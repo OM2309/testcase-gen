@@ -1,4 +1,4 @@
-import { callOpenAI } from '../ai/openai.service.js'
+import { callOpenAI } from './openai.service.js'
 import { agent3RecoverySystemPrompt, buildAgent3RecoveryPrompt } from './prompts/agent3.prompt.js'
 
 export async function runAgent3Recovery({

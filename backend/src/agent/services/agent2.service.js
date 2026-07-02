@@ -1,4 +1,4 @@
-import { callOpenAI } from '../ai/openai.service.js'
+import { callOpenAI } from './openai.service.js'
 import { agent2SystemPrompt, buildAgent2UserPrompt } from './prompts/agent2.prompt.js'
 
 export async function runAgent2({ requirementId, requirementJson }) {

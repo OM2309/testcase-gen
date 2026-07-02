@@ -1,12 +1,8 @@
 import dotenv from 'dotenv'
 dotenv.config({ override: true })
 
-import OpenAI from 'openai'
+import openai from './src/config/openai.js'
 import { setDefaultOpenAIClient } from '@openai/agents'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
 
 setDefaultOpenAIClient(openai)
 
@@ -16,7 +12,9 @@ import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { connectDB } from './src/config/db.js'
-import uploadRoute from './src/routes/upload.js'
+import projectRoutes from './src/project/project.routes.js'
+import agentRoutes from './src/agent/agent.routes.js'
+import executionRoutes from './src/execution/execution.routes.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -34,8 +32,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
 app.use('/public', express.static(path.join(__dirname, 'public')))
 
-
-app.use('/api', uploadRoute)
+app.use('/api', projectRoutes)
+app.use('/api', agentRoutes)
+app.use('/api', executionRoutes)
 
 app.get('/health', (_req, res) => {
   res.json({

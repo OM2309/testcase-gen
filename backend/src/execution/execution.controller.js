@@ -1,7 +1,7 @@
-import ExecutionRun from '../models/ExecutionRun.js'
-import TestSuite from '../models/TestSuite.js'
-import { executeTestSuite } from '../services/execution/playwrightRunner.service.js'
-import { eventBus } from '../services/stream/eventBus.service.js'
+import ExecutionRun from './executionRun.model.js'
+import TestSuite from './testSuite.model.js'
+import { executeTestSuite } from './services/playwrightRunner.service.js'
+import { eventBus } from './services/eventBus.service.js'
 import { sendSuccess, sendError } from '../utils/responseHelper.js'
 
 export async function runExecution(req, res) {

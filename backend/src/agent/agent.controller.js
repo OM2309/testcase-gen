@@ -1,7 +1,7 @@
-import Project from '../models/Project.js'
-import TestSuite from '../models/TestSuite.js'
-import { runAgent1 } from '../services/agents/agent1.service.js'
-import { runAgent2 } from '../services/agents/agent2.service.js'
+import Project from '../project/project.model.js'
+import TestSuite from '../execution/testSuite.model.js'
+import { runAgent1 } from './services/agent1.service.js'
+import { runAgent2 } from './services/agent2.service.js'
 import { sendSuccess, sendError } from '../utils/responseHelper.js'
 
 export async function analyzePRD(req, res) {

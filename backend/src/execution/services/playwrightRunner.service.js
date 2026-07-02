@@ -2,10 +2,10 @@ import { chromium } from 'playwright'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { eventBus } from '../stream/eventBus.service.js'
-import { runAgent3Recovery } from '../agents/agent3.service.js'
-import ExecutionRun from '../../models/ExecutionRun.js'
-import TestSuite from '../../models/TestSuite.js'
+import { eventBus } from './eventBus.service.js'
+import { runAgent3Recovery } from '../../agent/services/agent3.service.js'
+import ExecutionRun from '../executionRun.model.js'
+import TestSuite from '../testSuite.model.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
