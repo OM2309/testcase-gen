@@ -1,25 +1,5 @@
 import { apiClient } from './apiClient'
-
-export interface Project {
-  _id: string
-  projectName: string
-  projectDescription: string
-  documentName: string
-  originalFileName: string
-  status: 'uploaded' | 'analyzing' | 'analyzed' | 'tests_generated' | 'failed'
-  errorMessage?: string
-  createdAt: string
-  processingCompletedAt?: string
-  hasTestSuite?: boolean
-  testCasesCount?: number
-  parsedText?: string
-}
-
-export interface ProjectDetail {
-  project: Project
-  requirementAnalysis: any | null
-  testSuite: any | null
-}
+import { Project, ProjectDetail } from '../types'
 
 export const projectService = {
   async getAllProjects() {

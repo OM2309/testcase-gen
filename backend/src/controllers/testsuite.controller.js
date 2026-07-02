@@ -80,3 +80,31 @@ export async function getTestSuiteByProjectId(req, res, next) {
     next(err)
   }
 }
+
+/**
+ * Updates the test suite (test cases, steps, etc.) for a given project.
+ */
+export async function updateTestSuite(req, res, next) {
+  const { projectId } = req.params
+  const { testCases } = req.body
+
+  try {
+    const suite = await TestSuite.findOneAndUpdate(
+      { projectId },
+      { testCases },
+      { new: true }
+    )
+
+    if (!suite) {
+      throw new ApiError('Test suite not found for this project', 404)
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: suite
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+

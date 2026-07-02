@@ -8,7 +8,8 @@ import { ProjectsListView } from '../components/ProjectsListView'
 import { UploadView } from '../components/UploadView'
 import { RequirementsView } from '../components/RequirementsView'
 import { TestCasesView } from '../components/TestCasesView'
-import { projectService, Project } from '../services/projectService'
+import { projectService } from '../services/projectService'
+import { Project } from '../types'
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'projects' | 'upload' | 'requirements' | 'testcases'>('projects')
@@ -146,10 +147,18 @@ export default function Home() {
             />
           )}
 
-          {activeTab === 'testcases' && testSuiteData && (
+          {activeTab === 'testcases' && testSuiteData && selectedProjectId && (
             <TestCasesView
+              projectId={selectedProjectId}
               testSuiteId={testSuiteData._id}
               testCases={testSuiteData.testCases || []}
+              onSave={async (updatedCases) => {
+                const { agentService } = await import('../services/agentService')
+                const res = await agentService.saveTestSuite(selectedProjectId, updatedCases)
+                if (res.success) {
+                  setTestSuiteData(res.data)
+                }
+              }}
             />
           )}
         </main>

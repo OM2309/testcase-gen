@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { FolderKanban, Upload, FileCheck, ShieldCheck, Sun, Moon } from "lucide-react"
-import { Project } from "@/services/projectService"
+import { Project } from "../types"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   activeTab: string
@@ -52,12 +52,12 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent className="px-4 py-4 space-y-1.5">
-        <SidebarMenu className="gap-1.5">
+        <SidebarMenu className="gap-1.5 cursor-pointer">
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={activeTab === 'projects'}
               onClick={() => setActiveTab('projects')}
-              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5"
+              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 cursor-pointer"
             >
               <FolderKanban className="w-4 h-4" /> Repository
             </SidebarMenuButton>
@@ -67,7 +67,7 @@ export function AppSidebar({
             <SidebarMenuButton
               isActive={activeTab === 'upload'}
               onClick={() => setActiveTab('upload')}
-              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5"
+              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 cursor-pointer"
             >
               <Upload className="w-4 h-4" /> Upload PRD
             </SidebarMenuButton>
@@ -78,7 +78,7 @@ export function AppSidebar({
               isActive={activeTab === 'requirements'}
               disabled={!hasRequirements}
               onClick={() => setActiveTab('requirements')}
-              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <FileCheck className="w-4 h-4" /> Requirements
             </SidebarMenuButton>
@@ -89,7 +89,7 @@ export function AppSidebar({
               isActive={activeTab === 'testcases'}
               disabled={!hasTestSuite}
               onClick={() => setActiveTab('testcases')}
-              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ShieldCheck className="w-4 h-4" /> Test Suite
             </SidebarMenuButton>

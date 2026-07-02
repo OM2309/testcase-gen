@@ -13,5 +13,13 @@ export const agentService = {
       `/test-suites/generate/${projectId}`
     )
     return response.data
+  },
+
+  async saveTestSuite(projectId: string, testCases: any[]) {
+    const response = await apiClient.put<{ success: boolean; data: any }>(
+      `/test-suites/${projectId}`,
+      { testCases }
+    )
+    return response.data
   }
 }

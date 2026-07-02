@@ -1,58 +1,57 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { getPriorityBadge } from '../helpers/utils'
 import {
-  Info, ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2,
-  GripVertical, Pencil, Check, X, ChevronDown, ChevronRight,
-  FlaskConical, Search
+  ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2,
+  GripVertical, Pencil, Search, Check, X
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
-interface Step {
-  step_number: number
-  action: string
-  target: string
-  value: string
-  description: string
-  expected: string
-}
-
-interface TestCase {
-  id: string
-  title: string
-  description: string
-  module: string
-  feature: string
-  priority: string
-  severity?: string
-  type: string
-  scenario_type?: string
-  tags: string[]
-  preconditions: string[]
-  test_data: any
-  steps: Step[]
-  expected_result: string
-  cleanup_steps: string[]
-  source_requirements: any[]
-}
+import { Step, TestCase } from '../types'
 
 interface TestCasesViewProps {
+  projectId?: string
   testSuiteId: string
   testCases: TestCase[]
+  onSave?: (testCases: TestCase[]) => Promise<void>
 }
 
 const ACTIONS = ['goto', 'click', 'fill', 'select', 'check', 'uncheck', 'hover', 'press',
   'waitFor', 'assertText', 'assertVisible', 'assertHidden', 'assertURLContains', 'assertValue', 'assertCount', 'screenshot']
 
-export function TestCasesView({ testSuiteId, testCases: initialTestCases = [] }: TestCasesViewProps) {
+
+export function TestCasesView({ projectId, testSuiteId, testCases: initialTestCases = [], onSave }: TestCasesViewProps) {
   const [testCases, setTestCases] = useState<TestCase[]>(initialTestCases)
+  const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(initialTestCases[0]?.id || null)
   const [selectedModule, setSelectedModule] = useState('All')
   const [search, setSearch] = useState('')
   const [modulesList, setModulesList] = useState<Array<{ name: string; count: number }>>([])
-  const [editingTcId, setEditingTcId] = useState<string | null>(null)
   const [editingStepIdx, setEditingStepIdx] = useState<number | null>(null)
   const [draggedStepIdx, setDraggedStepIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  // Dialog States
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [tcToDelete, setTcToDelete] = useState<string | null>(null)
+
+  // Form State
+  const [formTitle, setFormTitle] = useState('')
+  const [formModule, setFormModule] = useState('General')
+  const [formPriority, setFormPriority] = useState('Medium')
+  const [formScenarioType, setFormScenarioType] = useState('positive')
+  const [formExpectedResult, setFormExpectedResult] = useState('')
 
   useEffect(() => {
     const map = new Map<string, number>()
@@ -71,12 +70,27 @@ export function TestCasesView({ testSuiteId, testCases: initialTestCases = [] }:
 
   const selectedTc = testCases.find(tc => tc.id === selectedId) || null
 
-  // ---- Step Drag & Drop ----
+  const updateTestCase = useCallback((id: string, patch: Partial<TestCase>) => {
+    setTestCases(prev => {
+      const next = prev.map(tc => tc.id === id ? { ...tc, ...patch } : tc)
+      if (onSave) {
+        setSaving(true)
+        onSave(next).then(() => {
+          setSaveSuccess(true)
+          setTimeout(() => setSaveSuccess(false), 1500)
+        }).catch(err => console.error('Auto-save failed', err))
+          .finally(() => setSaving(false))
+      }
+      return next
+    })
+  }, [onSave])
+
   const handleStepDragStart = (idx: number) => setDraggedStepIdx(idx)
   const handleStepDragOver = (e: React.DragEvent, idx: number) => {
     e.preventDefault()
     setDragOverIdx(idx)
   }
+
   const handleStepDrop = (e: React.DragEvent, dropIdx: number) => {
     e.preventDefault()
     if (draggedStepIdx === null || !selectedTc) return
@@ -88,11 +102,6 @@ export function TestCasesView({ testSuiteId, testCases: initialTestCases = [] }:
     setDraggedStepIdx(null)
     setDragOverIdx(null)
   }
-
-  // ---- Test Case & Step CRUD ----
-  const updateTestCase = useCallback((id: string, patch: Partial<TestCase>) => {
-    setTestCases(prev => prev.map(tc => tc.id === id ? { ...tc, ...patch } : tc))
-  }, [])
 
   const addStep = (tcId: string) => {
     const tc = testCases.find(t => t.id === tcId)
@@ -124,40 +133,233 @@ export function TestCasesView({ testSuiteId, testCases: initialTestCases = [] }:
     updateTestCase(tcId, { steps })
   }
 
+  const handleSave = async () => {
+    if (!onSave) return
+    try {
+      setSaving(true)
+      await onSave(testCases)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
+    } catch (err) {
+      console.error('Failed to save test suite', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openCreateDialog = () => {
+    setFormTitle('')
+    setFormModule('General')
+    setFormPriority('Medium')
+    setFormScenarioType('positive')
+    setFormExpectedResult('')
+    setIsCreateOpen(true)
+  }
+
+  const handleCreateTestCase = () => {
+    const newTc: TestCase = {
+      id: `TC-${Date.now()}`,
+      title: formTitle || 'New Test Case',
+      description: '',
+      module: formModule,
+      feature: '',
+      priority: formPriority,
+      type: 'functional',
+      scenario_type: formScenarioType,
+      tags: [],
+      preconditions: [],
+      test_data: {},
+      steps: [],
+      expected_result: formExpectedResult,
+      cleanup_steps: [],
+      source_requirements: []
+    }
+    const next = [...testCases, newTc]
+    setTestCases(next)
+    setSelectedId(newTc.id)
+    setIsCreateOpen(false)
+    if (onSave) {
+      setSaving(true)
+      onSave(next).then(() => {
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 1500)
+      }).catch(err => console.error(err)).finally(() => setSaving(false))
+    }
+  }
+
+  const openEditDialog = (tc: TestCase) => {
+    setFormTitle(tc.title)
+    setFormModule(tc.module || 'General')
+    setFormPriority(tc.priority)
+    setFormScenarioType(tc.scenario_type || 'positive')
+    setFormExpectedResult(tc.expected_result || '')
+    setIsEditOpen(true)
+  }
+
+  const handleSaveEdit = () => {
+    if (!selectedTc) return
+    updateTestCase(selectedTc.id, {
+      title: formTitle,
+      module: formModule,
+      priority: formPriority,
+      scenario_type: formScenarioType,
+      expected_result: formExpectedResult
+    })
+    setIsEditOpen(false)
+  }
+
+  const confirmDelete = (id: string) => {
+    setTcToDelete(id)
+    setIsDeleteOpen(true)
+  }
+
+  const handleDeleteTestCase = () => {
+    if (!tcToDelete) return
+    const next = testCases.filter(t => t.id !== tcToDelete)
+    setTestCases(next)
+    if (selectedId === tcToDelete) {
+      setSelectedId(next[0]?.id || null)
+    }
+    setIsDeleteOpen(false)
+    setTcToDelete(null)
+    if (onSave) {
+      setSaving(true)
+      onSave(next).then(() => {
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 1500)
+      }).catch(err => console.error(err)).finally(() => setSaving(false))
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Create Dialog */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Test Case</DialogTitle>
+            <DialogDescription>Add a new test case to this suite.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-xs">
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold">Title</label>
+              <input value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Test case title" className="px-3 py-2 bg-card border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold">Module</label>
+              <input value={formModule} onChange={e => setFormModule(e.target.value)} placeholder="Module name" className="px-3 py-2 bg-card border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold">Priority</label>
+                <select value={formPriority} onChange={e => setFormPriority(e.target.value)} className="px-3 py-2 bg-card border rounded-lg focus:outline-none">
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold">Scenario Type</label>
+                <select value={formScenarioType} onChange={e => setFormScenarioType(e.target.value)} className="px-3 py-2 bg-card border rounded-lg focus:outline-none">
+                  <option value="positive">Positive</option>
+                  <option value="negative">Negative</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold">Expected Result</label>
+              <textarea value={formExpectedResult} onChange={e => setFormExpectedResult(e.target.value)} placeholder="Expected outcome..." rows={2} className="px-3 py-2 bg-card border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setIsCreateOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold">Cancel</button>
+            <button onClick={handleCreateTestCase} className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90">Create</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Test Case Details</DialogTitle>
+            <DialogDescription>Modify metadata and validation params.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-xs">
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold">Title</label>
+              <input value={formTitle} onChange={e => setFormTitle(e.target.value)} className="px-3 py-2 bg-card border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold">Module</label>
+              <input value={formModule} onChange={e => setFormModule(e.target.value)} className="px-3 py-2 bg-card border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold">Priority</label>
+                <select value={formPriority} onChange={e => setFormPriority(e.target.value)} className="px-3 py-2 bg-card border rounded-lg focus:outline-none">
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold">Scenario Type</label>
+                <select value={formScenarioType} onChange={e => setFormScenarioType(e.target.value)} className="px-3 py-2 bg-card border rounded-lg focus:outline-none">
+                  <option value="positive">Positive</option>
+                  <option value="negative">Negative</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold">Expected Result</label>
+              <textarea value={formExpectedResult} onChange={e => setFormExpectedResult(e.target.value)} rows={2} className="px-3 py-2 bg-card border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setIsEditOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold">Cancel</button>
+            <button onClick={handleSaveEdit} className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90">Save Changes</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>Are you sure you want to permanently delete this test case? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setIsDeleteOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold">Cancel</button>
+            <button onClick={handleDeleteTestCase} className="px-4 py-2 bg-destructive text-destructive-foreground rounded-xl text-xs font-semibold hover:opacity-90">Delete</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Test Suite Builder</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{testCases.length} test cases — edit steps, drag to reorder, create new cases</p>
         </div>
-        <button
-          onClick={() => {
-            const newTc: TestCase = {
-              id: `TC-${Date.now()}`,
-              title: 'New Test Case',
-              description: '',
-              module: 'General',
-              feature: '',
-              priority: 'Medium',
-              type: 'functional',
-              scenario_type: 'positive',
-              tags: [],
-              preconditions: [],
-              test_data: {},
-              steps: [],
-              expected_result: '',
-              cleanup_steps: [],
-              source_requirements: []
-            }
-            setTestCases(prev => [...prev, newTc])
-            setSelectedId(newTc.id)
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" /> New Test Case
-        </button>
+        <div className="flex items-center gap-2">
+          {onSave && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${saveSuccess ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-card text-foreground hover:bg-muted border-border'}`}
+            >
+              {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
+            </button>
+          )}
+          <button
+            onClick={openCreateDialog}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" /> New Test Case
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -206,7 +408,10 @@ export function TestCasesView({ testSuiteId, testCases: initialTestCases = [] }:
                     <p className="text-[10px] text-muted-foreground mt-0.5">{tc.module} · {tc.steps.length} steps</p>
                   </div>
                   <button
-                    onClick={e => { e.stopPropagation(); setTestCases(prev => prev.filter(t => t.id !== tc.id)); if (selectedId === tc.id) setSelectedId(null) }}
+                    onClick={e => {
+                      e.stopPropagation()
+                      confirmDelete(tc.id)
+                    }}
                     className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-all flex-shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -224,26 +429,16 @@ export function TestCasesView({ testSuiteId, testCases: initialTestCases = [] }:
         <div className="lg:col-span-6 border border-border rounded-xl bg-card/20 overflow-hidden">
           {selectedTc ? (
             <div className="flex flex-col max-h-[75vh] overflow-y-auto">
-              {/* TC header with inline edit */}
+              {/* TC header with Dialog Edit */}
               <div className="px-5 py-4 border-b border-border bg-card space-y-3 flex-shrink-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    {editingTcId === selectedTc.id ? (
-                      <input
-                        autoFocus
-                        defaultValue={selectedTc.title}
-                        onBlur={e => { updateTestCase(selectedTc.id, { title: e.target.value }); setEditingTcId(null) }}
-                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                        className="w-full font-bold text-sm bg-muted/50 border border-primary/40 rounded-lg px-2 py-1 focus:outline-none"
-                      />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <h2 className="font-bold text-sm line-clamp-2">{selectedTc.title}</h2>
-                        <button onClick={() => setEditingTcId(selectedTc.id)} className="p-1 rounded hover:bg-muted flex-shrink-0">
-                          <Pencil className="w-3 h-3 text-muted-foreground" />
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-bold text-sm line-clamp-2">{selectedTc.title}</h2>
+                      <button onClick={() => openEditDialog(selectedTc)} className="p-1 rounded hover:bg-muted flex-shrink-0">
+                        <Pencil className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       <span className="text-[10px] font-mono font-bold text-primary">{selectedTc.id}</span>
                       {getPriorityBadge(selectedTc.priority)}
@@ -425,13 +620,3 @@ function StepEditor({ step, onSave, onCancel, onDelete }: {
   )
 }
 
-function getPriorityBadge(priority: string) {
-  const map: Record<string, string> = {
-    critical: 'bg-red-500/10 text-red-400 border-red-500/20',
-    high: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    medium: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    low: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-  }
-  const cls = map[(priority || '').toLowerCase()] || 'bg-muted text-muted-foreground border-border'
-  return <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase ${cls}`}>{priority || 'N/A'}</span>
-}

@@ -1,11 +1,21 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { projectService, Project } from '../services/projectService'
+import { projectService } from '../services/projectService'
+import { Project } from '../types'
 import {
   FolderOpen, Trash2, Plus, Clock, FileText, CheckCircle2,
   Loader2, BrainCircuit, FlaskConical, AlertCircle, UploadCloud
 } from 'lucide-react'
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface ProjectsListViewProps {
   onSelectProject: (projectId: string) => void
@@ -16,6 +26,10 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Dialog modal states
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
 
   const loadProjects = async () => {
     try {
@@ -34,12 +48,20 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm('Delete this project and all its data?')) return
+    setProjectToDelete(id)
+    setIsDeleteOpen(true)
+  }
+
+  const confirmDeleteProject = async () => {
+    if (!projectToDelete) return
     try {
-      await projectService.deleteProject(id)
-      setProjects(prev => prev.filter(p => p._id !== id))
+      await projectService.deleteProject(projectToDelete)
+      setProjects(prev => prev.filter(p => p._id !== projectToDelete))
     } catch (err) {
       console.error('Failed to delete project', err)
+    } finally {
+      setIsDeleteOpen(false)
+      setProjectToDelete(null)
     }
   }
 
@@ -56,6 +78,22 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
 
   return (
     <div className="space-y-6">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete this project and all its requirements analysis and test suites?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button onClick={() => setIsDeleteOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold">Cancel</button>
+            <button onClick={confirmDeleteProject} className="px-4 py-2 bg-destructive text-destructive-foreground rounded-xl text-xs font-semibold hover:opacity-90">Delete</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
