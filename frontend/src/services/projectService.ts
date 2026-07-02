@@ -11,6 +11,8 @@ export interface Project {
   errorMessage?: string
   createdAt: string
   processingCompletedAt?: string
+  hasTestSuite?: boolean
+  testCasesCount?: number
 }
 
 export const projectService = {

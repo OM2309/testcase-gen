@@ -1,7 +1,18 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Play, X, Info, ShieldCheck, ChevronRight, FileSpreadsheet, Eye, HelpCircle } from 'lucide-react'
+import { Play, X, Globe, Monitor, Zap, TerminalSquare, Info, ShieldCheck, FileSpreadsheet, HelpCircle } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface TestCasesViewProps {
   testSuiteId: string
@@ -12,8 +23,9 @@ interface TestCasesViewProps {
 export function TestCasesView({ testSuiteId, testCases = [], onRunTestSuite }: TestCasesViewProps) {
   const [selectedTestCase, setSelectedTestCase] = useState<any | null>(null)
   const [selectedModule, setSelectedModule] = useState<string>('All')
-  const [baseUrl, setBaseUrl] = useState('http://localhost:3000')
-  const [headless, setHeadless] = useState(true)
+  const [baseUrl, setBaseUrl] = useState('http://localhost:5173')
+  const [headless, setHeadless] = useState(false)
+  const [showRunModal, setShowRunModal] = useState(false)
   const [modulesList, setModulesList] = useState<Array<{ name: string; count: number }>>([])
 
   useEffect(() => {
@@ -58,45 +70,102 @@ export function TestCasesView({ testSuiteId, testCases = [], onRunTestSuite }: T
     return <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-mono text-xs">{action}</span>
   }
 
+  const handleLaunchRun = () => {
+    setShowRunModal(false)
+    onRunTestSuite(baseUrl, headless)
+  }
+
   return (
     <div className="space-y-6">
-      {/* Top Banner Control Panel */}
+      {/* Header */}
       <div className="border border-border bg-card rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Test Cases Workspace</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Automate and run Playwright tests directly against your target environment.</p>
+          <h1 className="text-xl font-bold tracking-tight">Test Suite Workspace</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {testCases.length} automated test cases ready to execute via Playwright.
+          </p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground font-semibold uppercase">Target Base URL</span>
-            <input
-              type="url"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              className="px-3 py-1.5 bg-background border border-border rounded-md text-xs outline-none focus:border-primary/50 w-52"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 mt-4 md:mt-0 bg-background border border-border px-3 py-2 rounded-md h-fit">
-            <input
-              type="checkbox"
-              id="headless-toggle"
-              checked={headless}
-              onChange={(e) => setHeadless(e.target.checked)}
-              className="rounded border-border text-primary focus:ring-primary w-4 h-4 bg-background"
-            />
-            <label htmlFor="headless-toggle" className="text-xs font-semibold cursor-pointer select-none">Headless Mode</label>
-          </div>
-
-          <button
-            onClick={() => onRunTestSuite(baseUrl, headless)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity uppercase tracking-wider mt-4 md:mt-0"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" /> Run Test Suite
-          </button>
-        </div>
+        <Button
+          onClick={() => setShowRunModal(true)}
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wider"
+        >
+          <Play className="w-4 h-4 fill-current" /> Run Tests
+        </Button>
       </div>
+
+      {/* ShadCN Dialog Modal — Radix UI handles portal + z-index correctly */}
+      <Dialog open={showRunModal} onOpenChange={setShowRunModal}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <TerminalSquare className="w-5 h-5 text-primary" />
+              <DialogTitle>Configure Test Run</DialogTitle>
+            </div>
+            <DialogDescription>
+              Set the target environment before launching Playwright.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Base URL */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5" /> Target Base URL
+              </Label>
+              <Input
+                type="url"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="http://localhost:5173"
+                autoFocus
+              />
+              <p className="text-[11px] text-muted-foreground">The root URL of your web application under test.</p>
+            </div>
+
+            {/* Browser Mode */}
+            <div className="border border-border rounded-xl p-4 space-y-3">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Browser Mode</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setHeadless(false)}
+                  className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all ${
+                    !headless
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-muted/20 text-muted-foreground hover:border-primary/40'
+                  }`}
+                >
+                  <Monitor className="w-5 h-5" />
+                  <span className="text-sm font-semibold">Headed</span>
+                  <span className="text-[10px] leading-tight opacity-80">Browser window visible</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHeadless(true)}
+                  className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all ${
+                    headless
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-muted/20 text-muted-foreground hover:border-primary/40'
+                  }`}
+                >
+                  <Zap className="w-5 h-5" />
+                  <span className="text-sm font-semibold">Headless</span>
+                  <span className="text-[10px] leading-tight opacity-80">Faster, no window</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setShowRunModal(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handleLaunchRun} className="flex-1 gap-2">
+              <Play className="w-4 h-4 fill-current" /> Launch Run
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Module Nav sidebar (Col 1) */}

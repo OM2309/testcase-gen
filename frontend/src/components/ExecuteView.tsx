@@ -2,7 +2,24 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { executionService } from '../services/executionService'
-import { Terminal, ShieldAlert, CheckCircle, RefreshCcw, Loader, Image as ImageIcon, Check } from 'lucide-react'
+import {
+  Terminal, ShieldAlert, CheckCircle, Loader, Image as ImageIcon,
+  ChevronDown, ChevronRight, Wrench, Clock, AlertCircle, CircleDot,
+  BarChart3, Play, XCircle
+} from 'lucide-react'
+
+interface StepState {
+  status: 'pending' | 'running' | 'passed' | 'failed'
+  message: string
+  screenshot?: string
+  recovery?: any
+  duration?: number
+}
+
+interface TestCaseState {
+  status: 'pending' | 'running' | 'passed' | 'failed'
+  duration?: number
+}
 
 interface ExecuteViewProps {
   runId: string
@@ -12,282 +29,464 @@ interface ExecuteViewProps {
 export function ExecuteView({ runId, testCases = [] }: ExecuteViewProps) {
   const [logs, setLogs] = useState<string[]>([])
   const [runStatus, setRunStatus] = useState<'pending' | 'running' | 'completed' | 'failed'>('pending')
-  const [stepsMap, setStepsMap] = useState<Record<string, { status: 'pending' | 'running' | 'passed' | 'failed'; message: string; screenshot?: string; recovery?: any }>>({})
+  const [stepsMap, setStepsMap] = useState<Record<string, StepState>>({})
+  const [testCaseMap, setTestCaseMap] = useState<Record<string, TestCaseState>>({})
+  const [expandedTCs, setExpandedTCs] = useState<Set<string>>(new Set())
   const [summary, setSummary] = useState({ total: testCases.length, passed: 0, failed: 0, skipped: 0 })
+  const [activeScreenshot, setActiveScreenshot] = useState<string | null>(null)
   const logTerminalEndRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
-    const initialMap: typeof stepsMap = {}
+    // Initialize all steps and test cases as pending
+    const initialSteps: typeof stepsMap = {}
+    const initialTCs: typeof testCaseMap = {}
+
     testCases.forEach(tc => {
+      const tcId = tc.id || tc._id
+      initialTCs[tcId] = { status: 'pending' }
       tc.steps?.forEach((step: any) => {
-        const key = `${tc.id || tc._id}_step_${step.step_number}`
-        initialMap[key] = { status: 'pending', message: 'Awaiting execution' }
+        const key = `${tcId}_step_${step.step_number}`
+        initialSteps[key] = { status: 'pending', message: 'Awaiting execution' }
       })
     })
-    setStepsMap(initialMap)
 
-    setLogs(['[SYSTEM] Initializing Playwright runner...'])
+    setStepsMap(initialSteps)
+    setTestCaseMap(initialTCs)
+    setLogs(['[SYSTEM] Initializing test runner...'])
 
+    // Open SSE stream
     const streamUrl = executionService.getStreamUrl(runId)
     const es = new EventSource(streamUrl)
     eventSourceRef.current = es
 
     es.onopen = () => {
-      setLogs(prev => [...prev, '[SSE] Connected to live runner stream.'])
+      setLogs(prev => [...prev, '[SSE] ✓ Connected to live stream.'])
     }
-
-    es.onerror = (err) => {
-      console.error('SSE Connection failed', err)
-      setLogs(prev => [...prev, '[SSE] Connection lost. Reconnecting...'])
+    es.onerror = () => {
+      setLogs(prev => [...prev, '[SSE] ⚠ Connection interrupted. Attempting reconnect...'])
     }
-
     es.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data)
-        handleSSEEvent(data)
-      } catch (err) {
-        console.error('Failed to parse SSE event data', err)
-      }
+        handleSSEEvent(JSON.parse(event.data))
+      } catch (_) {}
     }
 
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close()
-      }
+      eventSourceRef.current?.close()
     }
-  }, [runId, testCases])
+  }, [runId])
 
   useEffect(() => {
     logTerminalEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [logs])
 
   const handleSSEEvent = (event: any) => {
-    const timestamp = new Date().toLocaleTimeString()
-    const logPrefix = `[${timestamp}]`
+    const ts = new Date().toLocaleTimeString('en-US', { hour12: false })
 
     switch (event.type) {
       case 'RUN_STARTED':
         setRunStatus('running')
-        setLogs(prev => [...prev, `${logPrefix} Playwright browser execution started.`])
+        addLog(`[${ts}] 🚀 Playwright browser launched. Starting test execution.`, 'info')
         break
 
       case 'TEST_STARTED':
-        setLogs(prev => [...prev, `${logPrefix} Starting TestCase: ${event.title} (${event.testCaseId})`])
+        setTestCaseMap(prev => ({ ...prev, [event.testCaseId]: { status: 'running' } }))
+        setExpandedTCs(prev => new Set(prev).add(event.testCaseId))
+        addLog(`[${ts}] ▶ Starting: ${event.title}`, 'info')
         break
 
-      case 'STEP_STARTED': {
-        const key = `${event.testCaseId}_step_${event.stepNumber}`
+      case 'STEP_STARTED':
         setStepsMap(prev => ({
           ...prev,
-          [key]: { status: 'running', message: event.message }
-        }))
-        setLogs(prev => [...prev, `${logPrefix} Executing: [${event.action}] on target [${event.target || 'N/A'}] - ${event.message}`])
-        break
-      }
-
-      case 'RECOVERY_STARTED': {
-        const key = `${event.testCaseId}_step_${event.stepNumber}`
-        setStepsMap(prev => ({
-          ...prev,
-          [key]: { ...prev[key], status: 'running', message: '⚠️ Fail detected. Agent 3 healing locator...' }
-        }))
-        setLogs(prev => [...prev, `${logPrefix} ⚠️ Step failed. Prompting Agent 3 Recovery...`])
-        break
-      }
-
-      case 'RECOVERY_APPLIED': {
-        const key = `${event.testCaseId}_step_${event.stepNumber}`
-        setStepsMap(prev => ({
-          ...prev,
-          [key]: {
-            ...prev[key],
+          [`${event.testCaseId}_step_${event.stepNumber}`]: {
             status: 'running',
-            message: `Healed step: ${event.message}`,
+            message: event.message
+          }
+        }))
+        addLog(`[${ts}]   → [${event.action}]${event.target ? ` on "${event.target}"` : ''} — ${event.message}`, 'info')
+        break
+
+      case 'RECOVERY_STARTED':
+        setStepsMap(prev => ({
+          ...prev,
+          [`${event.testCaseId}_step_${event.stepNumber}`]: {
+            ...prev[`${event.testCaseId}_step_${event.stepNumber}`],
+            status: 'running',
+            message: '⚠️ Step failed. AI recovery analyzing...',
+            screenshot: event.screenshot
+          }
+        }))
+        addLog(`[${ts}]   ⚠ Step failed. Agent 3 analyzing DOM for recovery...`, 'warn')
+        break
+
+      case 'RECOVERY_APPLIED':
+        setStepsMap(prev => ({
+          ...prev,
+          [`${event.testCaseId}_step_${event.stepNumber}`]: {
+            ...prev[`${event.testCaseId}_step_${event.stepNumber}`],
+            status: 'running',
+            message: `🛠 Healed: ${event.message}`,
             recovery: event.recovery
           }
         }))
-        setLogs(prev => [...prev, `${logPrefix} 🛠️ Healed successfully! Applying: [${event.recovery?.action}] on target [${event.recovery?.target}]`])
+        addLog(`[${ts}]   🛠 Recovery applied: [${event.recovery?.action}] on "${event.recovery?.target}"`, 'warn')
         break
-      }
 
-      case 'STEP_PASSED': {
-        const key = `${event.testCaseId}_step_${event.stepNumber}`
+      case 'STEP_PASSED':
         setStepsMap(prev => ({
           ...prev,
-          [key]: { ...prev[key], status: 'passed', message: 'Passed' }
+          [`${event.testCaseId}_step_${event.stepNumber}`]: {
+            ...prev[`${event.testCaseId}_step_${event.stepNumber}`],
+            status: 'passed',
+            message: 'Passed',
+            duration: event.duration
+          }
         }))
-        setLogs(prev => [...prev, `${logPrefix} ✓ Step passed.`])
+        addLog(`[${ts}]   ✓ Step ${event.stepNumber} passed${event.duration ? ` (${event.duration}ms)` : ''}`, 'pass')
         break
-      }
 
-      case 'STEP_FAILED': {
-        const key = `${event.testCaseId}_step_${event.stepNumber}`
+      case 'STEP_FAILED':
         setStepsMap(prev => ({
           ...prev,
-          [key]: { ...prev[key], status: 'failed', message: event.message, screenshot: event.screenshot }
+          [`${event.testCaseId}_step_${event.stepNumber}`]: {
+            ...prev[`${event.testCaseId}_step_${event.stepNumber}`],
+            status: 'failed',
+            message: event.message,
+            screenshot: event.screenshot
+          }
         }))
-        setLogs(prev => [...prev, `${logPrefix} ❌ Step failed permanently: ${event.message}`])
+        addLog(`[${ts}]   ✗ Step ${event.stepNumber} FAILED: ${event.message}`, 'fail')
         break
-      }
 
       case 'TEST_FINISHED':
-        setLogs(prev => [...prev, `${logPrefix} TestCase ${event.testCaseId} finished with status: ${event.status.toUpperCase()}`])
+        setTestCaseMap(prev => ({
+          ...prev,
+          [event.testCaseId]: { status: event.status, duration: event.duration }
+        }))
+        addLog(
+          `[${ts}] ${event.status === 'passed' ? '✓' : '✗'} ${event.status.toUpperCase()}: Test case finished.`,
+          event.status === 'passed' ? 'pass' : 'fail'
+        )
+        // Auto-collapse passed tests, keep failed ones open
+        if (event.status === 'passed') {
+          setExpandedTCs(prev => {
+            const next = new Set(prev)
+            next.delete(event.testCaseId)
+            return next
+          })
+        }
         break
 
       case 'RUN_FINISHED':
         setRunStatus('completed')
         setSummary(event.summary)
-        setLogs(prev => [...prev, `${logPrefix} Run completed. Passed: ${event.summary.passed}, Failed: ${event.summary.failed}, Skipped: ${event.summary.skipped}`])
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close()
-        }
-        break
-
-      default:
+        eventSourceRef.current?.close()
+        addLog(`[${ts}] ══════════════════════════════`, 'info')
+        addLog(`[${ts}] RUN COMPLETE — ✓ ${event.summary.passed} Passed | ✗ ${event.summary.failed} Failed | ⊘ ${event.summary.skipped} Skipped`, 'info')
+        addLog(`[${ts}] ══════════════════════════════`, 'info')
         break
     }
   }
 
-  const getStepStatusStyle = (status: string) => {
-    switch (status) {
-      case 'running':
-        return 'border-amber-500 bg-amber-500/5 text-amber-300'
-      case 'passed':
-        return 'border-emerald-500/40 bg-emerald-500/5 text-emerald-400'
-      case 'failed':
-        return 'border-rose-500/40 bg-rose-500/5 text-rose-400'
-      default:
-        return 'border-border bg-card/40 text-muted-foreground'
-    }
+  const addLog = (line: string, _type: 'info' | 'pass' | 'fail' | 'warn') => {
+    setLogs(prev => [...prev, `${_type}:::${line}`])
   }
+
+  const toggleExpand = (tcId: string) => {
+    setExpandedTCs(prev => {
+      const next = new Set(prev)
+      if (next.has(tcId)) next.delete(tcId)
+      else next.add(tcId)
+      return next
+    })
+  }
+
+  // ── Helpers ──
+  const stepStatusIcon = (status: string) => {
+    if (status === 'running') return <Loader className="w-3.5 h-3.5 animate-spin text-amber-400" />
+    if (status === 'passed') return <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+    if (status === 'failed') return <XCircle className="w-3.5 h-3.5 text-rose-400" />
+    return <div className="w-3.5 h-3.5 rounded-full border border-border/60" />
+  }
+
+  const tcStatusIcon = (status: string) => {
+    if (status === 'running') return <Loader className="w-4 h-4 animate-spin text-amber-400" />
+    if (status === 'passed') return <CheckCircle className="w-4 h-4 text-emerald-400" />
+    if (status === 'failed') return <ShieldAlert className="w-4 h-4 text-rose-400" />
+    return <CircleDot className="w-4 h-4 text-border" />
+  }
+
+  const logLineColor = (line: string) => {
+    if (line.startsWith('pass:::')) return 'text-emerald-400'
+    if (line.startsWith('fail:::')) return 'text-rose-400'
+    if (line.startsWith('warn:::')) return 'text-amber-400'
+    return 'text-emerald-300/80'
+  }
+
+  const logLineText = (line: string) => line.replace(/^(pass|fail|warn|info):::/, '')
+
+  const allScreenshots = Object.entries(stepsMap)
+    .filter(([, v]) => v.screenshot)
+    .map(([key, v]) => ({ key, url: v.screenshot!, message: v.message }))
+
+  const passPercent = summary.total > 0 ? Math.round((summary.passed / summary.total) * 100) : 0
 
   return (
-    <div className="space-y-6">
-      <div className="border border-border bg-card rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Real-Time Execution Monitor</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Playwright headless browser execution stream with Agent 3 locator self-healing.</p>
-        </div>
-
-        <div className="flex items-center gap-6 text-center">
-          <div className="space-y-1">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Tests</span>
-            <div className="text-lg font-bold">{summary.total}</div>
-          </div>
-          <div className="space-y-1 border-l border-border pl-6">
-            <span className="text-[10px] text-emerald-400 uppercase font-bold tracking-wider">Passed</span>
-            <div className="text-lg font-bold text-emerald-400">{summary.passed}</div>
-          </div>
-          <div className="space-y-1 border-l border-border pl-6">
-            <span className="text-[10px] text-rose-400 uppercase font-bold tracking-wider">Failed</span>
-            <div className="text-lg font-bold text-rose-400">{summary.failed}</div>
-          </div>
-          <div className="space-y-1 border-l border-border pl-6">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Skipped</span>
-            <div className="text-lg font-bold text-muted-foreground">{summary.skipped}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-        <div className="lg:col-span-2 border border-border rounded-xl p-5 bg-card/10 space-y-4 max-h-[600px] overflow-y-auto">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Test Suite Steps Flow</h3>
-          <div className="space-y-3">
-            {testCases.map((tc, tcIdx) => (
-              <div key={tc.id || tcIdx} className="space-y-2 border-b border-border/40 pb-3 last:border-b-0 last:pb-0">
-                <span className="text-[10px] font-mono text-primary font-semibold">{tc.id || `TC-${tcIdx + 1}`} • {tc.title}</span>
-                <div className="space-y-1.5 pl-1">
-                  {tc.steps?.map((step: any, sIdx: number) => {
-                    const key = `${tc.id || tc._id}_step_${step.step_number}`
-                    const stepState = stepsMap[key] || { status: 'pending', message: 'Awaiting execution' }
-
-                    return (
-                      <div
-                        key={sIdx}
-                        className={`border rounded-lg p-2.5 flex items-center justify-between text-xs transition-all ${getStepStatusStyle(stepState.status)}`}
-                      >
-                        <div className="space-y-0.5 pr-4">
-                          <div className="font-semibold flex items-center gap-1.5">
-                            <span>Step {step.step_number}:</span>
-                            <span className="font-mono bg-border/45 px-1 py-0.2 rounded text-[10px]">{step.action}</span>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground line-clamp-1">{step.description}</p>
-                          {stepState.status === 'running' && (
-                            <p className="text-[10px] text-amber-400 font-medium italic mt-0.5">{stepState.message}</p>
-                          )}
-                          {stepState.recovery && (
-                            <span className="inline-block mt-1 text-[9px] px-1 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">Self-Healed Locator</span>
-                          )}
-                        </div>
-
-                        <div className="flex-shrink-0">
-                          {stepState.status === 'running' && <Loader className="w-3.5 h-3.5 animate-spin text-amber-500" />}
-                          {stepState.status === 'passed' && <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />}
-                          {stepState.status === 'failed' && <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />}
-                          {stepState.status === 'pending' && <div className="w-3.5 h-3.5 rounded-full border border-border" />}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="lg:col-span-3 space-y-6">
-          <div className="border border-border rounded-xl bg-black overflow-hidden flex flex-col h-[350px]">
-            <div className="bg-neutral-900 border-b border-border/80 px-4 py-2 flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold text-muted-foreground flex items-center gap-1.5"><Terminal className="w-3.5 h-3.5 text-primary" /> TEST_RUNNER_CONSOLE</span>
-              <span className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${runStatus === 'running' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-                <span className="text-[9px] font-mono text-muted-foreground uppercase">{runStatus}</span>
+    <div className="space-y-5">
+      {/* ── Summary Bar ── */}
+      <div className="border border-border bg-card rounded-xl p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              <h1 className="text-xl font-bold tracking-tight">Execution Monitor</h1>
+              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ml-1 ${
+                runStatus === 'running' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 animate-pulse' :
+                runStatus === 'completed' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                'bg-muted border-border text-muted-foreground'
+              }`}>
+                {runStatus}
               </span>
             </div>
-            <div className="p-4 font-mono text-xs text-emerald-400/90 overflow-y-auto space-y-1.5 flex-1 select-text">
+            <p className="text-xs text-muted-foreground">Playwright automation with AI self-healing recovery</p>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{summary.total}</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Total</div>
+            </div>
+            <div className="h-10 w-px bg-border" />
+            <div className="text-center">
+              <div className="text-2xl font-bold text-emerald-400">{summary.passed}</div>
+              <div className="text-[10px] uppercase font-bold text-emerald-500/70 tracking-wider">Passed</div>
+            </div>
+            <div className="h-10 w-px bg-border" />
+            <div className="text-center">
+              <div className="text-2xl font-bold text-rose-400">{summary.failed}</div>
+              <div className="text-[10px] uppercase font-bold text-rose-500/70 tracking-wider">Failed</div>
+            </div>
+            <div className="h-10 w-px bg-border" />
+            <div className="text-center">
+              <div className="text-2xl font-bold text-muted-foreground">{summary.skipped}</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Skipped</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        {summary.total > 0 && (
+          <div className="mt-4 space-y-1">
+            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+              <span>Progress</span>
+              <span>{passPercent}% passed</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-500"
+                style={{ width: `${passPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 items-start">
+        {/* ── Left: Test Case Accordion ── */}
+        <div className="md:col-span-2 border border-border rounded-xl bg-card/10 overflow-hidden">
+          <div className="bg-muted/30 border-b border-border px-4 py-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Play className="w-3.5 h-3.5 text-primary" />
+              Test Cases ({testCases.length})
+            </h3>
+          </div>
+          <div className="divide-y divide-border/50 max-h-[600px] overflow-y-auto">
+            {testCases.map((tc, tcIdx) => {
+              const tcId = tc.id || tc._id
+              const tcState = testCaseMap[tcId] || { status: 'pending' }
+              const isExpanded = expandedTCs.has(tcId)
+
+              return (
+                <div key={tcId || tcIdx}>
+                  {/* TC Header Row */}
+                  <button
+                    onClick={() => toggleExpand(tcId)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/20 transition-colors ${
+                      tcState.status === 'running' ? 'bg-amber-500/5' :
+                      tcState.status === 'passed' ? 'bg-emerald-500/5' :
+                      tcState.status === 'failed' ? 'bg-rose-500/5' : ''
+                    }`}
+                  >
+                    {tcStatusIcon(tcState.status)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] font-bold text-primary">{tc.id || `TC-${tcIdx + 1}`}</span>
+                      </div>
+                      <p className="text-xs font-medium text-foreground truncate">{tc.title}</p>
+                    </div>
+                    {tcState.duration && (
+                      <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-0.5">
+                        <Clock className="w-3 h-3" />{(tcState.duration / 1000).toFixed(1)}s
+                      </span>
+                    )}
+                    {isExpanded
+                      ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    }
+                  </button>
+
+                  {/* Steps (expanded) */}
+                  {isExpanded && (
+                    <div className="bg-card/30 border-t border-border/40 px-4 py-3 space-y-2">
+                      {(tc.steps || []).map((step: any, sIdx: number) => {
+                        const key = `${tcId}_step_${step.step_number}`
+                        const stepState = stepsMap[key] || { status: 'pending', message: '' }
+
+                        return (
+                          <div
+                            key={sIdx}
+                            className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-xs transition-all ${
+                              stepState.status === 'running' ? 'border-amber-500/30 bg-amber-500/5' :
+                              stepState.status === 'passed' ? 'border-emerald-500/20 bg-emerald-500/5' :
+                              stepState.status === 'failed' ? 'border-rose-500/30 bg-rose-500/5' :
+                              'border-border/50 bg-card/20'
+                            }`}
+                          >
+                            <div className="pt-0.5 flex-shrink-0">{stepStatusIcon(stepState.status)}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] text-muted-foreground font-bold">Step {step.step_number}</span>
+                                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-mono text-[10px]">
+                                  {step.action}
+                                </span>
+                                {stepState.recovery && (
+                                  <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold flex items-center gap-0.5">
+                                    <Wrench className="w-2.5 h-2.5" /> Healed
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{step.description}</p>
+                              {stepState.status === 'failed' && stepState.message && (
+                                <p className="text-[10px] text-rose-400 mt-1 font-medium flex items-start gap-1">
+                                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                  <span className="line-clamp-2">{stepState.message}</span>
+                                </p>
+                              )}
+                              {stepState.status === 'running' && stepState.message && (
+                                <p className="text-[10px] text-amber-400 mt-0.5 italic">{stepState.message}</p>
+                              )}
+                              {stepState.screenshot && (
+                                <button
+                                  onClick={() => setActiveScreenshot(stepState.screenshot!)}
+                                  className="mt-1.5 text-[10px] text-primary hover:underline flex items-center gap-1"
+                                >
+                                  <ImageIcon className="w-3 h-3" /> View Screenshot
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── Right: Terminal + Screenshots ── */}
+        <div className="md:col-span-3 space-y-4">
+          {/* Terminal */}
+          <div className="border border-border rounded-xl bg-black overflow-hidden flex flex-col h-[350px]">
+            <div className="bg-neutral-900 border-b border-white/10 px-4 py-2 flex items-center justify-between flex-shrink-0">
+              <span className="text-[10px] font-mono font-bold text-muted-foreground flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5 text-primary" />
+                LIVE_CONSOLE
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${
+                  runStatus === 'running' ? 'bg-amber-500 animate-pulse' :
+                  runStatus === 'completed' ? 'bg-emerald-500' : 'bg-border'
+                }`} />
+                <span className="text-[9px] font-mono text-muted-foreground uppercase">{runStatus}</span>
+              </div>
+            </div>
+            <div className="p-4 font-mono text-xs overflow-y-auto space-y-0.5 flex-1 select-text">
               {logs.map((log, idx) => (
-                <div key={idx} className="leading-relaxed break-all whitespace-pre-wrap">{log}</div>
+                <div key={idx} className={`leading-relaxed whitespace-pre-wrap break-all ${logLineColor(log)}`}>
+                  {logLineText(log)}
+                </div>
               ))}
               <div ref={logTerminalEndRef} />
             </div>
           </div>
 
-          <div className="border border-border rounded-xl p-5 bg-card/25 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ImageIcon className="w-4 h-4 text-primary" /> Failed Step Screenshots</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.entries(stepsMap)
-                .filter(([_, value]) => value.screenshot)
-                .map(([key, value]) => {
-                  const stepNum = key.split('_step_')[1]
-                  const backendBase = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'http://localhost:5000'
-                  const screenshotUrl = `${backendBase}${value.screenshot}`
-
+          {/* Screenshots Panel */}
+          <div className="border border-border rounded-xl p-4 bg-card/20 space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-primary" />
+              Failure Screenshots
+              {allScreenshots.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-[9px] rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                  {allScreenshots.length}
+                </span>
+              )}
+            </h3>
+            {allScreenshots.length === 0 ? (
+              <div className="border border-dashed border-border/60 rounded-lg py-8 text-center text-xs text-muted-foreground">
+                No failure screenshots yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {allScreenshots.map(({ key, url, message }) => {
+                  const backendBase = process.env.NEXT_PUBLIC_API_URL
+                    ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '')
+                    : 'http://localhost:5000'
+                  const fullUrl = `${backendBase}${url}`
                   return (
-                    <div key={key} className="border border-border bg-card rounded-lg overflow-hidden flex flex-col justify-between group cursor-zoom-in">
-                      <div className="aspect-video relative bg-neutral-950 flex items-center justify-center">
-                        <img
-                          src={screenshotUrl}
-                          alt={`Failure Screenshot Step ${stepNum}`}
-                          className="object-cover w-full h-full group-hover:scale-105 transition-transform"
-                        />
+                    <button
+                      key={key}
+                      onClick={() => setActiveScreenshot(fullUrl)}
+                      className="border border-border bg-card rounded-lg overflow-hidden group hover:border-rose-500/40 transition-colors text-left"
+                    >
+                      <div className="aspect-video relative bg-neutral-950">
+                        <img src={fullUrl} alt="Failure" className="object-cover w-full h-full group-hover:opacity-90 transition-opacity" />
                       </div>
-                      <div className="p-2 border-t border-border bg-muted/40 text-[9px] font-mono text-muted-foreground flex justify-between items-center">
-                        <span>Step {stepNum} fail</span>
-                        <a href={screenshotUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline uppercase">Full size</a>
+                      <div className="p-2 border-t border-border bg-muted/30 text-[9px] font-mono text-muted-foreground truncate">
+                        {message}
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
-              {Object.values(stepsMap).filter(v => v.screenshot).length === 0 && (
-                <div className="col-span-full border border-dashed border-border/80 rounded-lg py-12 text-center text-xs text-muted-foreground">
-                  No screenshots captured yet. (Screenshots are only captured upon test failure).
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* ── Screenshot Lightbox ── */}
+      {activeScreenshot && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8 cursor-zoom-out"
+          onClick={() => setActiveScreenshot(null)}
+        >
+          <div className="relative max-w-5xl w-full" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setActiveScreenshot(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white text-sm font-mono"
+            >
+              [ESC] Close
+            </button>
+            <img
+              src={activeScreenshot}
+              alt="Screenshot"
+              className="w-full rounded-xl border border-white/10 shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

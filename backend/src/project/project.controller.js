@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { parseFile } from '../utils/fileParser.js'
 import { sendSuccess, sendError, sendPaginated, parsePagination } from '../utils/responseHelper.js'
 import Project from './project.model.js'
+import TestSuite from '../execution/testSuite.model.js'
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id)
@@ -110,7 +111,16 @@ export async function getAllProjects(req, res) {
       Project.countDocuments(filter)
     ])
 
-    return sendPaginated(res, projects, total, page, limit)
+    const projectsWithSuites = await Promise.all(projects.map(async (project) => {
+      const suite = await TestSuite.findOne({ projectId: project._id }).select('testCases').lean()
+      return {
+        ...project,
+        hasTestSuite: !!suite,
+        testCasesCount: suite ? suite.testCases?.length || 0 : 0
+      }
+    }))
+
+    return sendPaginated(res, projectsWithSuites, total, page, limit)
 
   } catch (err) {
     console.error('[PROJECTS] Error:', err.message)

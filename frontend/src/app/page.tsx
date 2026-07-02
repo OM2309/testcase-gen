@@ -36,6 +36,7 @@ export default function Home() {
 
   const handleSelectProject = async (projectId: string) => {
     setSelectedProjectId(projectId)
+    setCurrentRunId(null)
     try {
       const statusRes = await projectService.getProjectStatus(projectId)
       if (statusRes.success) {
@@ -43,15 +44,30 @@ export default function Home() {
       }
 
       const analysisRes = await projectService.getProjectAnalysis(projectId)
+      let hasReq = false
       if (analysisRes.success && analysisRes.data) {
         setRequirementsData(analysisRes.data)
-        setActiveTab('requirements')
+        hasReq = true
       } else {
         setRequirementsData(null)
-        setActiveTab('upload')
+      }
+
+      const suiteRes = await executionService.getTestSuiteByProject(projectId)
+      if (suiteRes.success && suiteRes.testSuiteId && suiteRes.testCases && suiteRes.testCases.length > 0) {
+        setTestSuiteId(suiteRes.testSuiteId)
+        setTestCasesList(suiteRes.testCases)
+        setActiveTab('testcases')
+      } else {
+        setTestSuiteId(null)
+        setTestCasesList([])
+        if (hasReq) {
+          setActiveTab('requirements')
+        } else {
+          setActiveTab('upload')
+        }
       }
     } catch (err) {
-      console.error('Failed to fetch project analysis', err)
+      console.error('Failed to fetch project analysis or test suite', err)
       setActiveTab('projects')
     }
   }

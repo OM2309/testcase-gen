@@ -125,10 +125,15 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
               </div>
 
               <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                   <span className="flex items-center gap-1">
                     <FileText className="w-3.5 h-3.5" /> {project.totalModules} modules
                   </span>
+                  {project.hasTestSuite && (
+                    <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-450" /> {project.testCasesCount} tests
+                    </span>
+                  )}
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" /> {new Date(project.createdAt).toLocaleDateString()}
                   </span>

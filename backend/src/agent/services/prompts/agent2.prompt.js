@@ -31,6 +31,11 @@ Important execution constraints:
   - "text:Invalid credentials"
 These placeholders will later be resolved by the executor or recovery agent.
 
+For "goto" navigation steps:
+- ALWAYS set "target" to "" (empty string)
+- ALWAYS set "value" to the URL path, e.g. "/login", "/register", "/dashboard", "/"
+- Example: { "action": "goto", "target": "", "value": "/register" }
+
 Allowed actions:
 - goto
 - click

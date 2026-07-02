@@ -59,6 +59,17 @@ export const executionService = {
     return response.data
   },
 
+  async getTestSuiteByProject(projectId: string) {
+    const response = await apiClient.get<{
+      success: boolean
+      testSuiteId?: string
+      suiteName?: string
+      projectName?: string
+      testCases?: any[]
+    }>(`/project/${projectId}/testsuite`)
+    return response.data
+  },
+
   getStreamUrl(runId: string) {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
     return `${API_BASE_URL}/stream/${runId}`

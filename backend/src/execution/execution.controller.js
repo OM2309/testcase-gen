@@ -92,3 +92,25 @@ export async function getExecutionReport(req, res) {
     return sendError(res, `Failed to retrieve execution report: ${err.message}`)
   }
 }
+
+export async function getTestSuiteByProject(req, res) {
+  const { projectId } = req.params
+
+  try {
+    const suite = await TestSuite.findOne({ projectId }).sort({ createdAt: -1 })
+    if (!suite) {
+      return sendSuccess(res, { suite: null })
+    }
+
+    return sendSuccess(res, {
+      testSuiteId: suite._id,
+      suiteName: suite.suiteName,
+      projectName: suite.projectName,
+      testCases: suite.testCases
+    })
+
+  } catch (err) {
+    console.error('[TestSuite] Fetch failed:', err.message)
+    return sendError(res, `Failed to retrieve test suite: ${err.message}`)
+  }
+}
