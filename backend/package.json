@@ -2,11 +2,11 @@
   "name": "testgen-backend",
   "version": "1.0.0",
   "description": "AI-powered SRS requirements analyzer",
-  "main": "index.js",
+  "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
   "nodemonConfig": {
     "ignore": [
@@ -22,7 +22,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@openai/agents": "^0.12.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -31,7 +30,6 @@
     "multer": "^2.2.0",
     "openai": "^4.85.4",
     "pdf-parse": "^2.4.5",
-    "playwright": "^1.50.0",
     "uuid": "^14.0.1"
   },
   "devDependencies": {

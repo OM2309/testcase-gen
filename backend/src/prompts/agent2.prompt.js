@@ -32,9 +32,14 @@ Important execution constraints:
 These placeholders will later be resolved by the executor or recovery agent.
 
 For "goto" navigation steps:
-- ALWAYS set "target" to "" (empty string)
-- ALWAYS set "value" to the URL path, e.g. "/login", "/register", "/dashboard", "/"
-- Example: { "action": "goto", "target": "", "value": "/register" }
+- ALWAYS set "action": "goto"
+- ALWAYS set "target": "" (empty string)
+- Put page route or page placeholder in "value". Use page placeholders if exact routes are unknown:
+  - __PAGE_LOGIN__
+  - __PAGE_REGISTER__
+  - __PAGE_DASHBOARD__
+  - __PAGE_TASK_LIST__
+  - __PAGE_HOME__
 
 Allowed actions:
 - goto
@@ -62,11 +67,14 @@ Test design rules:
 - Include source_requirements to map each test case back to requirements.
 - If information is missing, do not invent UI flows. Use best-effort steps only from available requirement data.
 - Prefer concise but complete titles.
+- Add scenario_type separately from type.
+  Example:
+  - type = "functional"
+  - scenario_type = "positive"
 
 Output must be valid JSON only.
-Do not include markdown.
-Do not include explanations.
-`
+Do not include markdown code block wrappers or other text in your raw output.
+`;
 
 export function buildAgent2UserPrompt({ requirementId, requirementJson }) {
   return `
@@ -87,6 +95,7 @@ Output schema:
       "priority": "High",
       "severity": "Critical",
       "type": "functional",
+      "scenario_type": "positive",
       "tags": [],
       "preconditions": [],
       "test_data": {},
@@ -102,7 +111,13 @@ Output schema:
       ],
       "expected_result": "",
       "cleanup_steps": [],
-      "source_requirements": []
+      "source_requirements": [
+        {
+          "module": "",
+          "feature": "",
+          "requirement": ""
+        }
+      ]
     }
   ]
 }
@@ -119,5 +134,5 @@ ${requirementId}
 
 Requirement JSON:
 ${JSON.stringify(requirementJson, null, 2)}
-`
+`;
 }

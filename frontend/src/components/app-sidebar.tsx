@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { FolderKanban, Upload, FileCheck, ShieldCheck, PlayCircle, Sun, Moon } from "lucide-react"
+import { FolderKanban, Upload, FileCheck, ShieldCheck, Sun, Moon } from "lucide-react"
 import { Project } from "@/services/projectService"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -18,7 +18,6 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   setActiveTab: (tab: any) => void
   hasRequirements: boolean
   hasTestSuite: boolean
-  hasRunId: boolean
   selectedProject: Project | null
   theme: 'dark' | 'light'
   setTheme: (theme: 'dark' | 'light') => void
@@ -29,7 +28,6 @@ export function AppSidebar({
   setActiveTab,
   hasRequirements,
   hasTestSuite,
-  hasRunId,
   selectedProject,
   theme,
   setTheme,
@@ -97,16 +95,7 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'execute'}
-              disabled={!hasRunId}
-              onClick={() => setActiveTab('execute')}
-              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <PlayCircle className="w-4 h-4" /> Live Run
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+
         </SidebarMenu>
       </SidebarContent>
 

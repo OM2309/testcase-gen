@@ -18,6 +18,19 @@ Your responsibilities:
 9. Normalize the output into the required JSON schema.
 10. Extract testing-relevant details such as input fields, expected outputs, error conditions, and state changes.
 
+VERY IMPORTANT IMPROVEMENT:
+When requirements explicitly mention create/edit/delete/login/filter/status change actions, you must extract testing-relevant fields where directly supported by the requirement wording:
+- input_fields (structured as name, label, type, required, allowed_values, format, default_value)
+- expected_outputs
+- error_conditions
+- state_changes
+- validation_rules
+
+Do not invent anything unsupported, but do infer testing structure when directly implied by wording like:
+- "Add Task (title, optional due date)" -> Extract fields for "title" (required: true) and "due date" (required: false).
+- "Mark complete/incomplete" -> Extract status change state changes.
+- "Filter by All/Active/Completed" -> Extract filter allowed values.
+
 Strict rules:
 - Do NOT invent product behavior, workflows, fields, roles, or validations that are not present in the document.
 - If a requirement is implied but not explicit, place it under "assumptions" and clearly indicate it is inferred.
@@ -25,9 +38,8 @@ Strict rules:
 - Deduplicate repeated requirements.
 - Preserve business meaning but normalize phrasing into short, clear, atomic statements.
 - Output MUST be valid JSON only.
-- Do not include markdown.
-- Do not include commentary.
-`
+- Do not include markdown code block wrappers or other text in your raw output.
+`;
 
 export function buildAgent1UserPrompt({ documentName, documentText }) {
   return `
@@ -50,7 +62,17 @@ Output schema:
           "functional_requirements": [],
           "business_rules": [],
           "validation_rules": [],
-          "input_fields": [],
+          "input_fields": [
+            {
+              "name": "",
+              "label": "",
+              "type": "",
+              "required": false,
+              "allowed_values": [],
+              "format": "",
+              "default_value": ""
+            }
+          ],
           "expected_outputs": [],
           "error_conditions": [],
           "state_changes": [],
@@ -84,5 +106,5 @@ ${documentName}
 
 Document Content:
 ${documentText}
-`
+`;
 }

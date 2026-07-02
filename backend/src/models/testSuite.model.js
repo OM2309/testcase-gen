@@ -15,16 +15,17 @@ const testCaseSchema = new mongoose.Schema({
   description: { type: String, default: '' },
   module: { type: String, default: '' },
   feature: { type: String, default: '' },
-  priority: { type: String, default: 'Medium' },
-  severity: { type: String, default: 'Major' },
+  priority: { type: String, default: 'High' },
+  severity: { type: String, default: 'Critical' },
   type: { type: String, default: 'functional' },
+  scenario_type: { type: String, default: 'positive' },
   tags: { type: [String], default: [] },
   preconditions: { type: [String], default: [] },
   test_data: { type: mongoose.Schema.Types.Mixed, default: {} },
   steps: { type: [stepSchema], default: [] },
   expected_result: { type: String, default: '' },
   cleanup_steps: { type: [String], default: [] },
-  source_requirements: { type: [String], default: [] }
+  source_requirements: { type: [mongoose.Schema.Types.Mixed], default: [] }
 }, { _id: false })
 
 const testSuiteSchema = new mongoose.Schema({
@@ -36,6 +37,11 @@ const testSuiteSchema = new mongoose.Schema({
   },
   suiteName: { type: String, default: 'Automated Test Suite' },
   projectName: { type: String, default: '' },
+  generatedFromRequirementId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'RequirementAnalysis',
+    required: true
+  },
   testCases: { type: [testCaseSchema], default: [] }
 }, {
   timestamps: true
