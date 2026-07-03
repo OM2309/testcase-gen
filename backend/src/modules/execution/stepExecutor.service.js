@@ -9,7 +9,7 @@ import path from 'path'
 import fs from 'fs'
 import { resolveTarget, fuzzyResolve, fuzzyResolveField } from './targetResolver.service.js'
 
-const STEP_TIMEOUT = 15000 // 15 seconds per step
+const STEP_TIMEOUT = 35000 // 35 seconds per step
 const PROBE_TIMEOUT = 3000 // quick check for element existence before healing
 const EXPECT_TIMEOUT = 5000 // wait for expected url/text after an action
 
