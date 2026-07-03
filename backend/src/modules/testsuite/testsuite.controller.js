@@ -1,8 +1,8 @@
-import Project from '../models/project.model.js'
-import RequirementAnalysis from '../models/requirementAnalysis.model.js'
-import TestSuite from '../models/testSuite.model.js'
-import { runAgent2 } from '../services/agent2.service.js'
-import { ApiError } from '../utils/apiError.js'
+import Project from '../project/project.model.js'
+import RequirementAnalysis from '../requirement/requirement.model.js'
+import TestSuite from './testsuite.model.js'
+import { runAgent2 } from './testsuite.service.js'
+import { ApiError } from '../../utils/apiError.js'
 
 /**
  * Runs Agent 2 on the requirement analysis JSON to generate an automation-ready test suite.

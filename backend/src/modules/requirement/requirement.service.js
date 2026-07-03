@@ -1,5 +1,5 @@
-import { callOpenAI } from './openai.service.js'
-import { agent1SystemPrompt, buildAgent1UserPrompt } from '../prompts/agent1.prompt.js'
+import { callOpenAI } from '../../shared/openai.service.js'
+import { agent1SystemPrompt, buildAgent1UserPrompt } from './requirement.prompt.js'
 
 /**
  * Runs Agent 1 analysis on PRD/SRS text.

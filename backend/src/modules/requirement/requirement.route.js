@@ -1,6 +1,6 @@
 import express from 'express'
-import { generateRequirements, getRequirementsByProjectId } from '../controllers/requirement.controller.js'
-import { asyncHandler } from '../utils/asyncHandler.js'
+import { generateRequirements, getRequirementsByProjectId } from './requirement.controller.js'
+import { asyncHandler } from '../../utils/asyncHandler.js'
 
 const router = express.Router()
 

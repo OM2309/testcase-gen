@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import { agentService } from '../services/agentService'
 import {
   BrainCircuit, Sparkles, FileText, Shield, AlertTriangle, Info,
   Check, ChevronDown, ChevronRight, Loader2, FlaskConical, BookOpen
@@ -11,57 +10,29 @@ interface RequirementsViewProps {
   projectId: string
   requirements: any
   parsedText?: string
-  onRequirementsGenerated: (data: any) => void
-  onTestCasesGenerated: (suiteData: any) => void
+  agentRunning: 'agent1' | 'agent2' | null
+  agentError: string | null
+  onRunAgent1: () => void
+  onRunAgent2: () => void
 }
 
 export function RequirementsView({
-  projectId,
   requirements,
   parsedText,
-  onRequirementsGenerated,
-  onTestCasesGenerated
+  agentRunning,
+  agentError,
+  onRunAgent1,
+  onRunAgent2
 }: RequirementsViewProps) {
-  const [runningAgent1, setRunningAgent1] = useState(false)
-  const [runningAgent2, setRunningAgent2] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [activeModuleIdx, setActiveModuleIdx] = useState(0)
   const [showParsedText, setShowParsedText] = useState(false)
 
-  const handleRunAgent1 = async () => {
-    try {
-      setError(null)
-      setRunningAgent1(true)
-      const res = await agentService.generateRequirements(projectId)
-      if (res.success) {
-        onRequirementsGenerated(res.data.analyzedData)
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Agent 1 analysis failed. Please try again.')
-    } finally {
-      setRunningAgent1(false)
-    }
-  }
-
-  const handleRunAgent2 = async () => {
-    try {
-      setError(null)
-      setRunningAgent2(true)
-      const res = await agentService.generateTestSuite(projectId)
-      if (res.success) {
-        onTestCasesGenerated(res.data)
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Agent 2 generation failed. Please try again.')
-    } finally {
-      setRunningAgent2(false)
-    }
-  }
+  const error = agentError
 
   // Animated agent loading state
-  if (runningAgent1 || runningAgent2) {
-    const agentNum = runningAgent1 ? 1 : 2
-    const messages = runningAgent1
+  if (agentRunning) {
+    const agentNum = agentRunning === 'agent1' ? 1 : 2
+    const messages = agentRunning === 'agent1'
       ? ['Reading document structure...', 'Extracting modules and features...', 'Identifying validation rules...', 'Building requirement model...']
       : ['Loading requirement analysis...', 'Designing test scenarios...', 'Generating test steps...', 'Building test suite...']
 
@@ -138,7 +109,7 @@ export function RequirementsView({
             <p className="text-sm text-muted-foreground">Analyze your PRD/SRS to extract modules, features, business rules, and validation requirements.</p>
           </div>
           <button
-            onClick={handleRunAgent1}
+            onClick={onRunAgent1}
             className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <Sparkles className="w-4 h-4" /> Analyze with Agent 1
@@ -166,17 +137,17 @@ export function RequirementsView({
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <button
-            onClick={handleRunAgent1}
+            onClick={onRunAgent1}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted transition-colors"
           >
             <BrainCircuit className="w-3.5 h-3.5" /> Re-analyze
           </button>
           <button
-            onClick={handleRunAgent2}
-            disabled={runningAgent2}
+            onClick={onRunAgent2}
+            disabled={agentRunning === 'agent2'}
             className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            {runningAgent2 ? (
+            {agentRunning === 'agent2' ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
             ) : (
               <><FlaskConical className="w-4 h-4" /> Generate Test Suite</>

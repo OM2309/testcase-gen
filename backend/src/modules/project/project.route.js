@@ -1,7 +1,7 @@
 import express from 'express'
-import upload from '../middleware/multerConfig.js'
-import { createProject, getProjects, getProjectById, deleteProject } from '../controllers/project.controller.js'
-import { asyncHandler } from '../utils/asyncHandler.js'
+import upload from '../../middleware/multerConfig.js'
+import { createProject, getProjects, getProjectById, deleteProject } from './project.controller.js'
+import { asyncHandler } from '../../utils/asyncHandler.js'
 
 const router = express.Router()
 

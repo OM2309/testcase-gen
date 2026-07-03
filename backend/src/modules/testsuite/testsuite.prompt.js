@@ -22,24 +22,28 @@ Important execution constraints:
 - Each test case must contain machine-readable steps.
 - Use actions compatible with browser automation.
 - Prefer deterministic steps over vague natural language.
-- If exact selectors are not known from the requirement, use semantic placeholders in "target" such as:
-  - "input:email"
-  - "button:Login"
+Target rules (VERY IMPORTANT for the executor):
+- Use semantic targets in the form "type:label" where label is the VISIBLE text/label a real user sees.
+  - "input:Email", "input:Password", "input:Confirm Password"
+  - "button:Create Account", "button:Sign In", "button:Add Task"
   - "link:Forgot Password"
-  - "table:Employees"
-  - "toast:Success"
-  - "text:Invalid credentials"
-These placeholders will later be resolved by the executor or recovery agent.
+  - "text:Invalid credentials", "toast:Success"
+  - "table:Tasks", "checkbox:Remember me", "select:Country"
+- For buttons/links, prefer the ACTUAL button text implied by the requirement (e.g. a registration form's submit is usually "Create Account" or "Sign Up", login is "Sign In" or "Login").
+- Do NOT invent random CSS selectors.
 
-For "goto" navigation steps:
-- ALWAYS set "action": "goto"
-- ALWAYS set "target": "" (empty string)
-- Put page route or page placeholder in "value". Use page placeholders if exact routes are unknown:
-  - __PAGE_LOGIN__
-  - __PAGE_REGISTER__
-  - __PAGE_DASHBOARD__
-  - __PAGE_TASK_LIST__
-  - __PAGE_HOME__
+Navigation ("goto") rules:
+- ALWAYS set "action": "goto" and "target": "" (empty).
+- Put a REAL, conventional relative route in "value". Infer it from the feature:
+  - Registration -> "/register"   Login -> "/login"   Home -> "/"
+  - Dashboard -> "/dashboard"      Task list -> "/tasks"   Profile -> "/profile"   Settings -> "/settings"
+- Use a leading slash. Do NOT use placeholder tokens like "__PAGE_LOGIN__".
+
+Structured expectations (per step, optional but strongly encouraged):
+- "expected_url": if this step should cause navigation, put the relative path the app should be on AFTER the step (e.g. after clicking "Create Account" -> "/login").
+- "expected_text": a visible text/message that should appear after the step (e.g. "Task added", "Invalid credentials").
+- These are auto-verified by the executor, so only set them when you are reasonably confident.
+- Also add explicit verification steps where useful: an "assertURLContains" (value = real path like "/dashboard") or "assertText" (value = message) after a submit/click.
 
 Allowed actions:
 - goto
@@ -104,9 +108,11 @@ Output schema:
           "step_number": 1,
           "action": "goto",
           "target": "",
-          "value": "",
+          "value": "/register",
           "description": "",
-          "expected": ""
+          "expected": "",
+          "expected_url": "",
+          "expected_text": ""
         }
       ],
       "expected_result": "",
@@ -125,7 +131,10 @@ Output schema:
 Important rules:
 - Create test cases for each meaningful feature.
 - Cover positive + negative + validation scenarios where possible.
-- Use semantic placeholders for targets when exact selectors are unknown.
+- Use semantic "type:VisibleLabel" targets (e.g. "button:Create Account", "input:Email").
+- For "goto", put a REAL relative route in "value" (e.g. "/login") — never "__PAGE_*__" tokens.
+- Set "expected_url" / "expected_text" on steps that cause navigation or show a message.
+- Add an assertURLContains or assertText step after important submits to verify the outcome.
 - Use deterministic action names only.
 - Make the output directly usable by a Playwright execution engine.
 

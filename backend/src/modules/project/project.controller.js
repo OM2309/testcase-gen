@@ -1,10 +1,10 @@
 import fs from 'fs'
 import mongoose from 'mongoose'
-import Project from '../models/project.model.js'
-import RequirementAnalysis from '../models/requirementAnalysis.model.js'
-import TestSuite from '../models/testSuite.model.js'
-import { parseFile } from '../services/fileParser.service.js'
-import { ApiError } from '../utils/apiError.js'
+import Project from './project.model.js'
+import RequirementAnalysis from '../requirement/requirement.model.js'
+import TestSuite from '../testsuite/testsuite.model.js'
+import { parseFile } from '../../shared/fileParser.service.js'
+import { ApiError } from '../../utils/apiError.js'
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id)

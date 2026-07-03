@@ -1,5 +1,5 @@
-import { callOpenAI } from './openai.service.js'
-import { agent2SystemPrompt, buildAgent2UserPrompt } from '../prompts/agent2.prompt.js'
+import { callOpenAI } from '../../shared/openai.service.js'
+import { agent2SystemPrompt, buildAgent2UserPrompt } from './testsuite.prompt.js'
 
 /**
  * Runs Agent 2 to generate test suite from requirement analysis JSON.

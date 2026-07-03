@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { FolderKanban, Upload, FileCheck, ShieldCheck, Sun, Moon } from "lucide-react"
+import { FolderKanban, Upload, FileCheck, ShieldCheck, Sun, Moon, PlayCircle } from "lucide-react"
 import { Project } from "../types"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -18,6 +18,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   setActiveTab: (tab: any) => void
   hasRequirements: boolean
   hasTestSuite: boolean
+  hasExecution: boolean
   selectedProject: Project | null
   theme: 'dark' | 'light'
   setTheme: (theme: 'dark' | 'light') => void
@@ -28,6 +29,7 @@ export function AppSidebar({
   setActiveTab,
   hasRequirements,
   hasTestSuite,
+  hasExecution,
   selectedProject,
   theme,
   setTheme,
@@ -92,6 +94,17 @@ export function AppSidebar({
               className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ShieldCheck className="w-4 h-4" /> Test Suite
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={activeTab === 'execution'}
+              disabled={!hasExecution}
+              onClick={() => setActiveTab('execution')}
+              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <PlayCircle className="w-4 h-4" /> Execution
             </SidebarMenuButton>
           </SidebarMenuItem>
 

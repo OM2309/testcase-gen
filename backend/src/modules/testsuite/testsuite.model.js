@@ -6,7 +6,10 @@ const stepSchema = new mongoose.Schema({
   target: { type: String, default: '' },
   value: { type: String, default: '' },
   description: { type: String, default: '' },
-  expected: { type: String, default: '' }
+  expected: { type: String, default: '' },
+  // Structured expectations verified after the step runs (optional).
+  expected_url: { type: String, default: '' },
+  expected_text: { type: String, default: '' }
 }, { _id: false })
 
 const testCaseSchema = new mongoose.Schema({

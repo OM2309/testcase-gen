@@ -1,7 +1,7 @@
-import Project from '../models/project.model.js'
-import RequirementAnalysis from '../models/requirementAnalysis.model.js'
-import { runAgent1 } from '../services/agent1.service.js'
-import { ApiError } from '../utils/apiError.js'
+import Project from '../project/project.model.js'
+import RequirementAnalysis from './requirement.model.js'
+import { runAgent1 } from './requirement.service.js'
+import { ApiError } from '../../utils/apiError.js'
 
 /**
  * Runs Agent 1 on the project's parsed SRS text and saves the requirement analysis.

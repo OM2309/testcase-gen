@@ -3,9 +3,10 @@ import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import env from './config/env.js'
-import projectRoutes from './routes/project.route.js'
-import requirementRoutes from './routes/requirement.route.js'
-import testsuiteRoutes from './routes/testsuite.route.js'
+import projectRoutes from './modules/project/project.route.js'
+import requirementRoutes from './modules/requirement/requirement.route.js'
+import testsuiteRoutes from './modules/testsuite/testsuite.route.js'
+import executionRoutes from './modules/execution/execution.route.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -28,6 +29,10 @@ app.use('/public', express.static(path.join(__dirname, '../public')))
 app.use('/api', projectRoutes)
 app.use('/api', requirementRoutes)
 app.use('/api', testsuiteRoutes)
+app.use('/api', executionRoutes)
+
+// Serve screenshots from uploads/test-runs
+app.use('/uploads/test-runs', express.static(path.join(__dirname, '../uploads/test-runs')))
 
 // Health Check
 app.get('/health', (_req, res) => {

@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { projectService } from '../services/projectService'
-import { Project } from '../types'
+import { useProjectsQuery } from '../hooks/queries'
 import {
   FolderOpen, Trash2, Plus, Clock, FileText, CheckCircle2,
   Loader2, BrainCircuit, FlaskConical, AlertCircle, UploadCloud
@@ -23,28 +24,13 @@ interface ProjectsListViewProps {
 }
 
 export function ProjectsListView({ onSelectProject, onNavigateToUpload }: ProjectsListViewProps) {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
+  const queryClient = useQueryClient()
+  const { data: projects = [], isLoading: loading, isError } = useProjectsQuery()
+  const error = isError ? 'Could not load projects. Make sure the backend is running.' : null
+
   // Dialog modal states
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const res = await projectService.getAllProjects()
-      if (res.success) setProjects(res.data)
-    } catch (err: any) {
-      setError('Could not load projects. Make sure the backend is running.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { loadProjects() }, [])
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -56,7 +42,7 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
     if (!projectToDelete) return
     try {
       await projectService.deleteProject(projectToDelete)
-      setProjects(prev => prev.filter(p => p._id !== projectToDelete))
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     } catch (err) {
       console.error('Failed to delete project', err)
     } finally {
