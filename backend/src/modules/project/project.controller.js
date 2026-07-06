@@ -25,6 +25,7 @@ export async function createProject(req, res, next) {
     const parsedText = await parseFile(req.file.path)
 
     const project = await Project.create({
+      userId: req.user.id,
       projectName: projectName || 'Untitled Project',
       projectDescription: projectDescription || '',
       documentName: req.file.originalname,
@@ -56,7 +57,12 @@ export async function createProject(req, res, next) {
  */
 export async function getProjects(req, res, next) {
   try {
-    const projects = await Project.find()
+    const projects = await Project.find({
+      $or: [
+        { userId: req.user.id },
+        { userId: { $exists: false } }
+      ]
+    })
       .sort({ createdAt: -1 })
       .lean()
 
@@ -94,6 +100,10 @@ export async function getProjectById(req, res, next) {
       throw new ApiError('Project not found.', 404)
     }
 
+    if (project.userId && project.userId.toString() !== req.user.id) {
+      throw new ApiError('Access denied. You do not own this project.', 403)
+    }
+
     const [requirementAnalysis, testSuite] = await Promise.all([
       RequirementAnalysis.findOne({ projectId }).lean(),
       TestSuite.findOne({ projectId }).lean()
@@ -126,6 +136,10 @@ export async function deleteProject(req, res, next) {
     const project = await Project.findById(projectId)
     if (!project) {
       throw new ApiError('Project not found.', 404)
+    }
+
+    if (project.userId && project.userId.toString() !== req.user.id) {
+      throw new ApiError('Access denied. You do not own this project.', 403)
     }
 
     if (project.filePath && fs.existsSync(project.filePath)) {

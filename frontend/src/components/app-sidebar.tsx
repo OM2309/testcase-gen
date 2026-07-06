@@ -10,7 +10,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { FolderKanban, Upload, FileCheck, ShieldCheck, Sun, Moon, PlayCircle } from "lucide-react"
+import { FolderKanban, Upload, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
 import { Project } from "../types"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -35,6 +36,7 @@ export function AppSidebar({
   setTheme,
   ...props
 }: AppSidebarProps) {
+  const { data: session } = useSession()
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader className="border-b border-sidebar-border px-6 py-5">
@@ -72,6 +74,17 @@ export function AppSidebar({
               className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 cursor-pointer"
             >
               <Upload className="w-4 h-4" /> Upload PRD
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={activeTab === 'modules'}
+              disabled={!selectedProject}
+              onClick={() => setActiveTab('modules')}
+              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Layers className="w-4 h-4" /> Modules
             </SidebarMenuButton>
           </SidebarMenuItem>
 
@@ -117,6 +130,22 @@ export function AppSidebar({
           <div className="border border-border/60 bg-card rounded-lg p-3 space-y-1">
             <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">Active Project</span>
             <span className="font-semibold text-xs text-foreground block line-clamp-1">{selectedProject.projectName}</span>
+          </div>
+        )}
+
+        {session?.user && (
+          <div className="border border-border/60 bg-card rounded-lg p-3 flex items-center justify-between gap-2.5 animate-fadeIn">
+            <div className="min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold block">Developer</span>
+              <span className="font-semibold text-xs text-foreground block truncate">{session.user.name || session.user.email}</span>
+            </div>
+            <button
+              onClick={() => signOut()}
+              title="Log Out"
+              className="p-2 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 border border-transparent hover:border-rose-500/20 bg-card transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 

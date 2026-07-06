@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
@@ -9,18 +10,23 @@ import { UploadView } from '../components/UploadView'
 import { RequirementsView } from '../components/RequirementsView'
 import { TestCasesView } from '../components/TestCasesView'
 import { ExecutionView } from '../components/ExecutionView'
+import { ModuleExplorerView } from '../components/ModuleExplorerView'
+import { LoginView } from '../components/LoginView'
+import { useSession } from 'next-auth/react'
 import { projectService } from '../services/projectService'
 import { agentService } from '../services/agentService'
 import { Project } from '../types'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'projects' | 'upload' | 'requirements' | 'testcases' | 'execution'>('projects')
+  const { data: session, status } = useSession()
+  const [activeTab, setActiveTab] = useState<'projects' | 'upload' | 'requirements' | 'testcases' | 'execution' | 'modules'>('projects')
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [requirementsData, setRequirementsData] = useState<any>(null)
   const [testSuiteData, setTestSuiteData] = useState<any>(null)
+  const [selectedTestCaseId, setSelectedTestCaseId] = useState<string | null>(null)
   const [loadingProject, setLoadingProject] = useState(false)
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
 
@@ -56,15 +62,12 @@ export default function Home() {
 
         if (testSuite?.testCases?.length > 0) {
           setTestSuiteData(testSuite)
-          setActiveTab('testcases')
         } else {
           setTestSuiteData(null)
-          if (requirementAnalysis?.analyzedData) {
-            setActiveTab('requirements')
-          } else {
-            setActiveTab('upload')
-          }
         }
+
+        setSelectedTestCaseId(null)
+        setActiveTab('modules')
       }
     } catch (err) {
       console.error('Failed to fetch project details', err)
@@ -78,7 +81,8 @@ export default function Home() {
     setSelectedProjectId(projectId)
     setRequirementsData(null)
     setTestSuiteData(null)
-    setActiveTab('requirements')
+    setSelectedTestCaseId(null)
+    setActiveTab('modules')
     // Load the project details
     try {
       const res = await projectService.getProjectById(projectId)
@@ -90,8 +94,6 @@ export default function Home() {
     }
   }
 
-  // Agent 1 — runs from page level so it keeps running (with a global
-  // indicator) even if the user navigates to another tab.
   const runAgent1 = async () => {
     if (!selectedProjectId || agentRunning) return
     setAgentError(null)
@@ -100,7 +102,7 @@ export default function Home() {
       const res = await agentService.generateRequirements(selectedProjectId)
       if (res.success) {
         setRequirementsData(res.data.analyzedData)
-        setActiveTab('requirements')
+        setActiveTab('modules')
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
@@ -119,7 +121,7 @@ export default function Home() {
       const res = await agentService.generateTestSuite(selectedProjectId)
       if (res.success) {
         setTestSuiteData(res.data)
-        setActiveTab('testcases')
+        setActiveTab('modules')
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
@@ -141,8 +143,28 @@ export default function Home() {
       case 'requirements': return 'Requirements Analysis'
       case 'testcases': return 'Test Suite Builder'
       case 'execution': return 'Test Execution'
+      case 'modules': return 'Project Modules'
       default: return 'Dashboard'
     }
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse" />
+          <div className="absolute inset-2 rounded-full border-4 border-primary/30 animate-spin" style={{ animationDuration: '2s' }} />
+          <div className="absolute inset-[18px] rounded-full bg-primary/20 flex items-center justify-center">
+            <Loader2 className="w-4 h-4 text-primary animate-spin" />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground font-semibold">Verifying secure session...</p>
+      </div>
+    )
+  }
+
+  if (status === 'unauthenticated') {
+    return <LoginView />
   }
 
   return (
@@ -187,6 +209,7 @@ export default function Home() {
                 setSelectedProject(null)
                 setRequirementsData(null)
                 setTestSuiteData(null)
+                setSelectedTestCaseId(null)
                 setActiveTab('upload')
               }}
             />
@@ -194,6 +217,22 @@ export default function Home() {
 
           {activeTab === 'upload' && (
             <UploadView onProjectCreated={handleProjectCreated} />
+          )}
+
+          {activeTab === 'modules' && selectedProject && selectedProjectId && (
+            <ModuleExplorerView
+              projectId={selectedProjectId}
+              project={selectedProject}
+              requirements={requirementsData}
+              testSuiteData={testSuiteData}
+              onNavigateToTab={setActiveTab}
+              onSelectTestCase={setSelectedTestCaseId}
+              onRunAgent1={runAgent1}
+              onRunAgent2={runAgent2}
+              onRunStarted={handleRunStarted}
+              agentRunning={agentRunning}
+              agentError={agentError}
+            />
           )}
 
           {activeTab === 'requirements' && selectedProjectId && (
@@ -214,6 +253,8 @@ export default function Home() {
               testSuiteId={testSuiteData._id}
               testCases={testSuiteData.testCases || []}
               onRunStarted={handleRunStarted}
+              selectedTestCaseId={selectedTestCaseId}
+              onSelectTestCase={setSelectedTestCaseId}
               onSave={async (updatedCases) => {
                 const { agentService } = await import('../services/agentService')
                 const res = await agentService.saveTestSuite(selectedProjectId, updatedCases)

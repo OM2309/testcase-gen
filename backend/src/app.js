@@ -3,6 +3,8 @@ import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import env from './config/env.js'
+import authRoutes from './modules/auth/auth.route.js'
+import { authMiddleware } from './middleware/auth.js'
 import projectRoutes from './modules/project/project.route.js'
 import requirementRoutes from './modules/requirement/requirement.route.js'
 import testsuiteRoutes from './modules/testsuite/testsuite.route.js'
@@ -26,10 +28,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 app.use('/public', express.static(path.join(__dirname, '../public')))
 
 // Mount routes
-app.use('/api', projectRoutes)
-app.use('/api', requirementRoutes)
-app.use('/api', testsuiteRoutes)
-app.use('/api', executionRoutes)
+app.use('/api', authRoutes)
+app.use('/api', authMiddleware, projectRoutes)
+app.use('/api', authMiddleware, requirementRoutes)
+app.use('/api', authMiddleware, testsuiteRoutes)
+app.use('/api', authMiddleware, executionRoutes)
 
 // Serve screenshots from uploads/test-runs
 app.use('/uploads/test-runs', express.static(path.join(__dirname, '../uploads/test-runs')))

@@ -1,6 +1,11 @@
 import mongoose from 'mongoose'
 
 const projectSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
   projectName: {
     type: String,
     trim: true,

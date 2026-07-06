@@ -6,7 +6,8 @@ const env = {
   mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/testcasegen',
   openaiApiKey: process.env.OPENAI_API_KEY,
   openaiModel: process.env.OPENAI_MODEL || 'gpt-4o',
-  corsOrigin: process.env.CORS_ORIGIN || '*'
+  corsOrigin: process.env.CORS_ORIGIN || '*',
+  jwtSecret: process.env.JWT_SECRET || 'supersecretjwtkeyforauth'
 }
 
 // Simple validation

@@ -16,17 +16,37 @@ interface TestCasesViewProps {
   testCases: TestCase[]
   onSave?: (testCases: TestCase[]) => Promise<void>
   onRunStarted?: (runId: string) => void
+  selectedTestCaseId?: string | null
+  onSelectTestCase?: (id: string | null) => void
 }
 
 
-export function TestCasesView({ projectId, testSuiteId, testCases: initialTestCases = [], onSave, onRunStarted }: TestCasesViewProps) {
+export function TestCasesView({
+  projectId,
+  testSuiteId,
+  testCases: initialTestCases = [],
+  onSave,
+  onRunStarted,
+  selectedTestCaseId,
+  onSelectTestCase
+}: TestCasesViewProps) {
   const [testCases, setTestCases] = useState<TestCase[]>(initialTestCases)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(initialTestCases[0]?.id || null)
+  const [selectedId, setSelectedId] = useState<string | null>(selectedTestCaseId || initialTestCases[0]?.id || null)
   const [selectedModule, setSelectedModule] = useState('All')
   const [search, setSearch] = useState('')
   const [modulesList, setModulesList] = useState<Array<{ name: string; count: number }>>([])
+
+  useEffect(() => {
+    if (selectedTestCaseId) {
+      setSelectedId(selectedTestCaseId)
+      const tc = testCases.find(t => t.id === selectedTestCaseId)
+      if (tc) {
+        setSelectedModule(tc.module || 'General')
+      }
+    }
+  }, [selectedTestCaseId, testCases])
 
   // Run execution dialog state
   const [isRunOpen, setIsRunOpen] = useState(false)
@@ -319,7 +339,10 @@ export function TestCasesView({ projectId, testSuiteId, testCases: initialTestCa
           onSelectModule={setSelectedModule}
           testCases={filteredTcs}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => {
+            setSelectedId(id)
+            onSelectTestCase?.(id)
+          }}
           search={search}
           onSearch={setSearch}
           onDelete={confirmDelete}
