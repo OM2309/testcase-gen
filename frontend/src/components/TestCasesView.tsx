@@ -5,6 +5,7 @@ import { Plus, PlayCircle } from 'lucide-react'
 
 import { Step, TestCase } from '../types'
 import { executionService } from '../services/executionService'
+import { agentService } from '../services/agentService'
 import { SuiteSummary } from './testsuite/SuiteSummary'
 import { TestCaseList } from './testsuite/TestCaseList'
 import { TestCaseDetail } from './testsuite/TestCaseDetail'
@@ -18,6 +19,7 @@ interface TestCasesViewProps {
   onRunStarted?: (runId: string) => void
   selectedTestCaseId?: string | null
   onSelectTestCase?: (id: string | null) => void
+  onTestSuiteUpdate?: (suite: any) => void
 }
 
 
@@ -28,7 +30,8 @@ export function TestCasesView({
   onSave,
   onRunStarted,
   selectedTestCaseId,
-  onSelectTestCase
+  onSelectTestCase,
+  onTestSuiteUpdate
 }: TestCasesViewProps) {
   const [testCases, setTestCases] = useState<TestCase[]>(initialTestCases)
   const [saving, setSaving] = useState(false)
@@ -267,7 +270,27 @@ export function TestCasesView({
     }
   }
 
+  const handleToggleRegressive = async (tcId: string) => {
+    if (!projectId) return
+    try {
+      const res = await agentService.toggleTestCaseRegressive(projectId, tcId)
+      if (res.success) {
+        if (res.data?.testCases) {
+          setTestCases(res.data.testCases)
+        } else {
+          setTestCases(prev => prev.map(tc => tc.id === tcId ? { ...tc, isRegressive: !tc.isRegressive } : tc))
+        }
+        if (onTestSuiteUpdate && res.data) {
+          onTestSuiteUpdate(res.data)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to toggle regressive status', err)
+    }
+  }
+
   // Aggregate stats for the summary strip
+  // console.log("filteredTcs", filteredTcs);
 
   return (
     <div className="flex flex-col gap-6">
@@ -347,6 +370,7 @@ export function TestCasesView({
           onSearch={setSearch}
           onDelete={confirmDelete}
           onRun={onRunStarted ? openRunDialog : undefined}
+          onToggleRegressive={handleToggleRegressive}
         />
 
         {/* Right — Step editor */}

@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename)
 const app = express()
 
 app.use(cors({
-  origin: env.corsOrigin,
+  origin: "*",
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }))

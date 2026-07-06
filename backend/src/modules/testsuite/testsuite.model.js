@@ -21,6 +21,7 @@ const testCaseSchema = new mongoose.Schema({
   priority: { type: String, default: 'High' },
   severity: { type: String, default: 'Critical' },
   type: { type: String, default: 'functional' },
+  isRegressive: { type: Boolean, default: false },
   scenario_type: { type: String, default: 'positive' },
   tags: { type: [String], default: [] },
   preconditions: { type: [String], default: [] },

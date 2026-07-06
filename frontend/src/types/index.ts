@@ -39,6 +39,7 @@ export interface TestCase {
   priority: string
   severity?: string
   type: string
+  isRegressive?: boolean
   scenario_type?: string
   tags: string[]
   preconditions: string[]

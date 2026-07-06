@@ -108,3 +108,35 @@ export async function updateTestSuite(req, res, next) {
   }
 }
 
+/**
+ * Toggles the isRegressive status of a test case.
+ */
+export async function toggleTestCaseRegressive(req, res, next) {
+  const { projectId, testCaseId } = req.params
+
+  try {
+    const suite = await TestSuite.findOne({ projectId })
+    if (!suite) {
+      throw new ApiError('Test suite not found for this project', 404)
+    }
+
+    const testCase = suite.testCases.find(tc => tc.id === testCaseId)
+    if (!testCase) {
+      throw new ApiError('Test case not found in the suite', 404)
+    }
+
+    // Toggle the value of isRegressive
+    testCase.isRegressive = !testCase.isRegressive
+
+    await suite.save()
+
+    return res.status(200).json({
+      success: true,
+      data: suite
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+

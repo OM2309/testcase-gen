@@ -21,5 +21,12 @@ export const agentService = {
       { testCases }
     )
     return response.data
+  },
+
+  async toggleTestCaseRegressive(projectId: string, testCaseId: string) {
+    const response = await apiClient.patch<{ success: boolean; data: any }>(
+      `/test-suites/${projectId}/test-cases/${testCaseId}/regressive`
+    )
+    return response.data
   }
 }

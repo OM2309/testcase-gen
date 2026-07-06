@@ -255,6 +255,7 @@ export default function Home() {
               onRunStarted={handleRunStarted}
               selectedTestCaseId={selectedTestCaseId}
               onSelectTestCase={setSelectedTestCaseId}
+              onTestSuiteUpdate={setTestSuiteData}
               onSave={async (updatedCases) => {
                 const { agentService } = await import('../services/agentService')
                 const res = await agentService.saveTestSuite(selectedProjectId, updatedCases)

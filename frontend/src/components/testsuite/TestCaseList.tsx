@@ -16,11 +16,12 @@ interface TestCaseListProps {
   onSearch: (v: string) => void
   onDelete: (id: string) => void
   onRun?: (id: string) => void
+  onToggleRegressive?: (id: string) => void
 }
 
 /** Left module nav + center searchable test-case list (two grid columns). */
 export function TestCaseList({
-  modules, selectedModule, onSelectModule, testCases, selectedId, onSelect, search, onSearch, onDelete, onRun
+  modules, selectedModule, onSelectModule, testCases, selectedId, onSelect, search, onSearch, onDelete, onRun, onToggleRegressive
 }: TestCaseListProps) {
   return (
     <>
@@ -60,13 +61,27 @@ export function TestCaseList({
               className={`group px-4 py-3 cursor-pointer transition-all hover:bg-muted/30 ${selectedId === tc.id ? 'bg-primary/5 border-l-[3px] border-primary pl-[13px]' : ''}`}
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono font-bold text-primary flex-shrink-0">{tc.id}</span>
-                    {getPriorityBadge(tc.priority)}
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="flex items-center h-5 mt-0.5" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={tc.isRegressive || false}
+                      onChange={() => onToggleRegressive?.(tc.id)}
+                      title="Mark as Regressive"
+                      className="w-3.5 h-3.5 text-primary border-border rounded focus:ring-primary/40 bg-background cursor-pointer"
+                    />
                   </div>
-                  <p className="text-xs font-semibold text-foreground mt-1 line-clamp-2">{tc.title}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{tc.module} · {tc.steps.length} steps</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold text-primary flex-shrink-0">{tc.id}</span>
+                      {getPriorityBadge(tc.priority)}
+                      {tc.isRegressive && (
+                        <span className="text-[9px] bg-rose-500/10 text-rose-500 px-1 py-0.2 rounded font-semibold uppercase tracking-wider">Regressive</span>
+                      )}
+                    </div>
+                    <p className="text-xs font-semibold text-foreground mt-1 line-clamp-2">{tc.title}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{tc.module} · {tc.steps.length} steps</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-0.5 flex-shrink-0">
                   {onRun && (
