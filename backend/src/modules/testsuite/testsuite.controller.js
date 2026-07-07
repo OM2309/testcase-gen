@@ -40,7 +40,7 @@ export async function generateTestSuite(req, res, next) {
           generatedFromRequirementId: requirementAnalysis._id,
           testCases: testSuiteJson.test_cases || []
         },
-        { upsert: true, returnDocument: 'after' }
+        { upsert: true, new: true }
       )
       console.log("Hello2");
 

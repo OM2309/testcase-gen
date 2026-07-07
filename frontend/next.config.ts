@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Increase proxy timeout to 5 minutes for long-running OpenAI agent calls
+  experimental: {
+    proxyTimeout: 300_000,
+  },
   async rewrites() {
     return [
       {
