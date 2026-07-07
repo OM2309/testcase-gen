@@ -24,10 +24,12 @@ export async function generateTestSuite(req, res, next) {
     console.log(`[TESTSUITE CONTROLLER] Generating test cases for project ${projectId}...`)
 
     try {
+      console.log("Hello");
       const testSuiteJson = await runAgent2({
         requirementId: requirementAnalysis._id.toString(),
         requirementJson: requirementAnalysis.analyzedData
       })
+      console.log("Hello1");
 
       // Upsert the test suite
       const suite = await TestSuite.findOneAndUpdate(
@@ -38,17 +40,20 @@ export async function generateTestSuite(req, res, next) {
           generatedFromRequirementId: requirementAnalysis._id,
           testCases: testSuiteJson.test_cases || []
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       )
+      console.log("Hello2");
 
       // Update project status
       await Project.findByIdAndUpdate(projectId, { status: 'tests_generated' })
+      console.log("Hello3");
 
       return res.status(201).json({
         success: true,
         data: suite
       })
     } catch (err) {
+      console.log("err1", err);
       await Project.findByIdAndUpdate(projectId, {
         status: 'failed',
         errorMessage: `Test generation failed: ${err.message}`
@@ -56,6 +61,7 @@ export async function generateTestSuite(req, res, next) {
       throw err
     }
   } catch (err) {
+    console.log("error", err);
     next(err)
   }
 }

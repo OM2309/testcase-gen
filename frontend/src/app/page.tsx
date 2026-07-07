@@ -124,6 +124,7 @@ export default function Home() {
         setActiveTab('modules')
       }
     } catch (err: unknown) {
+      console.log("err", err);
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setAgentError(msg || 'Agent 2 generation failed. Please try again.')
     } finally {

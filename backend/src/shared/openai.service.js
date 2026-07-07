@@ -1,20 +1,24 @@
 import openai from '../config/openai.js'
 import env from '../config/env.js'
-import { extractJson } from '../utils/extractJson.js'
 
 /**
  * Calls OpenAI Chat Completions API.
- * 
+ *
  * @param {object} params
  * @param {string} params.systemPrompt
  * @param {string} params.userPrompt
  * @param {number} [params.temperature]
  * @param {boolean} [params.jsonMode]
- * @returns {Promise<object>} Parsed JSON response.
+ * @returns {Promise<object|string>}
  */
-export async function callOpenAI({ systemPrompt, userPrompt, temperature = 0.2, jsonMode = true }) {
+export async function callOpenAI({
+  systemPrompt,
+  userPrompt,
+  temperature = 0.2,
+  jsonMode = true
+}) {
   const model = env.openaiModel || 'gpt-4o'
-  
+
   const options = {
     model,
     temperature,
@@ -30,13 +34,27 @@ export async function callOpenAI({ systemPrompt, userPrompt, temperature = 0.2, 
 
   try {
     const response = await openai.chat.completions.create(options)
-    const content = response.choices[0].message.content
+    console.log("response", response);
+    const content = response?.choices?.[0]?.message?.content
+    console.log("content", content);
 
-    if (jsonMode) {
-      return extractJson(content)
+
+    if (!content) {
+      throw new Error('Empty response received from OpenAI')
     }
 
-    return content
+    if (jsonMode) {
+      try {
+        console.log("Inside json function");
+        return JSON.parse(content)
+      } catch (parseError) {
+        console.error('[OPENAI SERVICE] Failed to parse JSON response')
+        console.error('[OPENAI SERVICE] Raw content:', content)
+        throw new Error(`Invalid JSON returned from OpenAI: ${parseError.message}`)
+      }
+    }
+
+    return content;
   } catch (error) {
     console.error('[OPENAI SERVICE] Error during chat completion:', error)
     throw error
