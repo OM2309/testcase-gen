@@ -48,7 +48,7 @@ export function ExecutionView() {
       })
       if (res.success) {
         setSelectedTestCaseId(null)
-        router.push(`/dashboard/${run.projectId}/execution?runId=${res.runId}`)
+        router.push(`/dashboard/${run.projectId}/execution?runId=${res.data.runId}`)
       }
     } catch (err) {
       console.error('Re-run failed', err)

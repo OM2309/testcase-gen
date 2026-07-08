@@ -25,7 +25,14 @@ export const executionService = {
    * the backend continues executing asynchronously.
    */
   async startExecution(params: StartExecutionParams) {
-    const response = await apiClient.post<{ success: boolean; runId: string; message: string }>(
+    const response = await apiClient.post<{
+      success: boolean
+      message: string
+      data: {
+        runId: string
+        message: string
+      }
+    }>(
       '/executions/start',
       params
     )

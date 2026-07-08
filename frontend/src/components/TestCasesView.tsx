@@ -94,12 +94,19 @@ export function TestCasesView() {
     testCases.forEach(tc => map.set(tc.module || 'General', (map.get(tc.module || 'General') || 0) + 1))
     const list = Array.from(map.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
     const total = testCases.length
-    setModulesList([{ name: 'All', count: total }, ...list])
+    const regressiveTotal = testCases.filter(tc => tc.isRegressive).length
+    setModulesList([
+      { name: 'All', count: total },
+      ...list,
+      { name: 'Regressive', count: regressiveTotal },
+    ])
     if (testCases.length > 0 && !selectedId) setSelectedId(testCases[0].id)
   }, [testCases])
 
   const filteredTcs = testCases.filter(tc => {
-    const matchModule = selectedModule === 'All' || (tc.module || 'General') === selectedModule
+    const matchModule = selectedModule === 'All'
+      || (selectedModule === 'Regressive' && tc.isRegressive)
+      || (tc.module || 'General') === selectedModule
     const matchSearch = !search || tc.title.toLowerCase().includes(search.toLowerCase())
     return matchModule && matchSearch
   })
@@ -110,9 +117,9 @@ export function TestCasesView() {
     if (!project) return
     try {
       const wb = XLSX.utils.book_new()
-      
-      const targetTestCases = selectedModule === 'All' 
-        ? testCases 
+
+      const targetTestCases = selectedModule === 'All'
+        ? testCases
         : testCases.filter(tc => (tc.module || 'General') === selectedModule)
 
       if (targetTestCases.length === 0) {
@@ -146,11 +153,11 @@ export function TestCasesView() {
         const cleanSheetName = modName
           .replace(/[:\\/?*\[\]]/g, '')
           .substring(0, 30) || 'General'
-        
+
         XLSX.utils.book_append_sheet(wb, ws, cleanSheetName)
       })
 
-      const fileName = selectedModule === 'All' 
+      const fileName = selectedModule === 'All'
         ? `${project.projectName}_All_TestCases.xlsx`
         : `${project.projectName}_${selectedModule}_TestCases.xlsx`
 
@@ -234,16 +241,23 @@ export function TestCasesView() {
     }
     try {
       setStarting(true)
+      let testCaseIds: string[] | undefined = undefined
+      if (runTargetId) {
+        testCaseIds = [runTargetId]
+      } else if (selectedModule !== 'All') {
+        testCaseIds = filteredTcs.map(tc => tc.id)
+      }
+
       const res = await executionService.startExecution({
         projectId: project._id,
         testSuiteId: activeTestSuite._id,
         baseUrl: runBaseUrl.trim(),
         headless: runHeadless,
-        testCaseIds: runTargetId ? [runTargetId] : undefined
+        testCaseIds
       })
       if (res.success) {
         setIsRunOpen(false)
-        router.push(`/dashboard/${project._id}/execution?runId=${res.runId}`)
+        router.push(`/dashboard/${project._id}/execution?runId=${res.data.runId}`)
       }
     } catch (err: any) {
       setRunError(err?.response?.data?.error || err?.message || 'Failed to start execution')

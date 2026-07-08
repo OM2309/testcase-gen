@@ -6,7 +6,7 @@ import {
   FolderOpen, FolderClosed, Layers, Cpu, PlayCircle, Eye, Loader2,
   AlertCircle, Sparkles, BrainCircuit, FlaskConical, Search, ChevronDown,
   ChevronRight, Play, Info, FileText, ArrowRight, Settings, Plus, CheckCircle2,
-  FileSpreadsheet
+  FileSpreadsheet, RotateCcw
 } from 'lucide-react'
 import { TestCase } from '../types'
 import { SrsUploadSection } from './SrsUploadSection'
@@ -241,6 +241,7 @@ export function ModuleExplorerView() {
     let totalModules = 0
     let totalFeatures = 0
     let totalTests = 0
+    let totalRegressive = 0
 
     srsDocumentsList.forEach(doc => {
       const tree = getSrsTreeData(doc._id)
@@ -248,10 +249,13 @@ export function ModuleExplorerView() {
       tree.forEach(m => {
         totalFeatures += m.features.length
         totalTests += m.testCasesCount
+        m.features.forEach(f => {
+          totalRegressive += f.testCases.filter(tc => tc.isRegressive).length
+        })
       })
     })
 
-    return { totalModules, totalFeatures, totalTests }
+    return { totalModules, totalFeatures, totalTests, totalRegressive }
   }, [srsDocumentsList, getSrsTreeData])
 
   const handleOpenRunDialog = (
@@ -286,7 +290,7 @@ export function ModuleExplorerView() {
       })
       if (res.success) {
         setIsRunOpen(false)
-        router.push(`/dashboard/${project._id}/execution?runId=${res.runId}`)
+        router.push(`/dashboard/${project._id}/execution?runId=${res.data.runId}`)
       }
     } catch (err: any) {
       setRunError(err?.response?.data?.error || err?.message || 'Failed to start execution')
@@ -420,7 +424,7 @@ export function ModuleExplorerView() {
         </div>
 
         {/* Stats Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border/50">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-6 border-t border-border/50">
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">SRS Documents</span>
             <span className="text-xl font-extrabold text-foreground">{srsDocumentsList.length}</span>
@@ -436,6 +440,10 @@ export function ModuleExplorerView() {
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Generated Tests</span>
             <span className="text-xl font-extrabold text-foreground">{overallStats.totalTests}</span>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Regressive Tests</span>
+            <span className="text-xl font-extrabold text-foreground">{overallStats.totalRegressive}</span>
           </div>
         </div>
 
@@ -552,6 +560,18 @@ export function ModuleExplorerView() {
                           >
                             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> Export Excel
                           </button>
+                          {suite?.testCases && suite.testCases.filter(tc => tc.isRegressive).length > 0 && (
+                            <button
+                              onClick={() => {
+                                const regressiveTests = suite.testCases.filter(tc => tc.isRegressive)
+                                handleOpenRunDialog('srs', `${doc.originalFileName} (Regressive)`, regressiveTests, suite._id)
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-all cursor-pointer"
+                              title="Run only regressive test cases in this SRS document"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" /> Run Regressive ({suite.testCases.filter(tc => tc.isRegressive).length})
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenRunDialog('srs', doc.originalFileName, suite.testCases, suite._id)}
                             className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
@@ -694,6 +714,19 @@ export function ModuleExplorerView() {
                                       >
                                         <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
                                       </button>
+                                      {mod.features.flatMap(f => f.testCases).filter(tc => tc.isRegressive).length > 0 && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            const modRegTcs = mod.features.flatMap(f => f.testCases).filter(tc => tc.isRegressive)
+                                            handleOpenRunDialog('module', `${mod.name} (Regressive)`, modRegTcs, suite._id)
+                                          }}
+                                          title="Run only regressive tests in module"
+                                          className="p-1.5 rounded-lg hover:bg-violet-500/10 text-muted-foreground hover:text-violet-400 transition-all cursor-pointer"
+                                        >
+                                          <RotateCcw className="w-4 h-4" />
+                                        </button>
+                                      )}
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation()

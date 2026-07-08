@@ -1,14 +1,14 @@
 'use client'
 
 import React from 'react'
-import { ShieldCheck, Layers, ListChecks, Footprints } from 'lucide-react'
+import { ShieldCheck, Layers, ListChecks, RotateCcw } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TestCase } from '../../types'
 
 /** Top-of-suite stats: test cases, steps, modules, scenario + priority breakdown. */
 export function SuiteSummary({ testCases }: { testCases: TestCase[] }) {
-  const totalSteps = testCases.reduce((sum, tc) => sum + (tc.steps?.length || 0), 0)
+  const regressiveCount = testCases.filter(tc => tc.isRegressive).length
   const moduleCount = new Set(testCases.map(tc => tc.module || 'General')).size
   const priorityCounts = testCases.reduce((acc, tc) => {
     const key = (tc.priority || '').toLowerCase()
@@ -32,11 +32,11 @@ export function SuiteSummary({ testCases }: { testCases: TestCase[] }) {
         </Card>
         <Card className="flex-row items-center gap-3 px-4 py-3">
           <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-            <Footprints className="w-4.5 h-4.5 text-blue-500" />
+            <RotateCcw className="w-4.5 h-4.5 text-blue-500" />
           </div>
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Steps</div>
-            <div className="text-xl font-bold tabular-nums leading-tight">{totalSteps}</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Regressive</div>
+            <div className="text-xl font-bold tabular-nums leading-tight">{regressiveCount}</div>
           </div>
         </Card>
         <Card className="flex-row items-center gap-3 px-4 py-3">
