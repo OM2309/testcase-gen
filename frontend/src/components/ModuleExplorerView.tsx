@@ -683,17 +683,29 @@ export function ModuleExplorerView() {
                                   </div>
 
                                   {isSuiteGenerated && mod.testCasesCount > 0 && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        const allModTcs = mod.features.flatMap(f => f.testCases)
-                                        handleOpenRunDialog('module', mod.name, allModTcs, suite._id)
-                                      }}
-                                      title="Run all tests in module"
-                                      className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
-                                    >
-                                      <PlayCircle className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleDownloadExcel(`${doc.originalFileName}_${mod.name}`, [mod])
+                                        }}
+                                        title="Export module to Excel"
+                                        className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500 transition-all cursor-pointer"
+                                      >
+                                        <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          const allModTcs = mod.features.flatMap(f => f.testCases)
+                                          handleOpenRunDialog('module', mod.name, allModTcs, suite._id)
+                                        }}
+                                        title="Run all tests in module"
+                                        className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
+                                      >
+                                        <PlayCircle className="w-4 h-4" />
+                                      </button>
+                                    </div>
                                   )}
 
                                   <div className="text-muted-foreground p-0.5">

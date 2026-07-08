@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, PlayCircle } from 'lucide-react'
+import { FileSpreadsheet, Plus, PlayCircle } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
+import * as XLSX from 'xlsx'
 
 import { Step, TestCase } from '../types'
 import { executionService } from '../services/executionService'
@@ -103,6 +105,62 @@ export function TestCasesView() {
   })
 
   const selectedTc = testCases.find(tc => tc.id === selectedId) || null
+
+  const handleExportExcel = useCallback(() => {
+    if (!project) return
+    try {
+      const wb = XLSX.utils.book_new()
+      
+      const targetTestCases = selectedModule === 'All' 
+        ? testCases 
+        : testCases.filter(tc => (tc.module || 'General') === selectedModule)
+
+      if (targetTestCases.length === 0) {
+        toast.error('No test cases to export!')
+        return
+      }
+
+      // Group test cases by module name
+      const modulesMap = new Map<string, TestCase[]>()
+      targetTestCases.forEach(tc => {
+        const modName = tc.module || 'General'
+        if (!modulesMap.has(modName)) {
+          modulesMap.set(modName, [])
+        }
+        modulesMap.get(modName)!.push(tc)
+      })
+
+      modulesMap.forEach((cases, modName) => {
+        const sheetData = cases.map(tc => ({
+          'Test Case ID': tc.id,
+          'Title': tc.title,
+          'Description': tc.description || '',
+          'Feature': tc.feature || '',
+          'Priority': tc.priority,
+          'Scenario Type': tc.scenario_type || '',
+          'Expected Result': tc.expected_result || '',
+          'Steps': tc.steps.map(s => `${s.step_number}. ${s.action} ${s.target || ''} ${s.value ? `(${s.value})` : ''}`).join('\n')
+        }))
+
+        const ws = XLSX.utils.json_to_sheet(sheetData)
+        const cleanSheetName = modName
+          .replace(/[:\\/?*\[\]]/g, '')
+          .substring(0, 30) || 'General'
+        
+        XLSX.utils.book_append_sheet(wb, ws, cleanSheetName)
+      })
+
+      const fileName = selectedModule === 'All' 
+        ? `${project.projectName}_All_TestCases.xlsx`
+        : `${project.projectName}_${selectedModule}_TestCases.xlsx`
+
+      XLSX.writeFile(wb, fileName)
+      toast.success('Excel file downloaded successfully! 📊')
+    } catch (err: any) {
+      console.error('Failed to export Excel:', err)
+      toast.error('Failed to export Excel file.')
+    }
+  }, [testCases, selectedModule, project])
 
   const handleSave = async (updatedCases?: TestCase[]) => {
     if (!project || !activeTestSuite) return
@@ -332,6 +390,14 @@ export function TestCasesView() {
             className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${saveSuccess ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-card text-foreground hover:bg-muted border-border'}`}
           >
             {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
+          </button>
+          <button
+            onClick={handleExportExcel}
+            disabled={testCases.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-card text-foreground hover:bg-muted border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title={selectedModule === 'All' ? "Export all modules and test cases to Excel sheets" : `Export ${selectedModule} test cases to Excel`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export Excel
           </button>
           <button
             onClick={openCreateDialog}
