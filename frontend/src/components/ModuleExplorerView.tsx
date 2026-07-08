@@ -5,13 +5,16 @@ import { useRouter } from 'next/navigation'
 import {
   FolderOpen, FolderClosed, Layers, Cpu, PlayCircle, Eye, Loader2,
   AlertCircle, Sparkles, BrainCircuit, FlaskConical, Search, ChevronDown,
-  ChevronRight, Play, Info, FileText, ArrowRight, Settings, Plus, CheckCircle2
+  ChevronRight, Play, Info, FileText, ArrowRight, Settings, Plus, CheckCircle2,
+  FileSpreadsheet
 } from 'lucide-react'
 import { TestCase } from '../types'
 import { SrsUploadSection } from './SrsUploadSection'
 import { getPriorityBadge } from '../helpers/utils'
 import { executionService } from '../services/executionService'
 import { useProject } from '../contexts/ProjectContext'
+import { toast } from 'sonner'
+import * as XLSX from 'xlsx'
 import {
   Dialog,
   DialogContent,
@@ -111,6 +114,51 @@ export function ModuleExplorerView() {
     const key = `${srsId}::${modName}::${featName}`
     setExpandedFeatures(prev => ({ ...prev, [key]: !prev[key] }))
   }
+
+  const handleDownloadExcel = useCallback((srsName: string, modules: ModuleGroup[]) => {
+    try {
+      const wb = XLSX.utils.book_new()
+      let hasData = false
+
+      modules.forEach(mod => {
+        const testCases = mod.features.flatMap(f => f.testCases)
+        if (testCases.length === 0) return
+
+        hasData = true
+
+        const sheetData = testCases.map(tc => ({
+          'Test Case ID': tc.id,
+          'Title': tc.title,
+          'Description': tc.description || '',
+          'Feature': tc.feature || '',
+          'Priority': tc.priority,
+          'Scenario Type': tc.scenario_type || '',
+          'Expected Result': tc.expected_result || '',
+          'Steps': tc.steps.map(s => `${s.step_number}. ${s.action} ${s.target || ''} ${s.value ? `(${s.value})` : ''}`).join('\n')
+        }))
+
+        const ws = XLSX.utils.json_to_sheet(sheetData)
+        
+        const cleanSheetName = mod.name
+          .replace(/[:\\/?*\[\]]/g, '')
+          .substring(0, 30) || 'General'
+
+        XLSX.utils.book_append_sheet(wb, ws, cleanSheetName)
+      })
+
+      if (!hasData) {
+        toast.error('No test cases generated to export yet!')
+        return
+      }
+
+      const safeFileName = `${srsName.replace(/\.[^/.]+$/, "")}_TestCases.xlsx`
+      XLSX.writeFile(wb, safeFileName)
+      toast.success('Excel file downloaded successfully! 📊')
+    } catch (err: any) {
+      console.error('Failed to export Excel:', err)
+      toast.error('Failed to export Excel file.')
+    }
+  }, [])
 
   // Get module tree structure for a specific SRS document ID
   const getSrsTreeData = useCallback((srsId: string) => {
@@ -497,6 +545,13 @@ export function ModuleExplorerView() {
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">
                             <CheckCircle2 className="w-3 h-3" /> Fully Covered
                           </span>
+                          <button
+                            onClick={() => handleDownloadExcel(doc.originalFileName, srsModules)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border bg-card hover:bg-muted transition-colors cursor-pointer"
+                            title="Export all modules and test cases to Excel sheets"
+                          >
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> Export Excel
+                          </button>
                           <button
                             onClick={() => handleOpenRunDialog('srs', doc.originalFileName, suite.testCases, suite._id)}
                             className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
