@@ -1,5 +1,12 @@
 import mongoose from 'mongoose'
 
+const srsDocumentSchema = new mongoose.Schema({
+  originalFileName: { type: String, required: true },
+  filePath: { type: String, required: true },
+  parsedText: { type: String, default: '' },
+  uploadedAt: { type: Date, default: Date.now }
+}, { _id: true })
+
 const projectSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -16,6 +23,7 @@ const projectSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  // Legacy single-file fields kept for backward compatibility
   documentName: {
     type: String,
     trim: true,
@@ -23,20 +31,25 @@ const projectSchema = new mongoose.Schema({
   },
   originalFileName: {
     type: String,
-    required: true
+    default: ''
   },
   filePath: {
     type: String,
-    required: true
+    default: ''
   },
   parsedText: {
     type: String,
     default: ''
   },
+  // New: multiple SRS documents array
+  srsDocuments: {
+    type: [srsDocumentSchema],
+    default: []
+  },
   status: {
     type: String,
-    enum: ['uploaded', 'analyzing', 'analyzed', 'tests_generated', 'failed'],
-    default: 'uploaded',
+    enum: ['created', 'uploaded', 'analyzing', 'analyzed', 'tests_generated', 'failed'],
+    default: 'created',
     index: true
   },
   errorMessage: {

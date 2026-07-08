@@ -1,10 +1,10 @@
 import express from 'express'
 import { generateRequirements, getRequirementsByProjectId } from './requirement.controller.js'
-import { asyncHandler } from '../../utils/asyncHandler.js'
 
 const router = express.Router()
 
-router.post('/requirements/generate/:projectId', asyncHandler(generateRequirements))
-router.get('/requirements/:projectId', asyncHandler(getRequirementsByProjectId))
+router.post('/requirements/generate/:projectId', generateRequirements)
+router.post('/requirements/generate/:projectId/:srsDocumentId', generateRequirements)
+router.get('/requirements/:projectId', getRequirementsByProjectId)
 
 export default router

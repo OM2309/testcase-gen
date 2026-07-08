@@ -1,13 +1,21 @@
 import express from 'express'
 import upload from '../../middleware/multerConfig.js'
-import { createProject, getProjects, getProjectById, deleteProject } from './project.controller.js'
-import { asyncHandler } from '../../utils/asyncHandler.js'
+import {
+  createProject,
+  createProjectOnly,
+  addSrsToProject,
+  getProjects,
+  getProjectById,
+  deleteProject
+} from './project.controller.js'
 
 const router = express.Router()
 
-router.post('/projects', upload.single('srs'), asyncHandler(createProject))
-router.get('/projects', asyncHandler(getProjects))
-router.get('/projects/:projectId', asyncHandler(getProjectById))
-router.delete('/projects/:projectId', asyncHandler(deleteProject))
+router.post('/projects/create', createProjectOnly)
+router.post('/projects', upload.single('srs'), createProject)
+router.post('/projects/:projectId/srs', upload.single('srs'), addSrsToProject)
+router.get('/projects', getProjects)
+router.get('/projects/:projectId', getProjectById)
+router.delete('/projects/:projectId', deleteProject)
 
 export default router

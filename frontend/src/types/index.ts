@@ -1,22 +1,48 @@
+export interface SrsDocument {
+  _id: string
+  originalFileName: string
+  filePath: string
+  parsedText: string
+  uploadedAt: string
+}
+
 export interface Project {
   _id: string
   projectName: string
   projectDescription: string
   documentName: string
   originalFileName: string
-  status: 'uploaded' | 'analyzing' | 'analyzed' | 'tests_generated' | 'failed'
+  status: 'created' | 'uploaded' | 'analyzing' | 'analyzed' | 'tests_generated' | 'failed'
   errorMessage?: string
   createdAt: string
   processingCompletedAt?: string
   hasTestSuite?: boolean
   testCasesCount?: number
   parsedText?: string
+  srsDocuments?: SrsDocument[]
+}
+
+export interface RequirementAnalysis {
+  _id: string
+  projectId: string
+  srsDocumentId: string | null
+  analyzedData: any
+  status: string
+}
+
+export interface TestSuiteData {
+  _id: string
+  projectId: string
+  srsDocumentId: string | null
+  suiteName: string
+  projectName: string
+  testCases: TestCase[]
 }
 
 export interface ProjectDetail {
   project: Project
-  requirementAnalysis: any | null
-  testSuite: any | null
+  requirementAnalyses: RequirementAnalysis[]
+  testSuites: TestSuiteData[]
 }
 
 export interface Step {

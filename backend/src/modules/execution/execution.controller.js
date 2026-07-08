@@ -5,6 +5,7 @@
  */
 
 import { ApiError } from '../../utils/apiError.js'
+import { sendSuccess } from '../../utils/responseHelper.js'
 import {
   startExecution,
   getExecutionRun,
@@ -32,11 +33,10 @@ export async function startExecutionHandler(req, res, next) {
       testCaseIds: Array.isArray(testCaseIds) ? testCaseIds : null
     })
 
-    return res.status(201).json({
-      success: true,
+    return sendSuccess(res, 'Execution started successfully.', {
       runId,
       message: 'Execution started'
-    })
+    }, 201)
   } catch (err) {
     next(err)
   }
@@ -44,7 +44,7 @@ export async function startExecutionHandler(req, res, next) {
 
 /**
  * GET /api/executions/:runId
- * Returns full execution run details (used for polling).
+ * Returns full execution run details (used for polling/socket room initialization).
  */
 export async function getExecutionRunHandler(req, res, next) {
   try {
@@ -53,10 +53,7 @@ export async function getExecutionRunHandler(req, res, next) {
     const run = await getExecutionRun(runId)
     if (!run) throw new ApiError('Execution run not found', 404)
 
-    return res.status(200).json({
-      success: true,
-      data: run
-    })
+    return sendSuccess(res, 'Execution run fetched successfully.', run)
   } catch (err) {
     next(err)
   }
@@ -72,10 +69,7 @@ export async function getProjectExecutionsHandler(req, res, next) {
 
     const executions = await getProjectExecutions(projectId)
 
-    return res.status(200).json({
-      success: true,
-      data: executions
-    })
+    return sendSuccess(res, 'Project execution runs fetched successfully.', executions)
   } catch (err) {
     next(err)
   }
@@ -92,10 +86,7 @@ export async function getExecutionStatusHandler(req, res, next) {
     const status = await getExecutionStatus(runId)
     if (!status) throw new ApiError('Execution run not found', 404)
 
-    return res.status(200).json({
-      success: true,
-      data: status
-    })
+    return sendSuccess(res, 'Execution status fetched successfully.', status)
   } catch (err) {
     next(err)
   }

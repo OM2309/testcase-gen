@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react'
 import { PlayCircle, Loader2, AlertTriangle } from 'lucide-react'
-import { useExecutionRunQuery } from '../hooks/queries'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useExecutionSocket } from '../hooks/useExecutionSocket'
 import { executionService } from '../services/executionService'
 import { TestCaseResult } from '../types'
 import { ExecutionHeader } from './execution/execution-header'
@@ -11,24 +12,16 @@ import { ExecutionTestCaseList } from './execution/execution-testcase-list'
 import { ExecutionConsole } from './execution/execution-console'
 import { ExecutionScreenshotPanel } from './execution/execution-screenshot-panel'
 
-interface ExecutionViewProps {
-  runId: string | null
-  /** Called when a re-run is started so the parent can swap to the new runId. */
-  onRunStarted?: (runId: string) => void
-}
+export function ExecutionView() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const runId = searchParams.get('runId')
 
-export function ExecutionView({ runId, onRunStarted }: ExecutionViewProps) {
-  const query = useExecutionRunQuery(runId)
-  const run = query.data ?? null
-  const loading = query.isLoading
-  const error = query.error ? (query.error as Error).message : null
+  const { run, loading, error, refetch } = useExecutionSocket(runId)
   const isPolling = !!run && run.status !== 'completed' && run.status !== 'failed'
-  const refetch = query.refetch
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<string | null>(null)
   const [rerunning, setRerunning] = useState(false)
 
-  // Derive the displayed test case: the user's explicit selection, otherwise
-  // fall back to the first failed test case (most useful) once data arrives.
   const selectedTestCase: TestCaseResult | null = useMemo(() => {
     if (!run) return null
     if (selectedTestCaseId) {
@@ -47,9 +40,9 @@ export function ExecutionView({ runId, onRunStarted }: ExecutionViewProps) {
         baseUrl: run.runConfig.baseUrl,
         headless: run.runConfig.headless
       })
-      if (res.success && onRunStarted) {
+      if (res.success) {
         setSelectedTestCaseId(null)
-        onRunStarted(res.runId)
+        router.push(`/dashboard/${run.projectId}/execution?runId=${res.runId}`)
       }
     } catch (err) {
       console.error('Re-run failed', err)
@@ -57,8 +50,6 @@ export function ExecutionView({ runId, onRunStarted }: ExecutionViewProps) {
       setRerunning(false)
     }
   }
-
-  /* -------- Empty / loading / error states -------- */
 
   if (!runId) {
     return (
@@ -101,14 +92,13 @@ export function ExecutionView({ runId, onRunStarted }: ExecutionViewProps) {
         run={run}
         isPolling={isPolling}
         onRefresh={() => refetch()}
-        onRerun={onRunStarted ? handleRerun : undefined}
+        onRerun={handleRerun}
         rerunning={rerunning}
       />
 
       <ExecutionSummaryCards run={run} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left — test case list */}
         <div className="lg:col-span-7">
           <ExecutionTestCaseList
             testCases={run.testCaseResults}
@@ -118,7 +108,6 @@ export function ExecutionView({ runId, onRunStarted }: ExecutionViewProps) {
           />
         </div>
 
-        {/* Right — console + screenshot */}
         <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-4">
           <ExecutionConsole logs={run.executionLogs} isPolling={isPolling} />
           <ExecutionScreenshotPanel testCase={selectedTestCase} />

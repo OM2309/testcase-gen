@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from "react"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -10,33 +11,48 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { FolderKanban, Upload, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut } from "lucide-react"
+import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
-import { Project } from "../types"
+import { useProject } from "../contexts/ProjectContext"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  activeTab: string
-  setActiveTab: (tab: any) => void
-  hasRequirements: boolean
-  hasTestSuite: boolean
-  hasExecution: boolean
-  selectedProject: Project | null
   theme: 'dark' | 'light'
   setTheme: (theme: 'dark' | 'light') => void
 }
 
 export function AppSidebar({
-  activeTab,
-  setActiveTab,
-  hasRequirements,
-  hasTestSuite,
-  hasExecution,
-  selectedProject,
   theme,
   setTheme,
   ...props
 }: AppSidebarProps) {
   const { data: session } = useSession()
+  const pathname = usePathname()
+  const router = useRouter()
+  const { project, requirementAnalyses, testSuites } = useProject()
+
+  const hasRequirements = requirementAnalyses && requirementAnalyses.some(r => r.status === 'completed')
+  const hasTestSuite = testSuites && testSuites.length > 0
+
+  const getActiveTab = () => {
+    if (pathname.includes('/modules')) return 'modules'
+    if (pathname.includes('/requirements')) return 'requirements'
+    if (pathname.includes('/test-cases')) return 'testcases'
+    if (pathname.includes('/execution')) return 'execution'
+    return 'projects'
+  }
+
+  const activeTab = getActiveTab()
+
+  const navigateTo = (tab: string) => {
+    if (!project) return
+    const id = project._id
+    if (tab === 'projects') router.push('/dashboard/projects')
+    else if (tab === 'modules') router.push(`/dashboard/${id}/modules`)
+    else if (tab === 'requirements') router.push(`/dashboard/${id}/requirements`)
+    else if (tab === 'testcases') router.push(`/dashboard/${id}/test-cases`)
+    else if (tab === 'execution') router.push(`/dashboard/${id}/execution`)
+  }
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader className="border-b border-sidebar-border px-6 py-5">
@@ -60,7 +76,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={activeTab === 'projects'}
-              onClick={() => setActiveTab('projects')}
+              onClick={() => router.push('/dashboard/projects')}
               className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 cursor-pointer"
             >
               <FolderKanban className="w-4 h-4" /> Repository
@@ -69,19 +85,9 @@ export function AppSidebar({
 
           <SidebarMenuItem>
             <SidebarMenuButton
-              isActive={activeTab === 'upload'}
-              onClick={() => setActiveTab('upload')}
-              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 cursor-pointer"
-            >
-              <Upload className="w-4 h-4" /> Upload PRD
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton
               isActive={activeTab === 'modules'}
-              disabled={!selectedProject}
-              onClick={() => setActiveTab('modules')}
+              disabled={!project}
+              onClick={() => navigateTo('modules')}
               className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Layers className="w-4 h-4" /> Modules
@@ -91,8 +97,8 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={activeTab === 'requirements'}
-              disabled={!hasRequirements}
-              onClick={() => setActiveTab('requirements')}
+              disabled={!project || !hasRequirements}
+              onClick={() => navigateTo('requirements')}
               className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <FileCheck className="w-4 h-4" /> Requirements
@@ -102,8 +108,8 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={activeTab === 'testcases'}
-              disabled={!hasTestSuite}
-              onClick={() => setActiveTab('testcases')}
+              disabled={!project || !hasTestSuite}
+              onClick={() => navigateTo('testcases')}
               className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ShieldCheck className="w-4 h-4" /> Test Suite
@@ -113,23 +119,21 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={activeTab === 'execution'}
-              disabled={!hasExecution}
-              onClick={() => setActiveTab('execution')}
+              disabled={!project}
+              onClick={() => navigateTo('execution')}
               className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <PlayCircle className="w-4 h-4" /> Execution
             </SidebarMenuButton>
           </SidebarMenuItem>
-
-
         </SidebarMenu>
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-4 bg-muted/10">
-        {selectedProject && (
+        {project && (
           <div className="border border-border/60 bg-card rounded-lg p-3 space-y-1">
             <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">Active Project</span>
-            <span className="font-semibold text-xs text-foreground block line-clamp-1">{selectedProject.projectName}</span>
+            <span className="font-semibold text-xs text-foreground block line-clamp-1">{project.projectName}</span>
           </div>
         )}
 

@@ -1,14 +1,17 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   FolderOpen, FolderClosed, Layers, Cpu, PlayCircle, Eye, Loader2,
   AlertCircle, Sparkles, BrainCircuit, FlaskConical, Search, ChevronDown,
   ChevronRight, Play, Info, FileText, ArrowRight, Settings
 } from 'lucide-react'
-import { Project, TestCase } from '../types'
+import { TestCase } from '../types'
+import { SrsUploadSection } from './SrsUploadSection'
 import { getPriorityBadge } from '../helpers/utils'
 import { executionService } from '../services/executionService'
+import { useProject } from '../contexts/ProjectContext'
 import {
   Dialog,
   DialogContent,
@@ -17,20 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-
-interface ModuleExplorerViewProps {
-  projectId: string
-  project: Project
-  requirements: any | null
-  testSuiteData: any | null
-  onNavigateToTab: (tab: 'projects' | 'upload' | 'requirements' | 'testcases' | 'execution') => void
-  onSelectTestCase: (id: string) => void
-  onRunAgent1?: () => void
-  onRunAgent2?: () => void
-  onRunStarted?: (runId: string) => void
-  agentRunning?: 'agent1' | 'agent2' | null
-  agentError?: string | null
-}
 
 interface FeatureGroup {
   name: string
@@ -45,19 +34,22 @@ interface ModuleGroup {
   testCasesCount: number
 }
 
-export function ModuleExplorerView({
-  projectId,
-  project,
-  requirements,
-  testSuiteData,
-  onNavigateToTab,
-  onSelectTestCase,
-  onRunAgent1,
-  onRunAgent2,
-  onRunStarted,
-  agentRunning,
-  agentError
-}: ModuleExplorerViewProps) {
+export function ModuleExplorerView() {
+  const router = useRouter()
+  const {
+    project,
+    selectedSrsId,
+    setSelectedSrsId,
+    requirementAnalyses,
+    testSuites,
+    loading,
+    agentRunning,
+    agentError,
+    runAgent1,
+    runAgent2,
+    refreshProject
+  } = useProject()
+
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
   const [expandedFeatures, setExpandedFeatures] = useState<Record<string, boolean>>({})
@@ -68,7 +60,6 @@ export function ModuleExplorerView({
   const [runHeadless, setRunHeadless] = useState(true)
   const [starting, setStarting] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
-  // Target of execution: { type: 'project' | 'module' | 'feature' | 'testcase', name?: string, ids?: string[] }
   const [runTarget, setRunTarget] = useState<{
     type: 'project' | 'module' | 'feature' | 'testcase'
     name: string
@@ -84,13 +75,24 @@ export function ModuleExplorerView({
     setExpandedFeatures(prev => ({ ...prev, [featKey]: !prev[featKey] }))
   }
 
+  // Find active requirement analysis and test suite for the selected SRS document
+  const activeRequirement = useMemo(() => {
+    if (!selectedSrsId) return requirementAnalyses[0] || null
+    return requirementAnalyses.find(r => r.srsDocumentId === selectedSrsId) || null
+  }, [requirementAnalyses, selectedSrsId])
+
+  const activeTestSuite = useMemo(() => {
+    if (!selectedSrsId) return testSuites[0] || null
+    return testSuites.find(t => t.srsDocumentId === selectedSrsId) || null
+  }, [testSuites, selectedSrsId])
+
   // Build the hierarchical Module -> Feature -> Test Case data structure
   const modulesList = useMemo(() => {
     const modulesMap = new Map<string, { description?: string, features: Map<string, { description?: string, testCases: TestCase[] }> }>()
 
-    // 1. Add structure from Requirements Analysis (Agent 1)
-    if (requirements?.modules) {
-      requirements.modules.forEach((mod: any) => {
+    const reqData = activeRequirement?.analyzedData
+    if (reqData?.modules) {
+      reqData.modules.forEach((mod: any) => {
         const modName = mod.module_name || 'General'
         if (!modulesMap.has(modName)) {
           modulesMap.set(modName, { description: mod.description, features: new Map() })
@@ -108,9 +110,8 @@ export function ModuleExplorerView({
       })
     }
 
-    // 2. Add Test Cases from Test Suite (Agent 2) and map to structures
-    if (testSuiteData?.testCases) {
-      testSuiteData.testCases.forEach((tc: TestCase) => {
+    if (activeTestSuite?.testCases) {
+      activeTestSuite.testCases.forEach((tc: TestCase) => {
         const modName = tc.module || 'General'
         const featName = tc.feature || 'General'
 
@@ -124,14 +125,12 @@ export function ModuleExplorerView({
         }
         const featGroup = modGroup.features.get(featName)!
         
-        // Avoid duplicate push if already present
         if (!featGroup.testCases.some(t => t.id === tc.id)) {
           featGroup.testCases.push(tc)
         }
       })
     }
 
-    // Convert Map back to arrays
     const result: ModuleGroup[] = []
     modulesMap.forEach((modVal, modName) => {
       const features: FeatureGroup[] = []
@@ -146,7 +145,6 @@ export function ModuleExplorerView({
         })
       })
 
-      // Sort features by name
       features.sort((a, b) => a.name.localeCompare(b.name))
 
       result.push({
@@ -157,11 +155,9 @@ export function ModuleExplorerView({
       })
     })
 
-    // Sort modules by name
     return result.sort((a, b) => a.name.localeCompare(b.name))
-  }, [requirements, testSuiteData])
+  }, [activeRequirement, activeTestSuite])
 
-  // Filter based on search query
   const filteredModules = useMemo(() => {
     if (!searchQuery) return modulesList
 
@@ -199,7 +195,6 @@ export function ModuleExplorerView({
     }).filter(Boolean) as ModuleGroup[]
   }, [modulesList, searchQuery])
 
-  // Execute test runner dialog helpers
   const handleOpenRunDialog = (
     type: 'project' | 'module' | 'feature' | 'testcase',
     name: string,
@@ -213,7 +208,7 @@ export function ModuleExplorerView({
   }
 
   const handleStartRun = async () => {
-    if (!runTarget || !testSuiteData?._id) return
+    if (!runTarget || !activeTestSuite?._id || !project) return
     setRunError(null)
     if (!/^https?:\/\//i.test(runBaseUrl.trim())) {
       setRunError('Base URL must start with http:// or https://')
@@ -223,15 +218,15 @@ export function ModuleExplorerView({
     try {
       setStarting(true)
       const res = await executionService.startExecution({
-        projectId,
-        testSuiteId: testSuiteData._id,
+        projectId: project._id,
+        testSuiteId: activeTestSuite._id,
         baseUrl: runBaseUrl.trim(),
         headless: runHeadless,
         testCaseIds: runTarget.ids
       })
       if (res.success) {
         setIsRunOpen(false)
-        onRunStarted?.(res.runId)
+        router.push(`/dashboard/${project._id}/execution?runId=${res.runId}`)
       }
     } catch (err: any) {
       setRunError(err?.response?.data?.error || err?.message || 'Failed to start execution')
@@ -241,9 +236,9 @@ export function ModuleExplorerView({
   }
 
   const allTestCases = useMemo(() => {
-    if (!testSuiteData?.testCases) return []
-    return testSuiteData.testCases
-  }, [testSuiteData])
+    if (!activeTestSuite?.testCases) return []
+    return activeTestSuite.testCases
+  }, [activeTestSuite])
 
   const totalFeatures = useMemo(() => {
     let count = 0
@@ -251,15 +246,30 @@ export function ModuleExplorerView({
     return count
   }, [modulesList])
 
-  // Action: go to edit test case
   const handleEditTestCase = (id: string) => {
-    onSelectTestCase(id)
-    onNavigateToTab('testcases')
+    if (!project) return
+    router.push(`/dashboard/${project._id}/test-cases?caseId=${id}`)
   }
 
-  // Active status parsing
-  const isAnalyzed = project.status === 'analyzed' || project.status === 'tests_generated'
-  const isTestsGenerated = project.status === 'tests_generated' && allTestCases.length > 0
+  if (loading && !project) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm">Loading project details…</p>
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/20 text-xs text-muted-foreground">
+        Project not found.
+      </div>
+    )
+  }
+
+  const isSrsAnalyzed = activeRequirement && activeRequirement.status === 'completed'
+  const isTestsGenerated = activeTestSuite && allTestCases.length > 0
 
   return (
     <div className="space-y-6">
@@ -346,16 +356,23 @@ export function ModuleExplorerView({
 
       {/* Header Panel */}
       <div className="border border-border bg-card/40 rounded-2xl p-6 relative overflow-hidden">
-        {/* Decorative backdrop elements */}
         <div className="absolute -right-24 -top-24 w-60 h-60 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-primary tracking-wider uppercase">Project Modules</span>
-              <span className="px-2 py-0.5 rounded-full border bg-muted text-[10px] font-semibold">
-                {project.originalFileName}
-              </span>
+              {project.originalFileName ? (
+                <span className="px-2 py-0.5 rounded-full border bg-muted text-[10px] font-semibold">
+                  {project.srsDocuments && project.srsDocuments.length > 1
+                    ? `${project.srsDocuments.length} SRS docs`
+                    : project.originalFileName}
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full border border-dashed border-border bg-muted/40 text-[10px] font-semibold text-muted-foreground">
+                  No SRS uploaded
+                </span>
+              )}
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">{project.projectName}</h1>
             {project.projectDescription && (
@@ -364,10 +381,9 @@ export function ModuleExplorerView({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Quick action buttons depending on state */}
-            {!isAnalyzed && onRunAgent1 && (
+            {!isSrsAnalyzed && (
               <button
-                onClick={onRunAgent1}
+                onClick={() => runAgent1(selectedSrsId || undefined)}
                 disabled={agentRunning === 'agent1'}
                 className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-60"
               >
@@ -383,9 +399,9 @@ export function ModuleExplorerView({
               </button>
             )}
 
-            {isAnalyzed && !isTestsGenerated && onRunAgent2 && (
+            {isSrsAnalyzed && !isTestsGenerated && (
               <button
-                onClick={onRunAgent2}
+                onClick={() => runAgent2(selectedSrsId || undefined)}
                 disabled={agentRunning === 'agent2'}
                 className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-60"
               >
@@ -404,7 +420,7 @@ export function ModuleExplorerView({
             {isTestsGenerated && (
               <>
                 <button
-                  onClick={() => onNavigateToTab('testcases')}
+                  onClick={() => router.push(`/dashboard/${project._id}/test-cases`)}
                   className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-xl border border-border bg-card hover:bg-muted transition-colors"
                 >
                   <Settings className="w-3.5 h-3.5" /> Open Suite Builder
@@ -420,8 +436,7 @@ export function ModuleExplorerView({
           </div>
         </div>
 
-        {/* Stats Strip */}
-        {isAnalyzed && (
+        {isSrsAnalyzed && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border/50">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Modules</span>
@@ -443,6 +458,16 @@ export function ModuleExplorerView({
             </div>
           </div>
         )}
+
+        <div className="mt-6 pt-6 border-t border-border/50">
+          <SrsUploadSection
+            projectId={project._id}
+            srsDocuments={project.srsDocuments ?? []}
+            onSrsUploaded={() => {
+              refreshProject()
+            }}
+          />
+        </div>
       </div>
 
       {agentError && (
@@ -452,8 +477,28 @@ export function ModuleExplorerView({
         </div>
       )}
 
+      {/* SRS Documents Tab Selector */}
+      {project.srsDocuments && project.srsDocuments.length > 1 && (
+        <div className="flex border-b border-border gap-2">
+          {project.srsDocuments.map((doc, idx) => (
+            <button
+              key={doc._id}
+              onClick={() => setSelectedSrsId(doc._id)}
+              className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+                selectedSrsId === doc._id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              SRS {idx + 1}: {doc.originalFileName}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Main Explorer View */}
-      {isAnalyzed ? (
+      {isSrsAnalyzed ? (
         <div className="space-y-4">
           {/* Filter Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-border bg-card/20 p-3 rounded-xl">
@@ -481,7 +526,6 @@ export function ModuleExplorerView({
                   key={mod.name}
                   className={`border rounded-2xl bg-card transition-all duration-200 ${isModExpanded ? 'border-border shadow-sm' : 'border-border/60 hover:border-border'}`}
                 >
-                  {/* Module Header */}
                   <div
                     onClick={() => toggleModule(mod.name)}
                     className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
@@ -510,7 +554,6 @@ export function ModuleExplorerView({
                         )}
                       </div>
 
-                      {/* Module action button */}
                       {isTestsGenerated && mod.testCasesCount > 0 && (
                         <button
                           onClick={(e) => {
@@ -531,7 +574,6 @@ export function ModuleExplorerView({
                     </div>
                   </div>
 
-                  {/* Module Content */}
                   {isModExpanded && (
                     <div className="px-5 pb-5 pt-1 border-t border-border/40 space-y-4 bg-muted/5">
                       {mod.features.length === 0 ? (
@@ -546,7 +588,6 @@ export function ModuleExplorerView({
                               key={feat.name}
                               className={`border rounded-xl bg-card overflow-hidden transition-all ${isFeatExpanded ? 'border-border' : 'border-border/50'}`}
                             >
-                              {/* Feature Header */}
                               <div
                                 onClick={() => toggleFeature(featKey)}
                                 className="flex items-center justify-between px-4 py-3 bg-muted/20 cursor-pointer select-none"
@@ -566,7 +607,6 @@ export function ModuleExplorerView({
                                     {feat.testCases.length} tests
                                   </span>
 
-                                  {/* Feature action button */}
                                   {isTestsGenerated && feat.testCases.length > 0 && (
                                     <button
                                       onClick={(e) => {
@@ -586,21 +626,18 @@ export function ModuleExplorerView({
                                 </div>
                               </div>
 
-                              {/* Feature Content */}
                               {isFeatExpanded && (
                                 <div className="p-4 border-t border-border/40 bg-card space-y-3">
                                   {feat.testCases.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
                                       <FlaskConical className="w-6 h-6 text-muted-foreground/60" />
                                       <p className="text-xs text-muted-foreground">No test cases generated for this feature yet.</p>
-                                      {onRunAgent2 && (
-                                        <button
-                                          onClick={onRunAgent2}
-                                          className="text-[11px] text-primary font-bold hover:underline inline-flex items-center gap-1 mt-1"
-                                        >
-                                          Generate suite <ArrowRight className="w-3 h-3" />
-                                        </button>
-                                      )}
+                                      <button
+                                        onClick={() => runAgent2(selectedSrsId || undefined)}
+                                        className="text-[11px] text-primary font-bold hover:underline inline-flex items-center gap-1 mt-1"
+                                      >
+                                        Generate suite <ArrowRight className="w-3 h-3" />
+                                      </button>
                                     </div>
                                   ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -676,14 +713,25 @@ export function ModuleExplorerView({
             <BrainCircuit className="w-8 h-8 text-primary" />
           </div>
           <div className="space-y-1.5 max-w-sm">
-            <h3 className="font-semibold text-lg">Requirements Analysis Required</h3>
-            <p className="text-sm text-muted-foreground">
-              To browse modules and features, first analyze the project document using Agent 1.
-            </p>
+            {project.status === 'created' || (!project.originalFileName && !(project.srsDocuments?.length)) ? (
+              <>
+                <h3 className="font-semibold text-lg">Upload an SRS Document</h3>
+                <p className="text-sm text-muted-foreground">
+                  Upload your SRS document above to get started with requirements analysis and test generation.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="font-semibold text-lg">Requirements Analysis Required</h3>
+                <p className="text-sm text-muted-foreground">
+                  To browse modules and features, first analyze the selected SRS document using Agent 1.
+                </p>
+              </>
+            )}
           </div>
-          {onRunAgent1 && (
+          {(project.originalFileName || (project.srsDocuments?.length ?? 0) > 0) && (
             <button
-              onClick={onRunAgent1}
+              onClick={() => runAgent1(selectedSrsId || undefined)}
               disabled={agentRunning === 'agent1'}
               className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
             >

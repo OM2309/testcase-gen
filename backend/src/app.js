@@ -9,6 +9,7 @@ import projectRoutes from './modules/project/project.route.js'
 import requirementRoutes from './modules/requirement/requirement.route.js'
 import testsuiteRoutes from './modules/testsuite/testsuite.route.js'
 import executionRoutes from './modules/execution/execution.route.js'
+import { sendError } from './utils/responseHelper.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -49,14 +50,10 @@ app.get('/health', (_req, res) => {
 // Centralized error handling
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500
-  const status = err.status || 'error'
+  const message = err.message || 'Internal Server Error'
+  const details = process.env.NODE_ENV === 'development' ? { stack: err.stack } : null
 
-  res.status(statusCode).json({
-    success: false,
-    status,
-    error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  })
+  return sendError(res, message, statusCode, details)
 })
 
 export default app

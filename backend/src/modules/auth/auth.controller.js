@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken'
 import User from './user.model.js'
 import env from '../../config/env.js'
+import { sendSuccess, sendError } from '../../utils/responseHelper.js'
+import { ApiError } from '../../utils/apiError.js'
 
-// Helper to generate token
 function generateToken(user) {
   return jwt.sign(
     { id: user._id, email: user.email, username: user.username },
@@ -16,43 +17,23 @@ export async function register(req, res, next) {
     const { username, email, password } = req.body
 
     if (!username || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please provide username, email, and password.'
-      })
+      throw new ApiError('Please provide username, email, and password.', 400)
     }
 
-    // Check if email already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() })
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        error: 'An account with this email already exists.'
-      })
+      throw new ApiError('An account with this email already exists.', 400)
     }
 
-    // Create user (hashing is handled pre-save in User model)
-    const user = new User({
-      username,
-      email,
-      password
-    })
-
+    const user = new User({ username, email, password })
     await user.save()
 
     const token = generateToken(user)
 
-    return res.status(201).json({
-      success: true,
-      data: {
-        token,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email
-        }
-      }
-    })
+    return sendSuccess(res, 'Account created successfully.', {
+      token,
+      user: { id: user._id, username: user.username, email: user.email }
+    }, 201)
   } catch (err) {
     next(err)
   }
@@ -63,40 +44,24 @@ export async function login(req, res, next) {
     const { email, password } = req.body
 
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please provide email and password.'
-      })
+      throw new ApiError('Please provide email and password.', 400)
     }
 
     const user = await User.findOne({ email: email.toLowerCase() })
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid email or password.'
-      })
+      throw new ApiError('Invalid email or password.', 401)
     }
 
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid email or password.'
-      })
+      throw new ApiError('Invalid email or password.', 401)
     }
 
     const token = generateToken(user)
 
-    return res.json({
-      success: true,
-      data: {
-        token,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email
-        }
-      }
+    return sendSuccess(res, 'Login successful.', {
+      token,
+      user: { id: user._id, username: user.username, email: user.email }
     })
   } catch (err) {
     next(err)
@@ -107,19 +72,13 @@ export async function me(req, res, next) {
   try {
     const user = await User.findById(req.user.id).select('-password')
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found.'
-      })
+      throw new ApiError('User not found.', 404)
     }
 
-    return res.json({
-      success: true,
-      data: {
-        id: user._id,
-        username: user.username,
-        email: user.email
-      }
+    return sendSuccess(res, 'User fetched successfully.', {
+      id: user._id,
+      username: user.username,
+      email: user.email
     })
   } catch (err) {
     next(err)

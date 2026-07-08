@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Plus, PlayCircle } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import { Step, TestCase } from '../types'
 import { executionService } from '../services/executionService'
@@ -10,46 +11,55 @@ import { SuiteSummary } from './testsuite/SuiteSummary'
 import { TestCaseList } from './testsuite/TestCaseList'
 import { TestCaseDetail } from './testsuite/TestCaseDetail'
 import { TestCaseDialogs, TestCaseForm } from './testsuite/TestCaseDialogs'
+import { useProject } from '../contexts/ProjectContext'
 
-interface TestCasesViewProps {
-  projectId?: string
-  testSuiteId: string
-  testCases: TestCase[]
-  onSave?: (testCases: TestCase[]) => Promise<void>
-  onRunStarted?: (runId: string) => void
-  selectedTestCaseId?: string | null
-  onSelectTestCase?: (id: string | null) => void
-  onTestSuiteUpdate?: (suite: any) => void
-}
+export function TestCasesView() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const caseIdParam = searchParams.get('caseId')
 
+  const {
+    project,
+    selectedSrsId,
+    testSuites,
+    refreshProject
+  } = useProject()
 
-export function TestCasesView({
-  projectId,
-  testSuiteId,
-  testCases: initialTestCases = [],
-  onSave,
-  onRunStarted,
-  selectedTestCaseId,
-  onSelectTestCase,
-  onTestSuiteUpdate
-}: TestCasesViewProps) {
+  // Find active test suite for selected SRS
+  const activeTestSuite = useMemo(() => {
+    if (!selectedSrsId) return testSuites[0] || null
+    return testSuites.find(t => t.srsDocumentId === selectedSrsId) || null
+  }, [testSuites, selectedSrsId])
+
+  const initialTestCases = useMemo(() => {
+    return activeTestSuite?.testCases || []
+  }, [activeTestSuite])
+
   const [testCases, setTestCases] = useState<TestCase[]>(initialTestCases)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(selectedTestCaseId || initialTestCases[0]?.id || null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedModule, setSelectedModule] = useState('All')
   const [search, setSearch] = useState('')
   const [modulesList, setModulesList] = useState<Array<{ name: string; count: number }>>([])
 
+  // Keep state sync'd when initialTestCases change
   useEffect(() => {
-    if (selectedTestCaseId) {
-      setSelectedId(selectedTestCaseId)
-      const tc = testCases.find(t => t.id === selectedTestCaseId)
+    setTestCases(initialTestCases)
+    if (initialTestCases.length > 0 && !selectedId) {
+      setSelectedId(initialTestCases[0].id)
+    }
+  }, [initialTestCases])
+
+  useEffect(() => {
+    if (caseIdParam) {
+      setSelectedId(caseIdParam)
+      const tc = testCases.find(t => t.id === caseIdParam)
       if (tc) {
         setSelectedModule(tc.module || 'General')
       }
     }
-  }, [selectedTestCaseId, testCases])
+  }, [caseIdParam, testCases])
 
   // Run execution dialog state
   const [isRunOpen, setIsRunOpen] = useState(false)
@@ -57,7 +67,6 @@ export function TestCasesView({
   const [runHeadless, setRunHeadless] = useState(true)
   const [starting, setStarting] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
-  // null = run the whole suite; otherwise run just this test case id
   const [runTargetId, setRunTargetId] = useState<string | null>(null)
 
   const openRunDialog = (id: string | null = null) => {
@@ -72,7 +81,7 @@ export function TestCasesView({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [tcToDelete, setTcToDelete] = useState<string | null>(null)
 
-  // Form State (shared by create/edit dialogs)
+  // Form State
   const [form, setFormState] = useState<TestCaseForm>({
     title: '', module: 'General', priority: 'Medium', scenarioType: 'positive', expectedResult: ''
   })
@@ -95,20 +104,31 @@ export function TestCasesView({
 
   const selectedTc = testCases.find(tc => tc.id === selectedId) || null
 
+  const handleSave = async (updatedCases?: TestCase[]) => {
+    if (!project || !activeTestSuite) return
+    const targetCases = updatedCases || testCases
+    try {
+      setSaving(true)
+      const res = await agentService.saveTestSuite(project._id, activeTestSuite._id, targetCases)
+      if (res.success) {
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 1500)
+        await refreshProject()
+      }
+    } catch (err) {
+      console.error('Failed to save test suite', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const updateTestCase = useCallback((id: string, patch: Partial<TestCase>) => {
     setTestCases(prev => {
       const next = prev.map(tc => tc.id === id ? { ...tc, ...patch } : tc)
-      if (onSave) {
-        setSaving(true)
-        onSave(next).then(() => {
-          setSaveSuccess(true)
-          setTimeout(() => setSaveSuccess(false), 1500)
-        }).catch(err => console.error('Auto-save failed', err))
-          .finally(() => setSaving(false))
-      }
+      handleSave(next)
       return next
     })
-  }, [onSave])
+  }, [project, activeTestSuite])
 
   const reorderSteps = (tcId: string, from: number, to: number) => {
     const tc = testCases.find(t => t.id === tcId)
@@ -147,22 +167,8 @@ export function TestCasesView({
     updateTestCase(tcId, { steps })
   }
 
-  const handleSave = async () => {
-    if (!onSave) return
-    try {
-      setSaving(true)
-      await onSave(testCases)
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 2000)
-    } catch (err) {
-      console.error('Failed to save test suite', err)
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const handleStartRun = async () => {
-    if (!projectId || !testSuiteId) return
+    if (!project || !activeTestSuite) return
     setRunError(null)
     if (!/^https?:\/\//i.test(runBaseUrl.trim())) {
       setRunError('Base URL must start with http:// or https://')
@@ -171,15 +177,15 @@ export function TestCasesView({
     try {
       setStarting(true)
       const res = await executionService.startExecution({
-        projectId,
-        testSuiteId,
+        projectId: project._id,
+        testSuiteId: activeTestSuite._id,
         baseUrl: runBaseUrl.trim(),
         headless: runHeadless,
         testCaseIds: runTargetId ? [runTargetId] : undefined
       })
       if (res.success) {
         setIsRunOpen(false)
-        onRunStarted?.(res.runId)
+        router.push(`/dashboard/${project._id}/execution?runId=${res.runId}`)
       }
     } catch (err: any) {
       setRunError(err?.response?.data?.error || err?.message || 'Failed to start execution')
@@ -215,13 +221,7 @@ export function TestCasesView({
     setTestCases(next)
     setSelectedId(newTc.id)
     setIsCreateOpen(false)
-    if (onSave) {
-      setSaving(true)
-      onSave(next).then(() => {
-        setSaveSuccess(true)
-        setTimeout(() => setSaveSuccess(false), 1500)
-      }).catch(err => console.error(err)).finally(() => setSaving(false))
-    }
+    handleSave(next)
   }
 
   const openEditDialog = (tc: TestCase) => {
@@ -261,36 +261,36 @@ export function TestCasesView({
     }
     setIsDeleteOpen(false)
     setTcToDelete(null)
-    if (onSave) {
-      setSaving(true)
-      onSave(next).then(() => {
-        setSaveSuccess(true)
-        setTimeout(() => setSaveSuccess(false), 1500)
-      }).catch(err => console.error(err)).finally(() => setSaving(false))
-    }
+    handleSave(next)
   }
 
   const handleToggleRegressive = async (tcId: string) => {
-    if (!projectId) return
+    if (!project || !activeTestSuite) return
     try {
-      const res = await agentService.toggleTestCaseRegressive(projectId, tcId)
+      const res = await agentService.toggleTestCaseRegressive(project._id, activeTestSuite._id, tcId)
       if (res.success) {
-        if (res.data?.testCases) {
-          setTestCases(res.data.testCases)
-        } else {
-          setTestCases(prev => prev.map(tc => tc.id === tcId ? { ...tc, isRegressive: !tc.isRegressive } : tc))
-        }
-        if (onTestSuiteUpdate && res.data) {
-          onTestSuiteUpdate(res.data)
-        }
+        await refreshProject()
       }
     } catch (err) {
       console.error('Failed to toggle regressive status', err)
     }
   }
 
-  // Aggregate stats for the summary strip
-  // console.log("filteredTcs", filteredTcs);
+  if (!project) {
+    return (
+      <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/20 text-xs text-muted-foreground">
+        Project details not found.
+      </div>
+    )
+  }
+
+  if (!activeTestSuite) {
+    return (
+      <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/20 text-xs text-muted-foreground">
+        Test suite not found. Run Agent 2 to generate one.
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -326,30 +326,26 @@ export function TestCasesView({
           <p className="text-sm text-muted-foreground mt-0.5">{testCases.length} test cases — edit steps, drag to reorder, create new cases</p>
         </div>
         <div className="flex items-center gap-2">
-          {onSave && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${saveSuccess ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-card text-foreground hover:bg-muted border-border'}`}
-            >
-              {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
-            </button>
-          )}
+          <button
+            onClick={() => handleSave()}
+            disabled={saving}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${saveSuccess ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-card text-foreground hover:bg-muted border-border'}`}
+          >
+            {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
+          </button>
           <button
             onClick={openCreateDialog}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-card text-foreground hover:bg-muted border border-border transition-colors"
           >
             <Plus className="w-4 h-4" /> New Test Case
           </button>
-          {onRunStarted && (
-            <button
-              onClick={() => openRunDialog(null)}
-              disabled={testCases.length === 0}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <PlayCircle className="w-4 h-4" /> Run Test Suite
-            </button>
-          )}
+          <button
+            onClick={() => openRunDialog(null)}
+            disabled={testCases.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <PlayCircle className="w-4 h-4" /> Run Test Suite
+          </button>
         </div>
       </div>
 
@@ -362,14 +358,11 @@ export function TestCasesView({
           onSelectModule={setSelectedModule}
           testCases={filteredTcs}
           selectedId={selectedId}
-          onSelect={(id) => {
-            setSelectedId(id)
-            onSelectTestCase?.(id)
-          }}
+          onSelect={setSelectedId}
           search={search}
           onSearch={setSearch}
           onDelete={confirmDelete}
-          onRun={onRunStarted ? openRunDialog : undefined}
+          onRun={openRunDialog}
           onToggleRegressive={handleToggleRegressive}
         />
 
@@ -386,4 +379,3 @@ export function TestCasesView({
     </div>
   )
 }
-

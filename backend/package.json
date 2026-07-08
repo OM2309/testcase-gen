@@ -33,6 +33,7 @@
     "openai": "^4.85.4",
     "pdf-parse": "^2.4.5",
     "playwright": "^1.52.0",
+    "socket.io": "^4.8.3",
     "uuid": "^14.0.1"
   },
   "devDependencies": {

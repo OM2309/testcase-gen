@@ -1,12 +1,17 @@
+import http from 'http'
 import app from './app.js'
 import { connectDB } from './config/db.js'
 import env from './config/env.js'
+import { initSocket } from './shared/socket.js'
 
 const PORT = env.port
+const server = http.createServer(app)
+
+initSocket(server)
 
 connectDB()
   .then(() => {
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`[SERVER] Running on port ${PORT}`)
       console.log(`[SERVER] Health check: http://localhost:${PORT}/health`)
     })

@@ -5,42 +5,79 @@ import RequirementAnalysis from '../requirement/requirement.model.js'
 import TestSuite from '../testsuite/testsuite.model.js'
 import { parseFile } from '../../shared/fileParser.service.js'
 import { ApiError } from '../../utils/apiError.js'
+import { sendSuccess } from '../../utils/responseHelper.js'
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id)
 }
 
-/**
- * Creates a project by uploading a file, parsing it, and saving it to MongoDB.
- */
-export async function createProject(req, res, next) {
+export async function createProjectOnly(req, res, next) {
   try {
     const { projectName, projectDescription } = req.body
+
+    if (!projectName || !projectName.trim()) {
+      throw new ApiError('Project name is required.', 400)
+    }
+
+    if (!projectDescription || !projectDescription.trim()) {
+      throw new ApiError('Project description is required.', 400)
+    }
+
+    const project = await Project.create({
+      userId: req.user.id,
+      projectName: projectName.trim(),
+      projectDescription: projectDescription.trim(),
+      originalFileName: '',
+      filePath: '',
+      status: 'created'
+    })
+
+    return sendSuccess(res, 'Project created successfully.', project, 201)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function addSrsToProject(req, res, next) {
+  try {
+    const { projectId } = req.params
+
+    if (!isValidObjectId(projectId)) {
+      throw new ApiError('Invalid project ID format.', 400)
+    }
 
     if (!req.file) {
       throw new ApiError('No file uploaded. Send a PDF or DOCX file with field name "srs".', 400)
     }
 
-    console.log(`[PROJECT CONTROLLER] Parsing uploaded file: ${req.file.path}`)
+    const project = await Project.findById(projectId)
+    if (!project) {
+      throw new ApiError('Project not found.', 404)
+    }
+
+    if (project.userId && project.userId.toString() !== req.user.id) {
+      throw new ApiError('Access denied. You do not own this project.', 403)
+    }
+
     const parsedText = await parseFile(req.file.path)
 
-    const project = await Project.create({
-      userId: req.user.id,
-      projectName: projectName || 'Untitled Project',
-      projectDescription: projectDescription || '',
-      documentName: req.file.originalname,
+    const newSrsDoc = {
       originalFileName: req.file.originalname,
       filePath: req.file.path,
-      parsedText,
-      status: 'uploaded'
-    })
+      parsedText
+    }
 
-    return res.status(201).json({
-      success: true,
-      data: project
-    })
+    project.srsDocuments.push(newSrsDoc)
+    project.originalFileName = req.file.originalname
+    project.filePath = req.file.path
+    project.parsedText = parsedText
+    project.documentName = req.file.originalname
+    project.status = 'uploaded'
+
+    await project.save()
+
+    return sendSuccess(res, 'SRS document uploaded successfully.', project)
   } catch (err) {
-    // If upload fails, cleanup file if it exists
     if (req.file && fs.existsSync(req.file.path)) {
       try {
         fs.unlinkSync(req.file.path)
@@ -52,9 +89,47 @@ export async function createProject(req, res, next) {
   }
 }
 
-/**
- * Gets all projects sorted by creation date.
- */
+export async function createProject(req, res, next) {
+  try {
+    const { projectName, projectDescription } = req.body
+
+    if (!req.file) {
+      throw new ApiError('No file uploaded. Send a PDF or DOCX file with field name "srs".', 400)
+    }
+
+    const parsedText = await parseFile(req.file.path)
+
+    const srsDoc = {
+      originalFileName: req.file.originalname,
+      filePath: req.file.path,
+      parsedText
+    }
+
+    const project = await Project.create({
+      userId: req.user.id,
+      projectName: projectName || 'Untitled Project',
+      projectDescription: projectDescription || '',
+      documentName: req.file.originalname,
+      originalFileName: req.file.originalname,
+      filePath: req.file.path,
+      parsedText,
+      srsDocuments: [srsDoc],
+      status: 'uploaded'
+    })
+
+    return sendSuccess(res, 'Project created successfully.', project, 201)
+  } catch (err) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path)
+      } catch (unlinkErr) {
+        console.warn('[PROJECT CONTROLLER] Failed to remove file after error:', unlinkErr.message)
+      }
+    }
+    next(err)
+  }
+}
+
 export async function getProjects(req, res, next) {
   try {
     const projects = await Project.find({
@@ -75,18 +150,12 @@ export async function getProjects(req, res, next) {
       }
     }))
 
-    return res.status(200).json({
-      success: true,
-      data: projectsWithDetails
-    })
+    return sendSuccess(res, 'Projects fetched successfully.', projectsWithDetails)
   } catch (err) {
     next(err)
   }
 }
 
-/**
- * Gets project by ID, including related RequirementAnalysis and TestSuite.
- */
 export async function getProjectById(req, res, next) {
   try {
     const { projectId } = req.params
@@ -104,27 +173,21 @@ export async function getProjectById(req, res, next) {
       throw new ApiError('Access denied. You do not own this project.', 403)
     }
 
-    const [requirementAnalysis, testSuite] = await Promise.all([
-      RequirementAnalysis.findOne({ projectId }).lean(),
-      TestSuite.findOne({ projectId }).lean()
+    const [requirementAnalyses, testSuites] = await Promise.all([
+      RequirementAnalysis.find({ projectId }).lean(),
+      TestSuite.find({ projectId }).lean()
     ])
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        project,
-        requirementAnalysis,
-        testSuite
-      }
+    return sendSuccess(res, 'Project fetched successfully.', {
+      project,
+      requirementAnalyses,
+      testSuites
     })
   } catch (err) {
     next(err)
   }
 }
 
-/**
- * Deletes project by ID, including related files, RequirementAnalysis, and TestSuites.
- */
 export async function deleteProject(req, res, next) {
   try {
     const { projectId } = req.params
@@ -142,11 +205,18 @@ export async function deleteProject(req, res, next) {
       throw new ApiError('Access denied. You do not own this project.', 403)
     }
 
-    if (project.filePath && fs.existsSync(project.filePath)) {
-      try {
-        fs.unlinkSync(project.filePath)
-      } catch (err) {
-        console.warn(`[PROJECT CONTROLLER] Failed to delete SRS file at ${project.filePath}:`, err.message)
+    const allFiles = [
+      ...(project.srsDocuments || []).map(d => d.filePath),
+      project.filePath
+    ].filter(Boolean)
+
+    for (const filePath of allFiles) {
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath)
+        } catch (err) {
+          console.warn(`[PROJECT CONTROLLER] Failed to delete file at ${filePath}:`, err.message)
+        }
       }
     }
 
@@ -156,10 +226,7 @@ export async function deleteProject(req, res, next) {
       TestSuite.deleteMany({ projectId })
     ])
 
-    return res.status(200).json({
-      success: true,
-      message: 'Project and all associated data deleted successfully.'
-    })
+    return sendSuccess(res, 'Project and all associated data deleted successfully.')
   } catch (err) {
     next(err)
   }

@@ -1,35 +1,44 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   BrainCircuit, Sparkles, FileText, Shield, AlertTriangle, Info,
   Check, ChevronDown, ChevronRight, Loader2, FlaskConical, BookOpen
 } from 'lucide-react'
+import { useProject } from '../contexts/ProjectContext'
 
-interface RequirementsViewProps {
-  projectId: string
-  requirements: any
-  parsedText?: string
-  agentRunning: 'agent1' | 'agent2' | null
-  agentError: string | null
-  onRunAgent1: () => void
-  onRunAgent2: () => void
-}
+export function RequirementsView() {
+  const {
+    project,
+    selectedSrsId,
+    requirementAnalyses,
+    agentRunning,
+    agentError,
+    runAgent1,
+    runAgent2
+  } = useProject()
 
-export function RequirementsView({
-  requirements,
-  parsedText,
-  agentRunning,
-  agentError,
-  onRunAgent1,
-  onRunAgent2
-}: RequirementsViewProps) {
   const [activeModuleIdx, setActiveModuleIdx] = useState(0)
   const [showParsedText, setShowParsedText] = useState(false)
 
+  // Find active requirement analysis for the selected SRS document
+  const activeRequirement = useMemo(() => {
+    if (!selectedSrsId) return requirementAnalyses[0] || null
+    return requirementAnalyses.find(r => r.srsDocumentId === selectedSrsId) || null
+  }, [requirementAnalyses, selectedSrsId])
+
+  const requirements = activeRequirement?.analyzedData
+  const parsedText = useMemo(() => {
+    if (!project) return undefined
+    if (selectedSrsId) {
+      const srsDoc = project.srsDocuments?.find(d => d._id === selectedSrsId)
+      return srsDoc?.parsedText
+    }
+    return project.parsedText
+  }, [project, selectedSrsId])
+
   const error = agentError
 
-  // Animated agent loading state
   if (agentRunning) {
     const agentNum = agentRunning === 'agent1' ? 1 : 2
     const messages = agentRunning === 'agent1'
@@ -65,7 +74,14 @@ export function RequirementsView({
     )
   }
 
-  // Empty state - no requirements yet
+  if (!project) {
+    return (
+      <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/20 text-xs text-muted-foreground">
+        Project not found.
+      </div>
+    )
+  }
+
   if (!requirements) {
     return (
       <div className="space-y-6">
@@ -109,7 +125,7 @@ export function RequirementsView({
             <p className="text-sm text-muted-foreground">Analyze your PRD/SRS to extract modules, features, business rules, and validation requirements.</p>
           </div>
           <button
-            onClick={onRunAgent1}
+            onClick={() => runAgent1(selectedSrsId || undefined)}
             className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <Sparkles className="w-4 h-4" /> Analyze with Agent 1
@@ -119,7 +135,6 @@ export function RequirementsView({
     )
   }
 
-  // Requirements loaded
   const modules = requirements.modules || []
   const globalRoles = requirements.global_roles || []
   const ambiguities = requirements.document_level_ambiguities || []
@@ -137,13 +152,13 @@ export function RequirementsView({
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <button
-            onClick={onRunAgent1}
+            onClick={() => runAgent1(selectedSrsId || undefined)}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted transition-colors"
           >
             <BrainCircuit className="w-3.5 h-3.5" /> Re-analyze
           </button>
           <button
-            onClick={onRunAgent2}
+            onClick={() => runAgent2(selectedSrsId || undefined)}
             disabled={agentRunning === 'agent2'}
             className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
           >
@@ -160,6 +175,27 @@ export function RequirementsView({
         <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-4 rounded-xl flex items-center gap-3 text-sm">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* SRS Documents Tab Selector */}
+      {project.srsDocuments && project.srsDocuments.length > 1 && (
+        <div className="flex border-b border-border gap-2">
+          {project.srsDocuments.map((doc, idx) => (
+            <button
+              key={doc._id}
+              className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+                selectedSrsId === doc._id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              disabled={true}
+              title="Change active SRS document on Modules tab"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              SRS {idx + 1}: {doc.originalFileName}
+            </button>
+          ))}
         </div>
       )}
 

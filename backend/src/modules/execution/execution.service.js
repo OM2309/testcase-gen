@@ -12,6 +12,17 @@ import TestRun from './execution.model.js'
 import TestSuite from '../testsuite/testsuite.model.js'
 import Project from '../project/project.model.js'
 import { executeStep, captureFailureScreenshot } from './stepExecutor.service.js'
+import { getSocketIO } from '../../shared/socket.js'
+
+async function updateTestRun(runId, updateDoc) {
+  const run = await TestRun.findByIdAndUpdate(runId, updateDoc, { new: true }).lean()
+  const io = getSocketIO()
+  if (io && run) {
+    io.to(`run:${runId}`).emit('run-update', run)
+  }
+  return run
+}
+
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -124,7 +135,7 @@ async function runExecution(runId) {
     const { baseUrl, headless } = run.runConfig
 
     // Mark run as running
-    await TestRun.findByIdAndUpdate(runId, {
+    await updateTestRun(runId, {
       status: 'running',
       startedAt: new Date()
     })
@@ -167,7 +178,7 @@ async function runExecution(runId) {
       else if (updatedTc.status === 'failed') failedTests++
 
       // Update summary counts live
-      await TestRun.findByIdAndUpdate(runId, {
+      await updateTestRun(runId, {
         passedTests,
         failedTests
       })
@@ -200,7 +211,7 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
   const tcStartTime = Date.now()
 
   // Mark test case as running
-  await TestRun.findByIdAndUpdate(runId, {
+  await updateTestRun(runId, {
     [`testCaseResults.${testCaseIndex}.status`]: 'running',
     [`testCaseResults.${testCaseIndex}.startedAt`]: new Date(),
     currentTestCaseId: testCaseId,
@@ -223,7 +234,7 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
     const stepStart = Date.now()
 
     // Mark step running
-    await TestRun.findByIdAndUpdate(runId, {
+    await updateTestRun(runId, {
       [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.status`]: 'running',
       [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.startedAt`]: new Date(),
       currentStepNumber: step.stepNumber,
@@ -251,7 +262,7 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
 
     if (result.success) {
       // Mark step passed
-      await TestRun.findByIdAndUpdate(runId, {
+      await updateTestRun(runId, {
         [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.status`]: 'passed',
         [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.completedAt`]: new Date(),
         [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.durationMs`]: stepDuration
@@ -260,7 +271,7 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
       await appendLog(runId, 'success', 'step', `Step ${step.stepNumber} passed (${stepDuration}ms)`, testCaseId, step.stepNumber)
     } else {
       // Mark step failed
-      await TestRun.findByIdAndUpdate(runId, {
+      await updateTestRun(runId, {
         [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.status`]: 'failed',
         [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.completedAt`]: new Date(),
         [`testCaseResults.${testCaseIndex}.stepResults.${stepIdx}.durationMs`]: stepDuration,
@@ -288,7 +299,7 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
   const tcStatus = failed ? 'failed' : 'passed'
 
   // Update test case result
-  await TestRun.findByIdAndUpdate(runId, {
+  await updateTestRun(runId, {
     [`testCaseResults.${testCaseIndex}.status`]: tcStatus,
     [`testCaseResults.${testCaseIndex}.completedAt`]: new Date(),
     [`testCaseResults.${testCaseIndex}.durationMs`]: tcDuration,
@@ -318,7 +329,7 @@ async function finalizeRun(runId, status) {
     else skippedTests++
   })
 
-  await TestRun.findByIdAndUpdate(runId, {
+  await updateTestRun(runId, {
     status,
     completedAt: new Date(),
     passedTests,
@@ -337,7 +348,7 @@ async function finalizeRun(runId, status) {
  * Appends a log entry to the run's executionLogs array.
  */
 async function appendLog(runId, level, type, message, testCaseId = '', stepNumber = null) {
-  await TestRun.findByIdAndUpdate(runId, {
+  await updateTestRun(runId, {
     $push: {
       executionLogs: {
         timestamp: new Date(),

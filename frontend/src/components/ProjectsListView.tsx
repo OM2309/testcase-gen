@@ -5,10 +5,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { projectService } from '../services/projectService'
 import { useProjectsQuery } from '../hooks/queries'
 import {
-  FolderOpen, Trash2, Plus, Clock, FileText, CheckCircle2,
-  Loader2, BrainCircuit, FlaskConical, AlertCircle, UploadCloud
+  FolderOpen, Trash2, Plus, Clock, FileText, FlaskConical,
+  Loader2, AlertCircle, CheckCircle2, UploadCloud, BrainCircuit
 } from 'lucide-react'
-
 import {
   Dialog,
   DialogContent,
@@ -17,65 +16,69 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { CreateProjectModal } from './CreateProjectModal'
 
 interface ProjectsListViewProps {
   onSelectProject: (projectId: string) => void
-  onNavigateToUpload: () => void
 }
 
-export function ProjectsListView({ onSelectProject, onNavigateToUpload }: ProjectsListViewProps) {
+export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
   const queryClient = useQueryClient()
   const { data: projects = [], isLoading: loading, isError } = useProjectsQuery()
-  const error = isError ? 'Could not load projects. Make sure the backend is running.' : null
 
-  // Dialog modal states
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setProjectToDelete(id)
     setIsDeleteOpen(true)
   }
 
-  const confirmDeleteProject = async () => {
+  const confirmDelete = async () => {
     if (!projectToDelete) return
     try {
       await projectService.deleteProject(projectToDelete)
       queryClient.invalidateQueries({ queryKey: ['projects'] })
     } catch (err) {
-      console.error('Failed to delete project', err)
+      console.error('Delete failed', err)
     } finally {
       setIsDeleteOpen(false)
       setProjectToDelete(null)
     }
   }
 
-  const getStatusConfig = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'uploaded': return { label: 'Uploaded', cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20', icon: <UploadCloud className="w-3 h-3" /> }
-      case 'analyzing': return { label: 'Analyzing', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', icon: <Loader2 className="w-3 h-3 animate-spin" /> }
-      case 'analyzed': return { label: 'Analyzed', cls: 'bg-violet-500/10 text-violet-400 border-violet-500/20', icon: <BrainCircuit className="w-3 h-3" /> }
-      case 'tests_generated': return { label: 'Tests Ready', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: <CheckCircle2 className="w-3 h-3" /> }
-      case 'failed': return { label: 'Failed', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20', icon: <AlertCircle className="w-3 h-3" /> }
-      default: return { label: status, cls: 'bg-muted text-muted-foreground border-border', icon: null }
+      case 'tests_generated': return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+      case 'analyzed': return <BrainCircuit className="w-3.5 h-3.5 text-violet-400" />
+      case 'uploaded': return <UploadCloud className="w-3.5 h-3.5 text-blue-400" />
+      case 'analyzing': return <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+      case 'failed': return <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+      default: return <FileText className="w-3.5 h-3.5 text-muted-foreground" />
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Delete Confirmation Dialog */}
+    <div className="space-y-5">
+      <CreateProjectModal
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onProjectCreated={onSelectProject}
+      />
+
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent className="sm:max-w-[360px]">
+        <DialogContent className="sm:max-w-[340px]">
           <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to permanently delete this project and all its requirements analysis and test suites?
+            <DialogTitle className="text-sm">Delete Project?</DialogTitle>
+            <DialogDescription className="text-xs">
+              This will permanently delete the project and all its analyses and test suites.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <button onClick={() => setIsDeleteOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold">Cancel</button>
-            <button onClick={confirmDeleteProject} className="px-4 py-2 bg-destructive text-destructive-foreground rounded-xl text-xs font-semibold hover:opacity-90">Delete</button>
+            <button onClick={() => setIsDeleteOpen(false)} className="px-3 py-1.5 border rounded-lg hover:bg-muted text-xs font-semibold cursor-pointer">Cancel</button>
+            <button onClick={confirmDelete} className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded-lg text-xs font-semibold hover:opacity-90 cursor-pointer">Delete</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -83,70 +86,65 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground mt-1">Select a project to continue analysis or create a new one.</p>
+          <h1 className="text-xl font-bold">Projects</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Select a project or create a new one.</p>
         </div>
-        <button
-          onClick={onNavigateToUpload}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" /> New Project
-        </button>
+        {projects.length > 0 && (
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Project
+          </button>
+        )}
       </div>
 
-      {error && (
-        <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-4 rounded-xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
+      {isError && (
+        <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-3 rounded-lg flex items-center gap-2 text-xs">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          Could not load projects. Make sure the backend is running.
         </div>
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse" />
-            <div className="absolute inset-2 rounded-full border-4 border-primary/30 animate-spin" style={{ animationDuration: '2s' }} />
-            <div className="absolute inset-[18px] rounded-full bg-primary/20 flex items-center justify-center">
-              <Loader2 className="w-4 h-4 text-primary animate-spin" />
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">Loading projects...</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <p className="text-xs text-muted-foreground">Loading projects...</p>
         </div>
       ) : projects.length === 0 ? (
-        <div className="border border-dashed border-border rounded-2xl flex flex-col items-center justify-center p-20 text-center gap-5 bg-card/10">
-          <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-            <FolderOpen className="w-8 h-8 text-muted-foreground" />
+        <div className="border border-dashed border-border rounded-xl flex flex-col items-center justify-center p-16 text-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+            <FolderOpen className="w-6 h-6 text-muted-foreground" />
           </div>
-          <div className="space-y-1 max-w-sm">
-            <h3 className="font-bold text-lg">No Projects Yet</h3>
-            <p className="text-sm text-muted-foreground">Upload a PRD or SRS document to start generating AI-powered test cases.</p>
+          <div className="space-y-1">
+            <p className="font-semibold text-sm">No projects yet</p>
+            <p className="text-xs text-muted-foreground">Create a project to upload SRS documents and generate test cases.</p>
           </div>
           <button
-            onClick={onNavigateToUpload}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            onClick={() => setIsCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Upload First Document
+            <Plus className="w-3.5 h-3.5" /> Create Project
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {projects.map(project => {
-            const s = getStatusConfig(project.status)
+            const srsCount = project.srsDocuments?.length ?? (project.originalFileName ? 1 : 0)
             return (
               <div
                 key={project._id}
                 onClick={() => onSelectProject(project._id)}
-                className="group relative border border-border bg-card hover:border-primary/30 hover:shadow-md rounded-2xl p-5 cursor-pointer transition-all flex flex-col justify-between min-h-[180px]"
+                className="group relative border border-border bg-card hover:border-primary/40 hover:shadow-sm rounded-xl p-4 cursor-pointer transition-all"
               >
-                {/* Delete */}
                 <button
                   onClick={e => handleDelete(project._id, e)}
-                  className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-all"
+                  className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-all cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
 
-                <div className="space-y-2 pr-6">
+                <div className="pr-6 space-y-1 mb-4">
                   <h3 className="font-bold text-sm group-hover:text-primary transition-colors line-clamp-1">
                     {project.projectName || 'Untitled Project'}
                   </h3>
@@ -155,16 +153,16 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
                   )}
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-3">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <FileText className="w-3 h-3" />
-                      {project.originalFileName?.split('.').pop()?.toUpperCase()}
+                      {srsCount} SRS
                     </span>
                     {project.hasTestSuite && (
                       <span className="flex items-center gap-1 text-emerald-400 font-semibold">
                         <FlaskConical className="w-3 h-3" />
-                        {project.testCasesCount} tests
+                        {project.testCasesCount}
                       </span>
                     )}
                     <span className="flex items-center gap-1">
@@ -172,9 +170,7 @@ export function ProjectsListView({ onSelectProject, onNavigateToUpload }: Projec
                       {new Date(project.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${s.cls}`}>
-                    {s.icon} {s.label}
-                  </span>
+                  {getStatusIcon(project.status)}
                 </div>
               </div>
             )

@@ -7,7 +7,6 @@ const stepSchema = new mongoose.Schema({
   value: { type: String, default: '' },
   description: { type: String, default: '' },
   expected: { type: String, default: '' },
-  // Structured expectations verified after the step runs (optional).
   expected_url: { type: String, default: '' },
   expected_text: { type: String, default: '' }
 }, { _id: false })
@@ -39,6 +38,11 @@ const testSuiteSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  // Which SRS document this test suite belongs to
+  srsDocumentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
+  },
   suiteName: { type: String, default: 'Automated Test Suite' },
   projectName: { type: String, default: '' },
   generatedFromRequirementId: {
@@ -52,5 +56,6 @@ const testSuiteSchema = new mongoose.Schema({
 })
 
 testSuiteSchema.index({ createdAt: -1 })
+testSuiteSchema.index({ projectId: 1, srsDocumentId: 1 })
 
 export default mongoose.model('TestSuite', testSuiteSchema)
