@@ -1,6 +1,6 @@
 import Project from '../project/project.model.js'
 import RequirementAnalysis from './requirement.model.js'
-import { runAgent1 } from './requirement.service.js'
+import { runAgent1, runAgent0 } from './requirement.service.js'
 import { ApiError } from '../../utils/apiError.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
@@ -36,14 +36,40 @@ export async function generateRequirements(req, res, next) {
     await Project.findByIdAndUpdate(projectId, { status: 'analyzing', processingStartedAt: new Date() })
 
     try {
-      const requirementsJson = await runAgent1({ documentName, documentText })
+      // Run Agent 1 and Agent 0 in parallel using Promise.allSettled
+      const [agent1Result, agent0Result] = await Promise.allSettled([
+        runAgent1({ documentName, documentText }),
+        runAgent0({ documentName, documentText })
+      ])
+
+      if (agent1Result.status === 'rejected') {
+        throw agent1Result.reason
+      }
+
+      const requirementsJson = agent1Result.value
+
+      let agent0Score = null
+      let agent0Feedback = null
+      let agent0Status = 'failed'
+
+      if (agent0Result.status === 'fulfilled') {
+        agent0Score = typeof agent0Result.value?.score === 'number' ? agent0Result.value.score : 0
+        agent0Feedback = agent0Result.value?.feedback || ''
+        agent0Status = 'completed'
+      } else {
+        console.error('Agent 0 failed:', agent0Result.reason)
+        agent0Feedback = `Failed to score the SRS document: ${agent0Result.reason?.message || agent0Result.reason}`
+      }
 
       const analysis = await RequirementAnalysis.findOneAndUpdate(
         { projectId, srsDocumentId: targetSrsDocumentId },
         {
           analyzedData: requirementsJson,
           status: 'completed',
-          errorMessage: null
+          errorMessage: null,
+          agent0Score,
+          agent0Feedback,
+          agent0Status
         },
         { upsert: true, new: true }
       )

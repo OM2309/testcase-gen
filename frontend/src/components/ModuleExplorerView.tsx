@@ -52,6 +52,7 @@ export function ModuleExplorerView() {
   const [expandedSrs, setExpandedSrs] = useState<Record<string, boolean>>({})
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
   const [expandedFeatures, setExpandedFeatures] = useState<Record<string, boolean>>({})
+  const [expandedSrsScores, setExpandedSrsScores] = useState<Record<string, boolean>>({})
 
   // Run execution dialog state
   const [isRunOpen, setIsRunOpen] = useState(false)
@@ -116,7 +117,7 @@ export function ModuleExplorerView() {
     const targetSrsId = srsId === 'legacy' ? null : srsId
     const analysis = requirementAnalyses.find(r => r.srsDocumentId === targetSrsId) || null
     const suite = testSuites.find(t => t.srsDocumentId === targetSrsId) || null
-    
+
     const modulesMap = new Map<string, { description?: string, features: Map<string, { description?: string, testCases: TestCase[] }> }>()
 
     const reqData = analysis?.analyzedData
@@ -153,7 +154,7 @@ export function ModuleExplorerView() {
           modGroup.features.set(featName, { testCases: [] })
         }
         const featGroup = modGroup.features.get(featName)!
-        
+
         if (!featGroup.testCases.some(t => t.id === tc.id)) {
           featGroup.testCases.push(tc)
         }
@@ -411,7 +412,7 @@ export function ModuleExplorerView() {
       {/* Unified Multi-SRS Tree Explorer */}
       <div className="space-y-4">
         <h2 className="text-sm font-bold text-foreground">Unified Explorer (SRS tree)</h2>
-        
+
         {srsDocumentsList.length === 0 ? (
           <div className="border border-dashed border-border rounded-2xl bg-card/10 flex flex-col items-center justify-center p-16 text-center gap-6">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -431,13 +432,13 @@ export function ModuleExplorerView() {
               const targetSrsId = doc._id === 'legacy' ? null : doc._id
               const analysis = requirementAnalyses.find(r => r.srsDocumentId === targetSrsId) || null
               const suite = testSuites.find(t => t.srsDocumentId === targetSrsId) || null
-              
+
               const isAnalyzed = analysis && analysis.status === 'completed'
               const isSuiteGenerated = suite && suite.testCases?.length > 0
-              
+
               const srsModules = getSrsTreeData(doc._id)
               const totalTests = srsModules.reduce((acc, m) => acc + m.testCasesCount, 0)
-              
+
               return (
                 <div
                   key={doc._id}
@@ -509,7 +510,76 @@ export function ModuleExplorerView() {
 
                   {/* Modules Tree under SRS (Tree Level 2) */}
                   {isSrsExpanded && (
-                    <div className="p-5 border-t border-border/40 space-y-3 bg-muted/5">
+                    <div className="p-5 border-t border-border/40 space-y-4 bg-muted/5">
+                      {isAnalyzed && analysis && (analysis.agent0Score !== undefined && analysis.agent0Score !== null) && (
+                        <div className="rounded-2xl border bg-card/60 backdrop-blur-md border-border/60 shadow-sm overflow-hidden">
+                          <div
+                            onClick={() => setExpandedSrsScores(prev => ({ ...prev, [doc._id]: !prev[doc._id] }))}
+                            className="flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/10 transition-colors"
+                          >
+                            <div className="flex items-center gap-4">
+                              {/* Circular Gauge / Percentage Indicator */}
+                              <div className="relative flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-full bg-background border border-border">
+                                <svg className="w-12 h-12 transform -rotate-90">
+                                  <circle
+                                    cx="24"
+                                    cy="24"
+                                    r="20"
+                                    className="stroke-muted"
+                                    strokeWidth="3.5"
+                                    fill="transparent"
+                                  />
+                                  <circle
+                                    cx="24"
+                                    cy="24"
+                                    r="20"
+                                    className={analysis.agent0Score >= 70 ? "stroke-emerald-500" : "stroke-amber-500"}
+                                    strokeWidth="3.5"
+                                    fill="transparent"
+                                    strokeDasharray={`${2 * Math.PI * 20}`}
+                                    strokeDashoffset={`${2 * Math.PI * 20 * (1 - (analysis.agent0Score || 0) / 100)}`}
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                                <span className={`absolute text-xs font-black ${analysis.agent0Score >= 70 ? "text-emerald-400" : "text-amber-400"}`}>
+                                  {analysis.agent0Score}%
+                                </span>
+                              </div>
+
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400">
+                                    <BrainCircuit className="w-3 h-3" /> Agent 0
+                                  </span>
+                                  <h4 className="text-xs font-bold text-foreground">SRS Detailing Analysis</h4>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-muted-foreground p-1 hover:bg-muted/20 rounded-lg transition-colors">
+                              {expandedSrsScores[doc._id] ? <ChevronDown className="w-5 h-5 text-primary" /> : <ChevronRight className="w-5 h-5" />}
+                            </div>
+                          </div>
+
+                          {expandedSrsScores[doc._id] && (
+                            <div className="px-5 pb-5 pt-1 space-y-4 border-t border-border/40">
+                              <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl whitespace-pre-line">
+                                {analysis.agent0Feedback}
+                              </p>
+
+                              {analysis.agent0Score < 70 && (
+                                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 leading-relaxed">
+                                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                  <div>
+                                    <span className="font-semibold">Notice:</span> The SRS score is less than 70%. You can update your SRS or go through the test cases and update them if required.
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {!isAnalyzed ? (
                         <div className="text-center py-6 text-xs text-muted-foreground leading-relaxed">
                           ⚠️ This SRS document has not been analyzed yet. Run requirements analysis above to explore its modules.
@@ -522,7 +592,7 @@ export function ModuleExplorerView() {
                         srsModules.map((mod) => {
                           const modKey = `${doc._id}::${mod.name}`
                           const isModExpanded = !!expandedModules[modKey]
-                          
+
                           return (
                             <div
                               key={mod.name}

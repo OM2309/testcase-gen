@@ -28,6 +28,9 @@ export interface RequirementAnalysis {
   srsDocumentId: string | null
   analyzedData: any
   status: string
+  agent0Score?: number | null
+  agent0Feedback?: string | null
+  agent0Status?: 'pending' | 'completed' | 'failed' | null
 }
 
 export interface TestSuiteData {

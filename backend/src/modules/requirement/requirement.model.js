@@ -24,6 +24,19 @@ const requirementAnalysisSchema = new mongoose.Schema({
   errorMessage: {
     type: String,
     default: null
+  },
+  agent0Score: {
+    type: Number,
+    default: null
+  },
+  agent0Feedback: {
+    type: String,
+    default: null
+  },
+  agent0Status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
   }
 }, {
   timestamps: true

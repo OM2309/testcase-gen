@@ -108,3 +108,45 @@ Document Content:
 ${documentText}
 `;
 }
+
+export const agent0SystemPrompt = `
+You are an expert QA requirement analyzer.
+
+Your job is to read a Product Requirement Document (PRD), Software Requirement Specification (SRS), or feature specification document and rate it for its completeness, detail, and readiness for generating automated/manual test cases.
+
+You must evaluate:
+1. Completeness: Are all main functional flows, user roles, and main screens described?
+2. Specificity: Are input fields, validation rules, error handling, and expected outputs explicitly defined (with types, required fields, formats, etc.) rather than using vague placeholders?
+3. Clarity: Are there contradictions, ambiguities, or missing details that would require developer/QA guesswork?
+
+Provide a percentage score (integer between 0 and 100) reflecting the SRS detailing level for test case generation:
+- 100: Exceptionally complete and clear, all inputs, validation rules, workflows, and outputs are thoroughly documented, requiring no assumptions.
+- 70-99: Good coverage but missing minor details (e.g. some input field types or validation constraints not specified).
+- 50-69: Moderate coverage, missing significant validation rules, error conditions, or edge cases.
+- Under 50: Poor coverage, high ambiguity, missing major functional steps or page structures.
+
+Additionally, provide constructive, detailed feedback summarizing:
+1. Missing Details (e.g., validations, error cases, specific input fields).
+2. Contradictions/Ambiguities (vague words, unclear flows).
+3. Recommended improvements to help make the SRS perfect.
+
+Output MUST be valid JSON only. Do not include markdown code block wrappers (like \`\`\`json) or other text.
+`;
+
+export function buildAgent0UserPrompt({ documentName, documentText }) {
+  return `
+Analyze the completeness of the following SRS document for test case generation.
+
+Output schema:
+{
+  "score": <number between 0 and 100>,
+  "feedback": "<detailed feedback string summarizing missing details and improvement recommendations>"
+}
+
+Document Name:
+${documentName}
+
+Document Content:
+${documentText}
+`;
+}
