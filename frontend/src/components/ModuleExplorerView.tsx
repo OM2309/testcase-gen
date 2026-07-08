@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   FolderOpen, FolderClosed, Layers, Cpu, PlayCircle, Eye, Loader2,
   AlertCircle, Sparkles, BrainCircuit, FlaskConical, Search, ChevronDown,
-  ChevronRight, Play, Info, FileText, ArrowRight, Settings
+  ChevronRight, Play, Info, FileText, ArrowRight, Settings, Plus, CheckCircle2
 } from 'lucide-react'
 import { TestCase } from '../types'
 import { SrsUploadSection } from './SrsUploadSection'
@@ -38,8 +38,6 @@ export function ModuleExplorerView() {
   const router = useRouter()
   const {
     project,
-    selectedSrsId,
-    setSelectedSrsId,
     requirementAnalyses,
     testSuites,
     loading,
@@ -51,6 +49,7 @@ export function ModuleExplorerView() {
   } = useProject()
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [expandedSrs, setExpandedSrs] = useState<Record<string, boolean>>({})
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
   const [expandedFeatures, setExpandedFeatures] = useState<Record<string, boolean>>({})
 
@@ -61,36 +60,66 @@ export function ModuleExplorerView() {
   const [starting, setStarting] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
   const [runTarget, setRunTarget] = useState<{
-    type: 'project' | 'module' | 'feature' | 'testcase'
+    type: 'project' | 'module' | 'feature' | 'testcase' | 'srs'
     name: string
     ids: string[]
+    suiteId?: string
   } | null>(null)
 
+  // Derive SRS Documents list (handling legacy single-file projects)
+  const srsDocumentsList = useMemo(() => {
+    if (!project) return []
+    if (project.srsDocuments && project.srsDocuments.length > 0) {
+      return project.srsDocuments
+    }
+    if (project.originalFileName) {
+      return [{
+        _id: 'legacy',
+        originalFileName: project.originalFileName,
+        filePath: '',
+        parsedText: project.parsedText || '',
+        uploadedAt: project.createdAt
+      }]
+    }
+    return []
+  }, [project])
+
+  // Auto-expand the first SRS node by default
+  useEffect(() => {
+    if (srsDocumentsList.length > 0) {
+      setExpandedSrs(prev => {
+        if (Object.keys(prev).length === 0) {
+          return { [srsDocumentsList[0]._id]: true }
+        }
+        return prev
+      })
+    }
+  }, [srsDocumentsList])
+
   // Toggle helpers
-  const toggleModule = (modName: string) => {
-    setExpandedModules(prev => ({ ...prev, [modName]: !prev[modName] }))
+  const toggleSrs = (srsId: string) => {
+    setExpandedSrs(prev => ({ ...prev, [srsId]: !prev[srsId] }))
   }
 
-  const toggleFeature = (featKey: string) => {
-    setExpandedFeatures(prev => ({ ...prev, [featKey]: !prev[featKey] }))
+  const toggleModule = (srsId: string, modName: string) => {
+    const key = `${srsId}::${modName}`
+    setExpandedModules(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  // Find active requirement analysis and test suite for the selected SRS document
-  const activeRequirement = useMemo(() => {
-    if (!selectedSrsId) return requirementAnalyses[0] || null
-    return requirementAnalyses.find(r => r.srsDocumentId === selectedSrsId) || null
-  }, [requirementAnalyses, selectedSrsId])
+  const toggleFeature = (srsId: string, modName: string, featName: string) => {
+    const key = `${srsId}::${modName}::${featName}`
+    setExpandedFeatures(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
-  const activeTestSuite = useMemo(() => {
-    if (!selectedSrsId) return testSuites[0] || null
-    return testSuites.find(t => t.srsDocumentId === selectedSrsId) || null
-  }, [testSuites, selectedSrsId])
-
-  // Build the hierarchical Module -> Feature -> Test Case data structure
-  const modulesList = useMemo(() => {
+  // Get module tree structure for a specific SRS document ID
+  const getSrsTreeData = useCallback((srsId: string) => {
+    const targetSrsId = srsId === 'legacy' ? null : srsId
+    const analysis = requirementAnalyses.find(r => r.srsDocumentId === targetSrsId) || null
+    const suite = testSuites.find(t => t.srsDocumentId === targetSrsId) || null
+    
     const modulesMap = new Map<string, { description?: string, features: Map<string, { description?: string, testCases: TestCase[] }> }>()
 
-    const reqData = activeRequirement?.analyzedData
+    const reqData = analysis?.analyzedData
     if (reqData?.modules) {
       reqData.modules.forEach((mod: any) => {
         const modName = mod.module_name || 'General'
@@ -110,8 +139,8 @@ export function ModuleExplorerView() {
       })
     }
 
-    if (activeTestSuite?.testCases) {
-      activeTestSuite.testCases.forEach((tc: TestCase) => {
+    if (suite?.testCases) {
+      suite.testCases.forEach((tc: TestCase) => {
         const modName = tc.module || 'General'
         const featName = tc.feature || 'General'
 
@@ -156,59 +185,41 @@ export function ModuleExplorerView() {
     })
 
     return result.sort((a, b) => a.name.localeCompare(b.name))
-  }, [activeRequirement, activeTestSuite])
+  }, [requirementAnalyses, testSuites])
 
-  const filteredModules = useMemo(() => {
-    if (!searchQuery) return modulesList
+  // Get total stats across all loaded SRS documents
+  const overallStats = useMemo(() => {
+    let totalModules = 0
+    let totalFeatures = 0
+    let totalTests = 0
 
-    const query = searchQuery.toLowerCase()
-    return modulesList.map(mod => {
-      const matchModName = mod.name.toLowerCase().includes(query)
-      const matchModDesc = mod.description?.toLowerCase().includes(query) || false
+    srsDocumentsList.forEach(doc => {
+      const tree = getSrsTreeData(doc._id)
+      totalModules += tree.length
+      tree.forEach(m => {
+        totalFeatures += m.features.length
+        totalTests += m.testCasesCount
+      })
+    })
 
-      const filteredFeatures = mod.features.map(feat => {
-        const matchFeatName = feat.name.toLowerCase().includes(query)
-        const matchFeatDesc = feat.description?.toLowerCase().includes(query) || false
-
-        const filteredTestCases = feat.testCases.filter(tc => 
-          tc.title.toLowerCase().includes(query) || 
-          tc.id.toLowerCase().includes(query) || 
-          tc.description.toLowerCase().includes(query)
-        )
-
-        if (matchFeatName || matchFeatDesc || filteredTestCases.length > 0) {
-          return { ...feat, testCases: matchFeatName ? feat.testCases : filteredTestCases }
-        }
-        return null
-      }).filter(Boolean) as FeatureGroup[]
-
-      if (matchModName || matchModDesc || filteredFeatures.length > 0) {
-        return {
-          ...mod,
-          features: matchModName ? mod.features : filteredFeatures,
-          testCasesCount: matchModName 
-            ? mod.testCasesCount 
-            : filteredFeatures.reduce((acc, f) => acc + f.testCases.length, 0)
-        }
-      }
-      return null
-    }).filter(Boolean) as ModuleGroup[]
-  }, [modulesList, searchQuery])
+    return { totalModules, totalFeatures, totalTests }
+  }, [srsDocumentsList, getSrsTreeData])
 
   const handleOpenRunDialog = (
-    type: 'project' | 'module' | 'feature' | 'testcase',
+    type: 'project' | 'module' | 'feature' | 'testcase' | 'srs',
     name: string,
-    testCases: TestCase[]
+    testCases: TestCase[],
+    suiteId?: string
   ) => {
     const ids = testCases.map(tc => tc.id)
-    if (ids.length === 0) return
-    setRunTarget({ type, name, ids })
+    if (ids.length === 0 || !suiteId) return
+    setRunTarget({ type, name, ids, suiteId })
     setRunError(null)
     setIsRunOpen(true)
   }
 
   const handleStartRun = async () => {
-    if (!runTarget || !activeTestSuite?._id || !project) return
+    if (!runTarget || !project) return
     setRunError(null)
     if (!/^https?:\/\//i.test(runBaseUrl.trim())) {
       setRunError('Base URL must start with http:// or https://')
@@ -219,7 +230,7 @@ export function ModuleExplorerView() {
       setStarting(true)
       const res = await executionService.startExecution({
         projectId: project._id,
-        testSuiteId: activeTestSuite._id,
+        testSuiteId: runTarget.suiteId!,
         baseUrl: runBaseUrl.trim(),
         headless: runHeadless,
         testCaseIds: runTarget.ids
@@ -234,17 +245,6 @@ export function ModuleExplorerView() {
       setStarting(false)
     }
   }
-
-  const allTestCases = useMemo(() => {
-    if (!activeTestSuite?.testCases) return []
-    return activeTestSuite.testCases
-  }, [activeTestSuite])
-
-  const totalFeatures = useMemo(() => {
-    let count = 0
-    modulesList.forEach(m => { count += m.features.length })
-    return count
-  }, [modulesList])
 
   const handleEditTestCase = (id: string) => {
     if (!project) return
@@ -267,9 +267,6 @@ export function ModuleExplorerView() {
       </div>
     )
   }
-
-  const isSrsAnalyzed = activeRequirement && activeRequirement.status === 'completed'
-  const isTestsGenerated = activeTestSuite && allTestCases.length > 0
 
   return (
     <div className="space-y-6">
@@ -361,103 +358,37 @@ export function ModuleExplorerView() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-primary tracking-wider uppercase">Project Modules</span>
-              {project.originalFileName ? (
-                <span className="px-2 py-0.5 rounded-full border bg-muted text-[10px] font-semibold">
-                  {project.srsDocuments && project.srsDocuments.length > 1
-                    ? `${project.srsDocuments.length} SRS docs`
-                    : project.originalFileName}
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 rounded-full border border-dashed border-border bg-muted/40 text-[10px] font-semibold text-muted-foreground">
-                  No SRS uploaded
-                </span>
-              )}
+              <span className="text-xs font-bold text-primary tracking-wider uppercase">Project Workspace</span>
+              <span className="px-2 py-0.5 rounded-full border bg-muted text-[10px] font-semibold">
+                {srsDocumentsList.length} SRS document{srsDocumentsList.length > 1 ? 's' : ''}
+              </span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">{project.projectName}</h1>
             {project.projectDescription && (
               <p className="text-sm text-muted-foreground max-w-xl">{project.projectDescription}</p>
             )}
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {!isSrsAnalyzed && (
-              <button
-                onClick={() => runAgent1(selectedSrsId || undefined)}
-                disabled={agentRunning === 'agent1'}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-60"
-              >
-                {agentRunning === 'agent1' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Analyzing Document...
-                  </>
-                ) : (
-                  <>
-                    <BrainCircuit className="w-4 h-4" /> Run Requirements Analysis
-                  </>
-                )}
-              </button>
-            )}
-
-            {isSrsAnalyzed && !isTestsGenerated && (
-              <button
-                onClick={() => runAgent2(selectedSrsId || undefined)}
-                disabled={agentRunning === 'agent2'}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-60"
-              >
-                {agentRunning === 'agent2' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Generating Tests...
-                  </>
-                ) : (
-                  <>
-                    <FlaskConical className="w-4 h-4" /> Generate Test Suite
-                  </>
-                )}
-              </button>
-            )}
-
-            {isTestsGenerated && (
-              <>
-                <button
-                  onClick={() => router.push(`/dashboard/${project._id}/test-cases`)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-xl border border-border bg-card hover:bg-muted transition-colors"
-                >
-                  <Settings className="w-3.5 h-3.5" /> Open Suite Builder
-                </button>
-                <button
-                  onClick={() => handleOpenRunDialog('project', project.projectName, allTestCases)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-                >
-                  <PlayCircle className="w-4.5 h-4.5" /> Run Full Suite
-                </button>
-              </>
-            )}
-          </div>
         </div>
 
-        {isSrsAnalyzed && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border/50">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Modules</span>
-              <span className="text-xl font-extrabold text-foreground">{modulesList.length}</span>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Features</span>
-              <span className="text-xl font-extrabold text-foreground">{totalFeatures}</span>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Generated Tests</span>
-              <span className="text-xl font-extrabold text-foreground">{allTestCases.length}</span>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Coverage Status</span>
-              <span className={`text-xs font-bold inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full border ${isTestsGenerated ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                {isTestsGenerated ? 'Fully Covered' : 'Requirements Only'}
-              </span>
-            </div>
+        {/* Stats Strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border/50">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">SRS Documents</span>
+            <span className="text-xl font-extrabold text-foreground">{srsDocumentsList.length}</span>
           </div>
-        )}
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Modules</span>
+            <span className="text-xl font-extrabold text-foreground">{overallStats.totalModules}</span>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Features</span>
+            <span className="text-xl font-extrabold text-foreground">{overallStats.totalFeatures}</span>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Generated Tests</span>
+            <span className="text-xl font-extrabold text-foreground">{overallStats.totalTests}</span>
+          </div>
+        </div>
 
         <div className="mt-6 pt-6 border-t border-border/50">
           <SrsUploadSection
@@ -477,215 +408,297 @@ export function ModuleExplorerView() {
         </div>
       )}
 
-      {/* SRS Documents Tab Selector */}
-      {project.srsDocuments && project.srsDocuments.length > 1 && (
-        <div className="flex border-b border-border gap-2">
-          {project.srsDocuments.map((doc, idx) => (
-            <button
-              key={doc._id}
-              onClick={() => setSelectedSrsId(doc._id)}
-              className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
-                selectedSrsId === doc._id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              SRS {idx + 1}: {doc.originalFileName}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Main Explorer View */}
-      {isSrsAnalyzed ? (
-        <div className="space-y-4">
-          {/* Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-border bg-card/20 p-3 rounded-xl">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search modules, features, tests..."
-                className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs"
-              />
+      {/* Unified Multi-SRS Tree Explorer */}
+      <div className="space-y-4">
+        <h2 className="text-sm font-bold text-foreground">Unified Explorer (SRS tree)</h2>
+        
+        {srsDocumentsList.length === 0 ? (
+          <div className="border border-dashed border-border rounded-2xl bg-card/10 flex flex-col items-center justify-center p-16 text-center gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <BrainCircuit className="w-8 h-8 text-primary" />
             </div>
-            <div className="text-[10px] text-muted-foreground font-mono">
-              Showing {filteredModules.length} of {modulesList.length} Modules
+            <div className="space-y-1.5 max-w-sm">
+              <h3 className="font-semibold text-lg">Upload an SRS Document</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload your first SRS document above to generate structured modules and test suites.
+              </p>
             </div>
           </div>
-
-          {/* Module List Accordions */}
-          <div className="space-y-3">
-            {filteredModules.map((mod) => {
-              const isModExpanded = !!expandedModules[mod.name]
+        ) : (
+          <div className="space-y-4">
+            {srsDocumentsList.map((doc, srsIdx) => {
+              const isSrsExpanded = !!expandedSrs[doc._id]
+              const targetSrsId = doc._id === 'legacy' ? null : doc._id
+              const analysis = requirementAnalyses.find(r => r.srsDocumentId === targetSrsId) || null
+              const suite = testSuites.find(t => t.srsDocumentId === targetSrsId) || null
+              
+              const isAnalyzed = analysis && analysis.status === 'completed'
+              const isSuiteGenerated = suite && suite.testCases?.length > 0
+              
+              const srsModules = getSrsTreeData(doc._id)
+              const totalTests = srsModules.reduce((acc, m) => acc + m.testCasesCount, 0)
+              
               return (
                 <div
-                  key={mod.name}
-                  className={`border rounded-2xl bg-card transition-all duration-200 ${isModExpanded ? 'border-border shadow-sm' : 'border-border/60 hover:border-border'}`}
+                  key={doc._id}
+                  className="border rounded-2xl bg-card/30 border-border/80 overflow-hidden"
                 >
+                  {/* SRS Document Header Card (Tree Level 1) */}
                   <div
-                    onClick={() => toggleModule(mod.name)}
-                    className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
+                    onClick={() => toggleSrs(doc._id)}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-muted/10 hover:bg-muted/20 cursor-pointer select-none gap-4"
                   >
-                    <div className="flex items-center gap-3.5 min-w-0 pr-6">
-                      <div className={`p-2 rounded-xl border transition-colors ${isModExpanded ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/40 text-muted-foreground border-border/40'}`}>
-                        {isModExpanded ? <FolderOpen className="w-4.5 h-4.5" /> : <FolderClosed className="w-4.5 h-4.5" />}
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="text-muted-foreground p-0.5 flex-shrink-0">
+                        {isSrsExpanded ? <ChevronDown className="w-5 h-5 text-primary" /> : <ChevronRight className="w-5 h-5" />}
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex-shrink-0">
+                        <FileText className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-foreground line-clamp-1">{mod.name}</h3>
-                        {mod.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{mod.description}</p>
-                        )}
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">
+                          SRS {srsIdx + 1}
+                        </span>
+                        <h3 className="text-sm font-bold text-foreground truncate mt-0.5">
+                          {doc.originalFileName}
+                        </h3>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted border border-border text-[10px] font-semibold text-muted-foreground">
-                          <Layers className="w-2.5 h-2.5" /> {mod.features.length} Features
-                        </span>
-                        {mod.testCasesCount > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">
-                            <FlaskConical className="w-2.5 h-2.5" /> {mod.testCasesCount} Tests
-                          </span>
-                        )}
-                      </div>
-
-                      {isTestsGenerated && mod.testCasesCount > 0 && (
+                    {/* Quick status/actions inside SRS Header Card */}
+                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap" onClick={e => e.stopPropagation()}>
+                      {!isAnalyzed ? (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const allModTcs = mod.features.flatMap(f => f.testCases)
-                            handleOpenRunDialog('module', mod.name, allModTcs)
-                          }}
-                          title="Run all tests in module"
-                          className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                          onClick={() => runAgent1(doc._id)}
+                          disabled={agentRunning === 'agent1'}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-60 cursor-pointer"
                         >
-                          <PlayCircle className="w-4 h-4" />
+                          {agentRunning === 'agent1' ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
+                          ) : (
+                            <><Sparkles className="w-3.5 h-3.5" /> Run Analysis</>
+                          )}
                         </button>
+                      ) : !isSuiteGenerated ? (
+                        <button
+                          onClick={() => runAgent2(doc._id)}
+                          disabled={agentRunning === 'agent2'}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all disabled:opacity-60 cursor-pointer"
+                        >
+                          {agentRunning === 'agent2' ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                          ) : (
+                            <><FlaskConical className="w-3.5 h-3.5" /> Generate Suite</>
+                          )}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">
+                            <CheckCircle2 className="w-3 h-3" /> Fully Covered
+                          </span>
+                          <button
+                            onClick={() => handleOpenRunDialog('srs', doc.originalFileName, suite.testCases, suite._id)}
+                            className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
+                          >
+                            <PlayCircle className="w-3.5 h-3.5" /> Run SRS Suite ({totalTests})
+                          </button>
+                        </div>
                       )}
-
-                      <div className="text-muted-foreground p-0.5">
-                        {isModExpanded ? <ChevronDown className="w-4.5 h-4.5" /> : <ChevronRight className="w-4.5 h-4.5" />}
-                      </div>
                     </div>
                   </div>
 
-                  {isModExpanded && (
-                    <div className="px-5 pb-5 pt-1 border-t border-border/40 space-y-4 bg-muted/5">
-                      {mod.features.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-2 pl-3">No features found in this module.</p>
+                  {/* Modules Tree under SRS (Tree Level 2) */}
+                  {isSrsExpanded && (
+                    <div className="p-5 border-t border-border/40 space-y-3 bg-muted/5">
+                      {!isAnalyzed ? (
+                        <div className="text-center py-6 text-xs text-muted-foreground leading-relaxed">
+                          ⚠️ This SRS document has not been analyzed yet. Run requirements analysis above to explore its modules.
+                        </div>
+                      ) : srsModules.length === 0 ? (
+                        <div className="text-center py-6 text-xs text-muted-foreground leading-relaxed">
+                          No modules found inside this SRS document.
+                        </div>
                       ) : (
-                        mod.features.map(feat => {
-                          const featKey = `${mod.name}::${feat.name}`
-                          const isFeatExpanded = !!expandedFeatures[featKey]
-
+                        srsModules.map((mod) => {
+                          const modKey = `${doc._id}::${mod.name}`
+                          const isModExpanded = !!expandedModules[modKey]
+                          
                           return (
                             <div
-                              key={feat.name}
-                              className={`border rounded-xl bg-card overflow-hidden transition-all ${isFeatExpanded ? 'border-border' : 'border-border/50'}`}
+                              key={mod.name}
+                              className={`border rounded-2xl bg-card transition-all duration-200 ${isModExpanded ? 'border-border shadow-sm' : 'border-border/60 hover:border-border'}`}
                             >
+                              {/* Module Header Row */}
                               <div
-                                onClick={() => toggleFeature(featKey)}
-                                className="flex items-center justify-between px-4 py-3 bg-muted/20 cursor-pointer select-none"
+                                onClick={() => toggleModule(doc._id, mod.name)}
+                                className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
                               >
-                                <div className="flex items-center gap-2.5 min-w-0 pr-6">
-                                  <Cpu className="w-4 h-4 text-primary flex-shrink-0" />
+                                <div className="flex items-center gap-3.5 min-w-0 pr-6">
+                                  <div className={`p-2 rounded-xl border transition-colors ${isModExpanded ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/40 text-muted-foreground border-border/40'}`}>
+                                    {isModExpanded ? <FolderOpen className="w-4.5 h-4.5" /> : <FolderClosed className="w-4.5 h-4.5" />}
+                                  </div>
                                   <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-foreground line-clamp-1">{feat.name}</h4>
-                                    {feat.description && (
-                                      <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{feat.description}</p>
+                                    <h3 className="text-sm font-bold text-foreground line-clamp-1">{mod.name}</h3>
+                                    {mod.description && (
+                                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{mod.description}</p>
                                     )}
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <span className="text-[10px] bg-border/60 text-foreground px-1.5 py-0.5 rounded font-mono font-medium">
-                                    {feat.testCases.length} tests
-                                  </span>
+                                <div className="flex items-center gap-3 flex-shrink-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted border border-border text-[10px] font-semibold text-muted-foreground">
+                                      <Layers className="w-2.5 h-2.5" /> {mod.features.length} Features
+                                    </span>
+                                    {mod.testCasesCount > 0 && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">
+                                        <FlaskConical className="w-2.5 h-2.5" /> {mod.testCasesCount} Tests
+                                      </span>
+                                    )}
+                                  </div>
 
-                                  {isTestsGenerated && feat.testCases.length > 0 && (
+                                  {isSuiteGenerated && mod.testCasesCount > 0 && (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        handleOpenRunDialog('feature', feat.name, feat.testCases)
+                                        const allModTcs = mod.features.flatMap(f => f.testCases)
+                                        handleOpenRunDialog('module', mod.name, allModTcs, suite._id)
                                       }}
-                                      title="Run all tests in feature"
-                                      className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                                      title="Run all tests in module"
+                                      className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
                                     >
-                                      <Play className="w-3 h-3 fill-current" />
+                                      <PlayCircle className="w-4 h-4" />
                                     </button>
                                   )}
 
                                   <div className="text-muted-foreground p-0.5">
-                                    {isFeatExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    {isModExpanded ? <ChevronDown className="w-4.5 h-4.5" /> : <ChevronRight className="w-4.5 h-4.5" />}
                                   </div>
                                 </div>
                               </div>
 
-                              {isFeatExpanded && (
-                                <div className="p-4 border-t border-border/40 bg-card space-y-3">
-                                  {feat.testCases.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
-                                      <FlaskConical className="w-6 h-6 text-muted-foreground/60" />
-                                      <p className="text-xs text-muted-foreground">No test cases generated for this feature yet.</p>
-                                      <button
-                                        onClick={() => runAgent2(selectedSrsId || undefined)}
-                                        className="text-[11px] text-primary font-bold hover:underline inline-flex items-center gap-1 mt-1"
-                                      >
-                                        Generate suite <ArrowRight className="w-3 h-3" />
-                                      </button>
-                                    </div>
+                              {/* Features Tree under Module (Tree Level 3) */}
+                              {isModExpanded && (
+                                <div className="px-5 pb-5 pt-1 border-t border-border/40 space-y-4 bg-muted/5">
+                                  {mod.features.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground py-2 pl-3">No features found in this module.</p>
                                   ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                      {feat.testCases.map((tc) => (
+                                    mod.features.map(feat => {
+                                      const featKey = `${doc._id}::${mod.name}::${feat.name}`
+                                      const isFeatExpanded = !!expandedFeatures[featKey]
+
+                                      return (
                                         <div
-                                          key={tc.id}
-                                          className="border border-border/60 hover:border-primary/20 bg-muted/10 p-3 rounded-xl flex flex-col justify-between hover:shadow-sm transition-all"
+                                          key={feat.name}
+                                          className={`border rounded-xl bg-card overflow-hidden transition-all ${isFeatExpanded ? 'border-border' : 'border-border/50'}`}
                                         >
-                                          <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between gap-2">
-                                              <span className="text-[10px] font-mono font-bold text-primary">{tc.id}</span>
-                                              <div className="flex items-center gap-1">
-                                                {getPriorityBadge(tc.priority)}
-                                                {tc.scenario_type && (
-                                                  <span className={`text-[9px] px-1.5 py-0.2 rounded border font-semibold ${tc.scenario_type === 'positive' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10' : 'bg-rose-500/5 text-rose-400 border-rose-500/10'}`}>
-                                                    {tc.scenario_type}
-                                                  </span>
+                                          {/* Feature Header Row */}
+                                          <div
+                                            onClick={() => toggleFeature(doc._id, mod.name, feat.name)}
+                                            className="flex items-center justify-between px-4 py-3 bg-muted/20 cursor-pointer select-none"
+                                          >
+                                            <div className="flex items-center gap-2.5 min-w-0 pr-6">
+                                              <Cpu className="w-4 h-4 text-primary flex-shrink-0" />
+                                              <div className="min-w-0">
+                                                <h4 className="text-xs font-bold text-foreground line-clamp-1">{feat.name}</h4>
+                                                {feat.description && (
+                                                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{feat.description}</p>
                                                 )}
                                               </div>
                                             </div>
-                                            <h5 className="text-xs font-semibold text-foreground line-clamp-1">{tc.title}</h5>
-                                            {tc.description && (
-                                              <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">{tc.description}</p>
-                                            )}
-                                          </div>
 
-                                          <div className="flex items-center justify-between border-t border-border/40 pt-2 mt-3 text-[10px] text-muted-foreground">
-                                            <span className="font-mono">{tc.steps.length} execution steps</span>
-                                            <div className="flex items-center gap-1">
-                                              <button
-                                                onClick={() => handleEditTestCase(tc.id)}
-                                                title="Edit steps in Builder"
-                                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-                                              >
-                                                <Eye className="w-3.5 h-3.5" />
-                                              </button>
-                                              <button
-                                                onClick={() => handleOpenRunDialog('testcase', tc.id, [tc])}
-                                                title="Run test case"
-                                                className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                                              >
-                                                <PlayCircle className="w-3.5 h-3.5" />
-                                              </button>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                              <span className="text-[10px] bg-border/60 text-foreground px-1.5 py-0.5 rounded font-mono font-medium">
+                                                {feat.testCases.length} tests
+                                              </span>
+
+                                              {isSuiteGenerated && feat.testCases.length > 0 && (
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    handleOpenRunDialog('feature', feat.name, feat.testCases, suite._id)
+                                                  }}
+                                                  title="Run all tests in feature"
+                                                  className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
+                                                >
+                                                  <Play className="w-3 h-3 fill-current" />
+                                                </button>
+                                              )}
+
+                                              <div className="text-muted-foreground p-0.5">
+                                                {isFeatExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                              </div>
                                             </div>
                                           </div>
+
+                                          {/* Test Cases Tree under Feature (Tree Level 4) */}
+                                          {isFeatExpanded && (
+                                            <div className="p-4 border-t border-border/40 bg-card space-y-3">
+                                              {feat.testCases.length === 0 ? (
+                                                <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+                                                  <FlaskConical className="w-6 h-6 text-muted-foreground/60" />
+                                                  <p className="text-xs text-muted-foreground">No test cases generated for this feature yet.</p>
+                                                  {isSuiteGenerated && (
+                                                    <button
+                                                      onClick={() => runAgent2(doc._id)}
+                                                      className="text-[11px] text-primary font-bold hover:underline inline-flex items-center gap-1 mt-1 cursor-pointer"
+                                                    >
+                                                      Generate suite <ArrowRight className="w-3 h-3" />
+                                                    </button>
+                                                  )}
+                                                </div>
+                                              ) : (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                  {feat.testCases.map((tc) => (
+                                                    <div
+                                                      key={tc.id}
+                                                      onClick={() => handleEditTestCase(tc.id)}
+                                                      className="border border-border/60 hover:border-primary/30 hover:bg-primary/5 bg-muted/10 p-3 rounded-xl flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer transition-all duration-200"
+                                                    >
+                                                      <div className="space-y-1.5">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                          <span className="text-[10px] font-mono font-bold text-primary">{tc.id}</span>
+                                                          <div className="flex items-center gap-1">
+                                                            {getPriorityBadge(tc.priority)}
+                                                            {tc.scenario_type && (
+                                                              <span className={`text-[9px] px-1.5 py-0.2 rounded border font-semibold ${tc.scenario_type === 'positive' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10' : 'bg-rose-500/5 text-rose-400 border-rose-500/10'}`}>
+                                                                {tc.scenario_type}
+                                                              </span>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                        <h5 className="text-xs font-semibold text-foreground line-clamp-1">{tc.title}</h5>
+                                                        {tc.description && (
+                                                          <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">{tc.description}</p>
+                                                        )}
+                                                      </div>
+
+                                                      <div className="flex items-center justify-between border-t border-border/40 pt-2 mt-3 text-[10px] text-muted-foreground">
+                                                        <span className="font-mono">{tc.steps.length} execution steps</span>
+                                                        <div className="flex items-center gap-1">
+                                                          {isSuiteGenerated && (
+                                                            <button
+                                                              onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleOpenRunDialog('testcase', tc.id, [tc], suite._id)
+                                                              }}
+                                                              title="Run test case"
+                                                              className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
+                                                            >
+                                                              <PlayCircle className="w-4.5 h-4.5" />
+                                                            </button>
+                                                          )}
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
-                                      ))}
-                                    </div>
+                                      )
+                                    })
                                   )}
                                 </div>
                               )}
@@ -698,52 +711,9 @@ export function ModuleExplorerView() {
                 </div>
               )
             })}
-
-            {filteredModules.length === 0 && (
-              <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/20 text-xs text-muted-foreground">
-                No modules match your search query. Try clearing the filter.
-              </div>
-            )}
           </div>
-        </div>
-      ) : (
-        /* Requirements Not Analyzed State */
-        <div className="border border-dashed border-border rounded-2xl bg-card/10 flex flex-col items-center justify-center p-16 text-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <BrainCircuit className="w-8 h-8 text-primary" />
-          </div>
-          <div className="space-y-1.5 max-w-sm">
-            {project.status === 'created' || (!project.originalFileName && !(project.srsDocuments?.length)) ? (
-              <>
-                <h3 className="font-semibold text-lg">Upload an SRS Document</h3>
-                <p className="text-sm text-muted-foreground">
-                  Upload your SRS document above to get started with requirements analysis and test generation.
-                </p>
-              </>
-            ) : (
-              <>
-                <h3 className="font-semibold text-lg">Requirements Analysis Required</h3>
-                <p className="text-sm text-muted-foreground">
-                  To browse modules and features, first analyze the selected SRS document using Agent 1.
-                </p>
-              </>
-            )}
-          </div>
-          {(project.originalFileName || (project.srsDocuments?.length ?? 0) > 0) && (
-            <button
-              onClick={() => runAgent1(selectedSrsId || undefined)}
-              disabled={agentRunning === 'agent1'}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-            >
-              {agentRunning === 'agent1' ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</>
-              ) : (
-                <><Sparkles className="w-4 h-4" /> Run Requirements Analysis</>
-              )}
-            </button>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

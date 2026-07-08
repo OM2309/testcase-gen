@@ -11,6 +11,7 @@ export function RequirementsView() {
   const {
     project,
     selectedSrsId,
+    setSelectedSrsId,
     requirementAnalyses,
     agentRunning,
     agentError,
@@ -184,13 +185,12 @@ export function RequirementsView() {
           {project.srsDocuments.map((doc, idx) => (
             <button
               key={doc._id}
-              className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+              onClick={() => setSelectedSrsId(doc._id)}
+              className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
                 selectedSrsId === doc._id
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
-              disabled={true}
-              title="Change active SRS document on Modules tab"
             >
               <FileText className="w-3.5 h-3.5" />
               SRS {idx + 1}: {doc.originalFileName}
@@ -343,7 +343,7 @@ function FeatureCard({ feature }: { feature: any }) {
   )
 }
 
-function SectionList({ label, items, color }: { label: string; items: string[]; color: string }) {
+function SectionList({ label, items, color }: { label: string; items: any[]; color: string }) {
   if (!items || items.length === 0) return null
   const colorMap: Record<string, string> = {
     blue: 'text-blue-400',
@@ -353,11 +353,27 @@ function SectionList({ label, items, color }: { label: string; items: string[]; 
     emerald: 'text-emerald-400',
     teal: 'text-teal-400',
   }
+
+  const renderItem = (item: any) => {
+    if (item === null || item === undefined) return ''
+    if (typeof item === 'object') {
+      if (item.name !== undefined && (item.from !== undefined || item.to !== undefined)) {
+        return `${item.name}: from "${item.from ?? ''}" to "${item.to ?? ''}"`
+      }
+      return JSON.stringify(item)
+    }
+    return String(item)
+  }
+
   return (
     <div className="space-y-1.5">
       <span className={`text-[10px] font-bold uppercase tracking-wide ${colorMap[color] || 'text-muted-foreground'}`}>{label}</span>
       <ul className="space-y-1 pl-3 list-disc text-xs text-muted-foreground">
-        {items.map((item: string, idx: number) => <li key={idx} className="leading-relaxed">{item}</li>)}
+        {items.map((item: any, idx: number) => (
+          <li key={idx} className="leading-relaxed">
+            {renderItem(item)}
+          </li>
+        ))}
       </ul>
     </div>
   )

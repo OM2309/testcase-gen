@@ -135,7 +135,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
               <div
                 key={project._id}
                 onClick={() => onSelectProject(project._id)}
-                className="group relative border border-border bg-card hover:border-primary/40 hover:shadow-sm rounded-xl p-4 cursor-pointer transition-all"
+                className="group relative border border-border bg-card hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] rounded-xl p-4 cursor-pointer transition-all duration-200"
               >
                 <button
                   onClick={e => handleDelete(project._id, e)}
