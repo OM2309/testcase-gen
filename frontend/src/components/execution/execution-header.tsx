@@ -1,10 +1,11 @@
 'use client'
 
 import React from 'react'
-import { RotateCw, RefreshCw, PlayCircle, FolderKanban, Clock } from 'lucide-react'
+import { RotateCw, RefreshCw, PlayCircle, FolderKanban, Clock, FileDown, StopCircle } from 'lucide-react'
 import { TestRun } from '../../types'
 import { ExecutionStatusBadge } from './execution-status-badge'
 import { formatTime, elapsedBetween } from './execution-utils'
+import { downloadPdfReport } from '../../utils/pdfGenerator'
 
 interface ExecutionHeaderProps {
   run: TestRun
@@ -12,9 +13,11 @@ interface ExecutionHeaderProps {
   onRefresh: () => void
   onRerun?: () => void
   rerunning?: boolean
+  onCancel?: () => void
+  cancelling?: boolean
 }
 
-export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning }: ExecutionHeaderProps) {
+export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning, onCancel, cancelling }: ExecutionHeaderProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -56,6 +59,25 @@ export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning 
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
+          <button
+            onClick={() => downloadPdfReport(run)}
+            disabled={run.status === 'running' || run.status === 'queued'}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Download PDF execution report"
+          >
+            <FileDown className="w-3.5 h-3.5 text-primary" /> Report PDF
+          </button>
+          {onCancel && (run.status === 'running' || run.status === 'queued') && (
+            <button
+              onClick={onCancel}
+              disabled={cancelling}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-500 transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              title="Abort running execution"
+            >
+              <StopCircle className={`w-3.5 h-3.5 ${cancelling ? 'animate-pulse' : ''}`} />
+              {cancelling ? 'Stopping...' : 'Stop Run'}
+            </button>
+          )}
           {onRerun && (
             <button
               onClick={onRerun}

@@ -3,12 +3,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   PlayCircle, Loader2, AlertTriangle, Clock, ShieldAlert,
-  ChevronDown, ChevronRight, FileText, CheckCircle2, XCircle, Eye
+  ChevronDown, ChevronRight, FileText, CheckCircle2, XCircle, Eye, FileDown
 } from 'lucide-react'
 import { useSearchParams, useRouter, useParams } from 'next/navigation'
 import { useExecutionSocket } from '../hooks/useExecutionSocket'
 import { executionService, getAssetUrl } from '../services/executionService'
 import { TestCaseResult, TestRun } from '../types'
+import { downloadPdfReport } from '../utils/pdfGenerator'
 import { ExecutionHeader } from './execution/execution-header'
 import { ExecutionSummaryCards } from './execution/execution-summary-cards'
 import { ExecutionTestCaseList } from './execution/execution-testcase-list'
@@ -54,6 +55,23 @@ export function ExecutionView() {
       console.error('Re-run failed', err)
     } finally {
       setRerunning(false)
+    }
+  }
+
+  const [cancelling, setCancelling] = useState(false)
+
+  const handleCancel = async () => {
+    if (!runId) return
+    try {
+      setCancelling(true)
+      const res = await executionService.cancelExecution(runId)
+      if (res.success) {
+        refetch()
+      }
+    } catch (err) {
+      console.error('Cancel run failed', err)
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -107,6 +125,8 @@ export function ExecutionView() {
         onRefresh={() => refetch()}
         onRerun={handleRerun}
         rerunning={rerunning}
+        onCancel={handleCancel}
+        cancelling={cancelling}
       />
 
       <ExecutionSummaryCards run={run} />
@@ -300,6 +320,15 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
                       </>
                     )}
                   </div>
+
+                  <button
+                    onClick={() => downloadPdfReport(runItem)}
+                    disabled={runItem.status === 'running' || runItem.status === 'queued'}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-border bg-card hover:bg-muted cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Download PDF report"
+                  >
+                    <FileDown className="w-4 h-4 text-primary" /> PDF Report
+                  </button>
 
                   <button
                     onClick={() => onSelectRun(runItem._id)}

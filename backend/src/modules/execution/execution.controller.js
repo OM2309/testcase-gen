@@ -10,7 +10,8 @@ import {
   startExecution,
   getExecutionRun,
   getProjectExecutions,
-  getExecutionStatus
+  getExecutionStatus,
+  cancelExecution
 } from './execution.service.js'
 
 /**
@@ -88,6 +89,20 @@ export async function getExecutionStatusHandler(req, res, next) {
     if (!status) throw new ApiError('Execution run not found', 404)
 
     return sendSuccess(res, 'Execution status fetched successfully.', status)
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * POST /api/executions/:runId/cancel
+ * Cancels a running execution.
+ */
+export async function cancelExecutionHandler(req, res, next) {
+  try {
+    const { runId } = req.params
+    const cancelled = await cancelExecution(runId)
+    return sendSuccess(res, 'Execution cancelled successfully.', { cancelled })
   } catch (err) {
     next(err)
   }

@@ -57,5 +57,15 @@ export const executionService = {
       `/executions/project/${projectId}`
     )
     return response.data
+  },
+
+  /**
+   * Cancels a running execution.
+   */
+  async cancelExecution(runId: string) {
+    const response = await apiClient.post<{ success: boolean; data: { cancelled: boolean } }>(
+      `/executions/${runId}/cancel`
+    )
+    return response.data
   }
 }

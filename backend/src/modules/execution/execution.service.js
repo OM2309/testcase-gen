@@ -14,6 +14,8 @@ import Project from '../project/project.model.js'
 import { executeStep, captureFailureScreenshot } from './stepExecutor.service.js'
 import { getSocketIO } from '../../shared/socket.js'
 
+const activeRuns = new Map()
+
 async function updateTestRun(runId, updateDoc) {
   const run = await TestRun.findByIdAndUpdate(runId, updateDoc, { new: true }).lean()
   const io = getSocketIO()
@@ -114,6 +116,8 @@ export async function startExecution({ projectId, testSuiteId, baseUrl, headless
     }]
   })
 
+  activeRuns.set(run._id.toString(), { browser: null, cancelRequested: false })
+
   // Start execution asynchronously (fire and forget)
   runExecution(run._id.toString()).catch(err => {
     console.error('[EXECUTION SERVICE] Unhandled execution error:', err.message)
@@ -142,8 +146,19 @@ async function runExecution(runId) {
 
     await appendLog(runId, 'info', 'system', 'Execution started')
 
+    const activeRun = activeRuns.get(runId)
+    if (!activeRun || activeRun.cancelRequested) {
+      throw new Error('Execution cancelled by user')
+    }
+
     // Launch browser (bundled Chromium, or system Chrome as a fallback)
     browser = await launchBrowser(headless)
+    activeRun.browser = browser
+
+    if (activeRun.cancelRequested) {
+      throw new Error('Execution cancelled by user')
+    }
+
     await appendLog(runId, 'info', 'system', `Browser launched (headless: ${headless})`)
 
     const context = await browser.newContext({
@@ -159,6 +174,10 @@ async function runExecution(runId) {
 
     // Execute each test case
     for (let i = 0; i < run.testCaseResults.length; i++) {
+      const currentActiveRun = activeRuns.get(runId)
+      if (!currentActiveRun || currentActiveRun.cancelRequested) {
+        throw new Error('Execution cancelled by user')
+      }
       const tcResult = run.testCaseResults[i]
 
       await runSingleTestCase({
@@ -196,6 +215,7 @@ async function runExecution(runId) {
     await appendLog(runId, 'error', 'system', friendly)
     await finalizeRun(runId, 'failed')
   } finally {
+    activeRuns.delete(runId)
     if (browser) {
       try { await browser.close() } catch (e) { /* ignore */ }
     }
@@ -230,6 +250,10 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
   const steps = run.testCaseResults[testCaseIndex].stepResults
 
   for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+    const currentActiveRun = activeRuns.get(runId)
+    if (!currentActiveRun || currentActiveRun.cancelRequested) {
+      throw new Error('Execution cancelled by user')
+    }
     const step = steps[stepIdx]
     const stepStart = Date.now()
 
@@ -386,4 +410,37 @@ export async function getExecutionStatus(runId) {
   return await TestRun.findById(runId)
     .select('status passedTests failedTests skippedTests totalTests currentTestCaseTitle currentStepNumber currentStepAction')
     .lean()
+}
+
+/**
+ * Cancels a running execution.
+ */
+export async function cancelExecution(runId) {
+  const activeRun = activeRuns.get(runId)
+  if (!activeRun) {
+    const run = await TestRun.findById(runId)
+    if (run && (run.status === 'running' || run.status === 'queued')) {
+      await updateTestRun(runId, {
+        status: 'failed',
+        completedAt: new Date()
+      })
+      await appendLog(runId, 'error', 'system', 'Execution cancelled by user')
+      return true
+    }
+    return false
+  }
+
+  activeRun.cancelRequested = true
+  await appendLog(runId, 'error', 'system', 'Cancellation requested by user...')
+
+  if (activeRun.browser) {
+    try {
+      await activeRun.browser.close()
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  activeRuns.delete(runId)
+  return true
 }
