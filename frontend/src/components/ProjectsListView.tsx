@@ -118,7 +118,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
           </div>
           <div className="space-y-1">
             <p className="font-semibold text-sm">No projects yet</p>
-            <p className="text-xs text-muted-foreground">Create a project to upload SRS documents and generate test cases.</p>
+            <p className="text-xs text-muted-foreground">Create a project to upload requirement documents and generate test cases.</p>
           </div>
           <button
             onClick={() => setIsCreateOpen(true)}
@@ -157,7 +157,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <FileText className="w-3 h-3" />
-                      {srsCount} SRS
+                      {srsCount} {srsCount === 1 ? 'Doc' : 'Docs'}
                     </span>
                     {project.hasTestSuite && (
                       <span className="flex items-center gap-1 text-emerald-400 font-semibold">

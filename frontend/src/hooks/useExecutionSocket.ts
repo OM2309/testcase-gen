@@ -70,5 +70,5 @@ export function useExecutionSocket(runId: string | null) {
     }
   }, [runId])
 
-  return { run, loading, error, refetch: () => {} }
+  return { run, loading, error, refetch: () => { } }
 }

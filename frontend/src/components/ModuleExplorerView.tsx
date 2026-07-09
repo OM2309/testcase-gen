@@ -138,7 +138,7 @@ export function ModuleExplorerView() {
         }))
 
         const ws = XLSX.utils.json_to_sheet(sheetData)
-        
+
         const cleanSheetName = mod.name
           .replace(/[:\\/?*\[\]]/g, '')
           .substring(0, 30) || 'General'
@@ -413,12 +413,12 @@ export function ModuleExplorerView() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-primary tracking-wider uppercase">Project Workspace</span>
               <span className="px-2 py-0.5 rounded-full border bg-muted text-[10px] font-semibold">
-                {srsDocumentsList.length} SRS document{srsDocumentsList.length > 1 ? 's' : ''}
+                {srsDocumentsList.length} Requirement document{srsDocumentsList.length > 1 ? 's' : ''}
               </span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">{project.projectName}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground capitalize">{project.projectName}</h1>
             {project.projectDescription && (
-              <p className="text-sm text-muted-foreground max-w-xl">{project.projectDescription}</p>
+              <p className="text-sm text-muted-foreground max-w-xl  capitalize">{project.projectDescription}</p>
             )}
           </div>
         </div>
@@ -426,7 +426,7 @@ export function ModuleExplorerView() {
         {/* Stats Strip */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-6 border-t border-border/50">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">SRS Documents</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Requirement Docs</span>
             <span className="text-xl font-extrabold text-foreground">{srsDocumentsList.length}</span>
           </div>
           <div className="space-y-1">
@@ -467,7 +467,7 @@ export function ModuleExplorerView() {
 
       {/* Unified Multi-SRS Tree Explorer */}
       <div className="space-y-4">
-        <h2 className="text-sm font-bold text-foreground">Unified Explorer (SRS tree)</h2>
+        <h2 className="text-sm font-bold text-foreground">Uploaded Requirement Documents</h2>
 
         {srsDocumentsList.length === 0 ? (
           <div className="border border-dashed border-border rounded-2xl bg-card/10 flex flex-col items-center justify-center p-16 text-center gap-6">
@@ -475,9 +475,9 @@ export function ModuleExplorerView() {
               <BrainCircuit className="w-8 h-8 text-primary" />
             </div>
             <div className="space-y-1.5 max-w-sm">
-              <h3 className="font-semibold text-lg">Upload an SRS Document</h3>
+              <h3 className="font-semibold text-lg">Upload a Requirement Document</h3>
               <p className="text-sm text-muted-foreground">
-                Upload your first SRS document above to generate structured modules and test suites.
+                Upload your first requirement document above to generate structured modules and test suites.
               </p>
             </div>
           </div>
@@ -514,7 +514,7 @@ export function ModuleExplorerView() {
                       </div>
                       <div className="min-w-0">
                         <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">
-                          SRS {srsIdx + 1}
+                          Requirement Doc {srsIdx + 1}
                         </span>
                         <h3 className="text-sm font-bold text-foreground truncate mt-0.5">
                           {doc.originalFileName}
@@ -576,7 +576,7 @@ export function ModuleExplorerView() {
                             onClick={() => handleOpenRunDialog('srs', doc.originalFileName, suite.testCases, suite._id)}
                             className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-all cursor-pointer"
                           >
-                            <PlayCircle className="w-3.5 h-3.5" /> Run SRS Suite ({totalTests})
+                            <PlayCircle className="w-3.5 h-3.5" /> Run Suite ({totalTests})
                           </button>
                         </div>
                       )}
@@ -593,6 +593,21 @@ export function ModuleExplorerView() {
                             className="flex items-center justify-between p-5 cursor-pointer select-none hover:bg-muted/10 transition-colors"
                           >
                             <div className="flex items-center gap-4">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  {/* <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400">
+                                    <BrainCircuit className="w-3 h-3" /> Agent 0
+                                  </span> */}
+                                  <div className="flex items-center gap-1.5 relative group" onClick={e => e.stopPropagation()}>
+                                    <h4 className="text-xs font-bold text-foreground">Accuracy Score</h4>
+                                    <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                    <div className="absolute top-1/2 left-11/12 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-3 bg-popover text-popover-foreground text-[11px] font-normal leading-relaxed rounded-xl border border-border/80 shadow-xl z-50">
+                                      The Accuracy Score evaluates if the requirement document has sufficient functional detail, clear workflows, inputs, outputs, and edge cases for reliable test case generation.
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
                               {/* Circular Gauge / Percentage Indicator */}
                               <div className="relative flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-full bg-background border border-border">
                                 <svg className="w-12 h-12 transform -rotate-90">
@@ -620,15 +635,6 @@ export function ModuleExplorerView() {
                                   {analysis.agent0Score}%
                                 </span>
                               </div>
-
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400">
-                                    <BrainCircuit className="w-3 h-3" /> Agent 0
-                                  </span>
-                                  <h4 className="text-xs font-bold text-foreground">SRS Detailing Analysis</h4>
-                                </div>
-                              </div>
                             </div>
 
                             <div className="text-muted-foreground p-1 hover:bg-muted/20 rounded-lg transition-colors">
@@ -638,7 +644,7 @@ export function ModuleExplorerView() {
 
                           {expandedSrsScores[doc._id] && (
                             <div className="px-5 pb-5 pt-1 space-y-4 border-t border-border/40">
-                              <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl whitespace-pre-line">
+                              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
                                 {analysis.agent0Feedback}
                               </p>
 
@@ -646,7 +652,7 @@ export function ModuleExplorerView() {
                                 <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 leading-relaxed">
                                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                                   <div>
-                                    <span className="font-semibold">Notice:</span> The SRS score is less than 70%. You can update your SRS or go through the test cases and update them if required.
+                                    <span className="font-semibold">Note:</span> The detail score is less than 70%. You can update your requirement document or go through the test cases and update them if required.
                                   </div>
                                 </div>
                               )}
@@ -657,11 +663,11 @@ export function ModuleExplorerView() {
 
                       {!isAnalyzed ? (
                         <div className="text-center py-6 text-xs text-muted-foreground leading-relaxed">
-                          ⚠️ This SRS document has not been analyzed yet. Run requirements analysis above to explore its modules.
+                          ⚠️ This requirement document has not been analyzed yet. Run requirements analysis above to explore its modules.
                         </div>
                       ) : srsModules.length === 0 ? (
                         <div className="text-center py-6 text-xs text-muted-foreground leading-relaxed">
-                          No modules found inside this SRS document.
+                          No modules found inside this requirement document.
                         </div>
                       ) : (
                         srsModules.map((mod) => {

@@ -27,12 +27,16 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
 
   const isValidFile = (f: File) => {
     const ext = f.name.split('.').pop()?.toLowerCase()
-    return ext === 'pdf' || ext === 'docx'
+    return ext === 'pdf' || ext === 'docx' || ext === 'doc'
   }
 
   const selectFile = (f: File) => {
     if (!isValidFile(f)) {
-      setError('Only PDF and DOCX files are accepted.')
+      setError('Only PDF, DOC, and DOCX files are accepted.')
+      return
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setError('File size must be under 5MB.')
       return
     }
     setError(null)
@@ -58,7 +62,7 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
         setSuccess(true)
         setFile(null)
         onSrsUploaded(res.data)
-        toast.success(`SRS Document "${fileName}" uploaded and parsed! 📁`)
+        toast.success(`Requirement Document "${fileName}" uploaded and parsed! 📁`)
         confetti({
           particleCount: 80,
           spread: 50,
@@ -86,7 +90,7 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
             <UploadCloud className="w-4 h-4 text-blue-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground">SRS Documents</h3>
+            <h3 className="text-sm font-bold text-foreground">Requirement Documents</h3>
             <p className="text-[11px] text-muted-foreground">
               {srsDocuments.length === 0
                 ? 'No documents uploaded yet'
@@ -123,7 +127,7 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                        SRS {idx + 1}
+                        Doc {idx + 1}
                       </span>
                       <p className="text-xs font-semibold text-foreground truncate">{doc.originalFileName}</p>
                     </div>
@@ -147,7 +151,7 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
           <div className="space-y-3 pt-2">
             <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               <Plus className="w-3.5 h-3.5 text-primary" />
-              {srsDocuments.length === 0 ? 'Upload First SRS Document' : 'Upload Another SRS Document'}
+              {srsDocuments.length === 0 ? 'Upload First Requirement Document' : 'Upload Another Requirement Document'}
             </p>
 
             {error && (
@@ -160,7 +164,7 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
             {success && (
               <div className="border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 p-3 rounded-xl flex items-center gap-2 text-xs">
                 <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                SRS document uploaded and parsed successfully!
+                Requirement document uploaded and parsed successfully!
               </div>
             )}
 
@@ -170,25 +174,24 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center gap-3 ${
-                  dragOver
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center gap-3 ${dragOver
                     ? 'border-primary bg-primary/5'
                     : 'border-border hover:border-primary/40 bg-muted/5 hover:bg-muted/10'
-                }`}
+                  }`}
               >
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={e => e.target.files?.[0] && selectFile(e.target.files[0])}
-                  accept=".pdf,.docx"
+                  accept=".pdf,.docx,.doc"
                   className="hidden"
                 />
                 <div className="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center">
                   <Upload className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Drop SRS file here or click to browse</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">PDF or DOCX — up to 25MB</p>
+                  <p className="text-sm font-semibold">Drop requirement file here or click to browse</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">PDF, DOC or DOCX — up to 5MB</p>
                 </div>
               </div>
             ) : (
@@ -227,7 +230,7 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
                     ) : (
                       <>
                         <Upload className="w-3.5 h-3.5" />
-                        Upload SRS Document
+                        Upload Requirement Document
                       </>
                     )}
                   </button>

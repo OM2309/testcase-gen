@@ -135,12 +135,101 @@ Output MUST be valid JSON only. Do not include markdown code block wrappers (lik
 
 export function buildAgent0UserPrompt({ documentName, documentText }) {
   return `
-Analyze the completeness of the following SRS document for test case generation.
+You are an expert Software QA Engineer and Business Analyst.
 
-Output schema:
+Your task is to evaluate how suitable the provided Software Requirements Specification (SRS) is for generating comprehensive and accurate AI-generated functional test cases.
+
+IMPORTANT:
+Do NOT evaluate grammar, formatting, writing style, or spelling.
+Evaluate ONLY whether the document contains enough information to generate reliable functional test cases with minimal assumptions.
+
+Scoring Methodology:
+
+Start with a score of 100.
+
+Evaluate the document using the following weighted criteria:
+
+1. Functional Requirements (25 points)
+- Clearly defined system features
+- User actions
+- Expected system behavior
+
+2. User Flows & Workflows (15 points)
+- End-to-end user journeys
+- Navigation flow
+- Process sequence
+
+3. Acceptance Criteria (15 points)
+- Clear expected outcomes
+- Success conditions
+- Functional completion criteria
+
+4. Business Rules (10 points)
+- Rules
+- Constraints
+- Permissions
+- Conditional logic
+
+5. Inputs & Outputs (10 points)
+- Required inputs
+- Expected outputs
+- Data formats
+
+6. Error Handling & Exception Scenarios (10 points)
+- Invalid inputs
+- Failure cases
+- Error messages
+- Recovery behavior
+
+7. Edge Cases (5 points)
+- Boundary conditions
+- Alternate scenarios
+- Rare cases
+
+8. Non-functional Requirements (5 points)
+- Performance
+- Security
+- Accessibility
+- Compatibility
+(Only score if relevant to testing.)
+
+9. Data Validation Rules (5 points)
+- Mandatory fields
+- Field validations
+- Input constraints
+- Business validations
+
+Scoring Rules:
+
+• Begin with the maximum score of 100.
+• Deduct points for missing, incomplete, vague, or ambiguous information.
+• Do NOT deduct points for grammar or formatting.
+• If a section is not applicable, do not penalize it.
+• Never invent missing requirements.
+• Base the score only on the provided document.
+
+Interpretation:
+
+90-100:
+Excellent. The SRS is highly suitable for automated test case generation with minimal assumptions.
+
+75-89:
+Good. Minor details are missing, but reliable test cases can still be generated.
+
+60-74:
+Average. Several important testing details are missing, requiring assumptions.
+
+40-59:
+Poor. Significant information is missing, making automated test generation unreliable.
+
+0-39:
+Insufficient. The document lacks enough functional detail for meaningful automated test generation.
+
+Return ONLY valid JSON using this schema:
+
 {
-  "score": <number between 0 and 100>,
-  "feedback": "<detailed feedback string summarizing missing details and improvement recommendations>"
+  "score": <integer between 0 and 100>,
+  "feedback": "<Explain why this score was assigned. Mention the strongest parts of the SRS, the missing information that reduced the score, and provide specific recommendations to improve its suitability for AI-generated test case generation. Do not mention individual section scores or calculations.>"
 }
 
 Document Name:
