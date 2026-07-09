@@ -22,8 +22,8 @@ export function SuiteSummary({ testCases }: { testCases: TestCase[] }) {
     <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="flex-row items-center gap-3 px-4 py-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <ShieldCheck className="w-4.5 h-4.5 text-primary" />
+          <div className="w-9 h-9 rounded-lg bg-[#FF6B00]/10 flex items-center justify-center flex-shrink-0">
+            <ShieldCheck className="w-4.5 h-4.5 text-[#FF6B00]" />
           </div>
           <div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Test Cases</div>

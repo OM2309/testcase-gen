@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   PlayCircle, Loader2, AlertTriangle, Clock, ShieldAlert,
-  ChevronDown, ChevronRight, FileText, CheckCircle2, XCircle, Eye, FileDown
+  ChevronDown, ChevronRight, FileText, CheckCircle2, XCircle, Eye, FileDown, StopCircle
 } from 'lucide-react'
 import { useSearchParams, useRouter, useParams } from 'next/navigation'
 import { useExecutionSocket } from '../hooks/useExecutionSocket'
@@ -147,6 +147,34 @@ export function ExecutionView() {
         </div>
       </div>
     </div>
+  )
+}
+
+function StopHistoryButton({ runId, onCancelled }: { runId: string; onCancelled: () => void }) {
+  const [cancelling, setCancelling] = useState(false)
+  
+  const handleStop = async () => {
+    try {
+      setCancelling(true)
+      await executionService.cancelExecution(runId)
+      onCancelled()
+    } catch (err) {
+      console.error("Failed to stop run from list", err)
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleStop}
+      disabled={cancelling}
+      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-rose-600 text-white hover:bg-rose-500 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      title="Stop execution run"
+    >
+      <StopCircle className={`w-4 h-4 ${cancelling ? 'animate-pulse' : ''}`} />
+      {cancelling ? 'Stopping...' : 'Stop'}
+    </button>
   )
 }
 
@@ -320,6 +348,10 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
                       </>
                     )}
                   </div>
+
+                  {(runItem.status === 'running' || runItem.status === 'queued') && (
+                    <StopHistoryButton runId={runItem._id} onCancelled={fetchHistory} />
+                  )}
 
                   <button
                     onClick={() => downloadPdfReport(runItem)}

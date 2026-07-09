@@ -32,7 +32,7 @@ export function TestCaseList({
           <button
             key={m.name}
             onClick={() => onSelectModule(m.name)}
-            className={`w-full text-left px-3 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-between ${selectedModule === m.name ? 'bg-primary/10 text-primary border-l-[3px] border-primary pl-[10px]' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            className={`w-full text-left px-3 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-between ${selectedModule === m.name ? 'bg-[#FF6B00]/10 text-[#FF6B00] border-l-[3px] border-[#FF6B00] pl-[10px]' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
           >
             <span className="line-clamp-1">{m.name}</span>
             <span className="text-[10px] bg-border/60 px-1.5 py-0.5 rounded font-mono">{m.count}</span>
@@ -41,7 +41,7 @@ export function TestCaseList({
       </div>
 
       {/* Test case list */}
-      <div className="lg:col-span-4 border border-border rounded-xl bg-card overflow-hidden">
+      <div className="lg:col-span-10 border border-border rounded-xl bg-card overflow-hidden">
         <div className="p-3 border-b border-border bg-muted/20">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -49,7 +49,7 @@ export function TestCaseList({
               value={search}
               onChange={e => onSearch(e.target.value)}
               placeholder="Search test cases..."
-              className="w-full pl-8 pr-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground"
+              className="w-full pl-8 pr-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF6B00]/40 placeholder:text-muted-foreground"
             />
           </div>
         </div>
@@ -58,47 +58,51 @@ export function TestCaseList({
             <div
               key={tc.id}
               onClick={() => onSelect(tc.id)}
-              className={`group px-4 py-3 cursor-pointer transition-all hover:bg-muted/30 ${selectedId === tc.id ? 'bg-primary/5 border-l-[3px] border-primary pl-[13px]' : ''}`}
+              className={`group px-4 py-2.5 cursor-pointer transition-all hover:bg-muted/30 ${selectedId === tc.id ? 'bg-[#FF6B00]/5 border-l-[3px] border-[#FF6B00] pl-[13px]' : ''}`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <div className="flex items-center h-5 mt-0.5" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-center h-4" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={tc.isRegressive || false}
                       onChange={() => onToggleRegressive?.(tc.id)}
                       title="Mark as Regressive"
-                      className="w-3.5 h-3.5 text-primary border-border rounded focus:ring-primary/40 bg-background cursor-pointer"
+                      className="w-3.5 h-3.5 text-[#FF6B00] border-border rounded focus:ring-[#FF6B00]/40 bg-background cursor-pointer"
                     />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-bold text-primary flex-shrink-0">{tc.id}</span>
-                      {getPriorityBadge(tc.priority)}
-                      {tc.isRegressive && (
-                        <span className="text-[9px] bg-rose-500/10 text-rose-500 px-1 py-0.2 rounded font-semibold uppercase tracking-wider">Regressive</span>
-                      )}
-                    </div>
-                    <p className="text-xs font-semibold text-foreground mt-1 line-clamp-2">{tc.title}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{tc.module} · {tc.steps.length} steps</p>
-                  </div>
+                  <span className="text-[10px] font-mono font-bold text-[#FF6B00] flex-shrink-0">{tc.id}</span>
+                  <span className="text-xs font-semibold text-foreground truncate min-w-0 flex-1" title={tc.title}>
+                    {tc.title}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/80 font-medium hidden md:inline flex-shrink-0">
+                    ({tc.module || 'General'} · {tc.steps.length} steps)
+                  </span>
                 </div>
-                <div className="flex items-center gap-0.5 flex-shrink-0">
-                  {onRun && (
-                    <button
-                      onClick={e => { e.stopPropagation(); onRun(tc.id) }}
-                      title="Run this test case"
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-                    >
-                      <PlayCircle className="w-3.5 h-3.5" />
-                    </button>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {getPriorityBadge(tc.priority)}
+                  {tc.isRegressive && (
+                    <span className="text-[9px] bg-rose-500/10 text-rose-500 px-1 py-0.2 rounded font-semibold uppercase tracking-wider">Regressive</span>
                   )}
-                  <button
-                    onClick={e => { e.stopPropagation(); onDelete(tc.id) }}
-                    className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  
+                  <div className="flex items-center gap-0.5">
+                    {onRun && (
+                      <button
+                        onClick={e => { e.stopPropagation(); onRun(tc.id) }}
+                        title="Run this test case"
+                        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[#FF6B00]/10 text-muted-foreground hover:text-[#FF6B00] transition-all"
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={e => { e.stopPropagation(); onDelete(tc.id) }}
+                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-all"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

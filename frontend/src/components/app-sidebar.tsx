@@ -11,9 +11,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut } from "lucide-react"
+import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut, ChevronDown, ChevronRight, BarChart3, FileText } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
 import { useProject } from "../contexts/ProjectContext"
+import { projectService } from "../services/projectService"
+import { Project } from "../types"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   theme: 'dark' | 'light'
@@ -29,6 +31,33 @@ export function AppSidebar({
   const pathname = usePathname()
   const router = useRouter()
   const { project, requirementAnalyses, testSuites } = useProject()
+  const [allProjects, setAllProjects] = React.useState<Project[]>([])
+  
+  const isOnReportsPage = pathname.includes('/execution')
+  const [isProjectMenuOpen, setIsProjectMenuOpen] = React.useState(!isOnReportsPage)
+  const [isReportsMenuOpen, setIsReportsMenuOpen] = React.useState(isOnReportsPage)
+
+  React.useEffect(() => {
+    projectService.getAllProjects()
+      .then(res => {
+        if (res.success && res.data) {
+          setAllProjects(res.data)
+        }
+      })
+      .catch(err => console.error("Failed to load projects list in sidebar", err))
+  }, [])
+
+  // Auto-open menus depending on current page context
+  React.useEffect(() => {
+    const isExecution = pathname.includes('/execution')
+    if (isExecution) {
+      setIsReportsMenuOpen(true)
+      setIsProjectMenuOpen(false)
+    } else if (project) {
+      setIsProjectMenuOpen(true)
+      setIsReportsMenuOpen(false)
+    }
+  }, [pathname, project])
 
   const hasRequirements = requirementAnalyses && requirementAnalyses.some(r => r.status === 'completed')
   const hasTestSuite = testSuites && testSuites.length > 0
@@ -53,6 +82,16 @@ export function AppSidebar({
     else if (tab === 'execution') router.push(`/dashboard/${id}/execution`)
   }
 
+  const handleReportsClick = () => {
+    if (project) {
+      router.push(`/dashboard/${project._id}/execution`)
+    } else if (allProjects.length > 0) {
+      router.push(`/dashboard/${allProjects[0]._id}/execution`)
+    } else {
+      router.push('/dashboard/projects')
+    }
+  }
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader className="border-b border-sidebar-border px-6 py-5">
@@ -71,71 +110,103 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="px-4 py-4 space-y-1.5">
-        <SidebarMenu className="gap-1.5 cursor-pointer">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'projects'}
-              onClick={() => router.push('/dashboard/projects')}
-              className="w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 cursor-pointer"
-            >
-              <FolderKanban className="w-4 h-4" /> Repository
-            </SidebarMenuButton>
+      <SidebarContent className="px-4 py-4 space-y-3">
+        <SidebarMenu className="gap-1 cursor-pointer">
+          <SidebarMenuItem className="space-y-1">
+            <div className="flex items-center justify-between w-full group/menu">
+              <SidebarMenuButton
+                isActive={activeTab === 'projects'}
+                onClick={() => router.push('/dashboard/projects')}
+                className="flex-1 text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 hover:bg-muted/80 cursor-pointer"
+              >
+                <FolderKanban className="w-4 h-4 text-muted-foreground" />
+                <span>Projects</span>
+              </SidebarMenuButton>
+              {project && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsProjectMenuOpen(!isProjectMenuOpen)
+                  }}
+                  className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer mr-1 flex-shrink-0"
+                  title={isProjectMenuOpen ? "Collapse menu" : "Expand menu"}
+                >
+                  {isProjectMenuOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                </button>
+              )}
+            </div>
+
+            {project && isProjectMenuOpen && (
+              <div className="pl-4 ml-5 border-l border-border/80 flex flex-col gap-1 mt-1">
+                <SidebarMenuButton
+                  isActive={activeTab === 'modules'}
+                  onClick={() => navigateTo('modules')}
+                  className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50"
+                >
+                  <Layers className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>modules</span>
+                </SidebarMenuButton>
+
+                <SidebarMenuButton
+                  isActive={activeTab === 'requirements'}
+                  disabled={!hasRequirements}
+                  onClick={() => navigateTo('requirements')}
+                  className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <FileCheck className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>requirements</span>
+                </SidebarMenuButton>
+
+                <SidebarMenuButton
+                  isActive={activeTab === 'testcases'}
+                  disabled={!hasTestSuite}
+                  onClick={() => navigateTo('testcases')}
+                  className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>test suits</span>
+                </SidebarMenuButton>
+              </div>
+            )}
           </SidebarMenuItem>
 
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'modules'}
-              disabled={!project}
-              onClick={() => navigateTo('modules')}
-              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+          <SidebarMenuItem className="space-y-1">
+            <button
+              onClick={() => setIsReportsMenuOpen(!isReportsMenuOpen)}
+              className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${
+                activeTab === 'execution' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+              }`}
             >
-              <Layers className="w-4 h-4" /> Modules
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+              <div className="flex items-center gap-2.5">
+                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                <span>Reports</span>
+              </div>
+              {isReportsMenuOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
 
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'requirements'}
-              disabled={!project || !hasRequirements}
-              onClick={() => navigateTo('requirements')}
-              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <FileCheck className="w-4 h-4" /> Requirements
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'testcases'}
-              disabled={!project || !hasTestSuite}
-              onClick={() => navigateTo('testcases')}
-              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ShieldCheck className="w-4 h-4" /> Test Suite
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeTab === 'execution'}
-              disabled={!project}
-              onClick={() => navigateTo('execution')}
-              className="w-full cursor-pointer text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <PlayCircle className="w-4 h-4" /> Execution
-            </SidebarMenuButton>
+            {isReportsMenuOpen && allProjects.length > 0 && (
+              <div className="pl-4 ml-5 border-l border-border/80 flex flex-col gap-1 mt-1">
+                {allProjects.map((p) => {
+                  const isCurrentReportsActive = pathname.includes(`/dashboard/${p._id}/execution`)
+                  return (
+                    <SidebarMenuButton
+                      key={p._id}
+                      isActive={isCurrentReportsActive}
+                      onClick={() => router.push(`/dashboard/${p._id}/execution`)}
+                      className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="truncate max-w-[120px]">{p.projectName}</span>
+                    </SidebarMenuButton>
+                  )
+                })}
+              </div>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-4 bg-muted/10">
-        {project && (
-          <div className="border border-border/60 bg-card rounded-lg p-3 space-y-1">
-            <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">Active Project</span>
-            <span className="font-semibold text-xs text-foreground block line-clamp-1">{project.projectName}</span>
-          </div>
-        )}
 
         {session?.user && (
           <div className="border border-border/60 bg-card rounded-lg p-3 flex items-center justify-between gap-2.5 animate-fadeIn">

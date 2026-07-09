@@ -14,6 +14,7 @@ import { TestCaseList } from './testsuite/TestCaseList'
 import { TestCaseDetail } from './testsuite/TestCaseDetail'
 import { TestCaseDialogs, TestCaseForm } from './testsuite/TestCaseDialogs'
 import { useProject } from '../contexts/ProjectContext'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 
 export function TestCasesView() {
   const router = useRouter()
@@ -422,7 +423,7 @@ export function TestCasesView() {
           <button
             onClick={() => openRunDialog(null)}
             disabled={testCases.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#FF6B00] hover:bg-[#E05300] text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <PlayCircle className="w-4 h-4" /> Run Test Suite
           </button>
@@ -445,17 +446,31 @@ export function TestCasesView() {
           onRun={openRunDialog}
           onToggleRegressive={handleToggleRegressive}
         />
-
-        {/* Right — Step editor */}
-        <TestCaseDetail
-          testCase={selectedTc}
-          onEditMeta={openEditDialog}
-          onAddStep={() => { if (selectedTc) addStep(selectedTc.id) }}
-          onDeleteStep={(idx) => { if (selectedTc) deleteStep(selectedTc.id, idx) }}
-          onUpdateStep={(idx, patch) => { if (selectedTc) updateStep(selectedTc.id, idx, patch) }}
-          onReorder={(from, to) => { if (selectedTc) reorderSteps(selectedTc.id, from, to) }}
-        />
       </div>
+
+      <Sheet open={!!selectedId} onOpenChange={(open) => { if (!open) setSelectedId(null) }}>
+        <SheetContent className="sm:max-w-2xl overflow-y-auto w-full p-6">
+          <SheetHeader className="pb-4 border-b border-border mb-4">
+            <SheetTitle className="text-lg font-bold text-foreground">
+              {selectedTc ? `${selectedTc.id} — Details` : 'Test Case Details'}
+            </SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
+              View expected results, preconditions, and manage step definitions.
+            </SheetDescription>
+          </SheetHeader>
+          
+          {selectedTc && (
+            <TestCaseDetail
+              testCase={selectedTc}
+              onEditMeta={openEditDialog}
+              onAddStep={() => { if (selectedTc) addStep(selectedTc.id) }}
+              onDeleteStep={(idx) => { if (selectedTc) deleteStep(selectedTc.id, idx) }}
+              onUpdateStep={(idx, patch) => { if (selectedTc) updateStep(selectedTc.id, idx, patch) }}
+              onReorder={(from, to) => { if (selectedTc) reorderSteps(selectedTc.id, from, to) }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

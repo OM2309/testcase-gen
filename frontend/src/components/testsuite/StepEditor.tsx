@@ -97,7 +97,7 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
   }
 
   return (
-    <div className="p-3 space-y-3 bg-primary/5 border border-primary/30 rounded-xl">
+    <div className="p-3 space-y-3 bg-[#FF6B00]/5 border border-[#FF6B00]/30 rounded-xl">
       <div className="grid grid-cols-2 gap-2">
         {/* Action */}
         <div>
@@ -169,7 +169,7 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
           <button onClick={onCancel} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg border border-border hover:bg-muted font-semibold">
             <X className="w-3 h-3" /> Cancel
           </button>
-          <button onClick={save} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold">
+          <button onClick={save} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-[#FF6B00] text-white hover:bg-[#FF6B00]/90 font-semibold">
             <Check className="w-3 h-3" /> Save
           </button>
         </div>
@@ -184,7 +184,7 @@ export function StepRow({ step }: { step: Step }) {
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-1 flex-wrap">
         <span className="text-[10px] font-bold text-muted-foreground">STEP {step.step_number}</span>
-        <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-primary/10 text-primary border border-primary/20">{step.action}</span>
+        <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/20">{step.action}</span>
         {step.target && <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[140px]">{step.target}</span>}
         {step.value && <span className="text-[10px] font-mono text-muted-foreground/70 truncate max-w-[120px]">= {step.value}</span>}
       </div>

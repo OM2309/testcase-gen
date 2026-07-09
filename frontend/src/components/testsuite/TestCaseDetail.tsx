@@ -25,11 +25,9 @@ export function TestCaseDetail({
 
   if (!testCase) {
     return (
-      <div className="lg:col-span-6 border border-border rounded-xl bg-card/20 overflow-hidden">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground text-xs gap-3">
-          <HelpCircle className="w-10 h-10 opacity-30" />
-          <p>Select a test case to view and edit its steps</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground text-xs gap-3">
+        <HelpCircle className="w-10 h-10 opacity-30" />
+        <p>Select a test case to view and edit its steps</p>
       </div>
     )
   }
@@ -42,8 +40,7 @@ export function TestCaseDetail({
   }
 
   return (
-    <div className="lg:col-span-6 border border-border rounded-xl bg-card/20 overflow-hidden">
-      <div className="flex flex-col max-h-[75vh] overflow-y-auto">
+    <div className="flex flex-col h-full">
         {/* TC header */}
         <div className="px-5 py-4 border-b border-border bg-card space-y-3 flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
@@ -55,7 +52,7 @@ export function TestCaseDetail({
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="text-[10px] font-mono font-bold text-primary">{testCase.id}</span>
+                <span className="text-[10px] font-mono font-bold text-[#FF6B00]">{testCase.id}</span>
                 {getPriorityBadge(testCase.priority)}
                 {testCase.scenario_type && (
                   <span className="px-1.5 py-0.5 text-[10px] rounded bg-muted text-muted-foreground border border-border">{testCase.scenario_type}</span>
@@ -75,11 +72,11 @@ export function TestCaseDetail({
         <div className="px-5 py-4 space-y-2 flex-1">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-primary" /> Steps ({testCase.steps.length})
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#FF6B00]" /> Steps ({testCase.steps.length})
             </h3>
             <button
               onClick={onAddStep}
-              className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors font-semibold"
+              className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/20 hover:bg-[#FF6B00]/20 transition-colors font-semibold"
             >
               <Plus className="w-3 h-3" /> Add Step
             </button>
@@ -98,7 +95,7 @@ export function TestCaseDetail({
               onDragStart={() => setDraggedStepIdx(idx)}
               onDragOver={e => { e.preventDefault(); setDragOverIdx(idx) }}
               onDrop={e => handleDrop(e, idx)}
-              className={`border rounded-xl transition-all ${dragOverIdx === idx ? 'border-primary bg-primary/5' : 'border-border bg-card'} ${draggedStepIdx === idx ? 'opacity-40' : ''}`}
+              className={`border rounded-xl transition-all ${dragOverIdx === idx ? 'border-[#FF6B00] bg-[#FF6B00]/5' : 'border-border bg-card'} ${draggedStepIdx === idx ? 'opacity-40' : ''}`}
             >
               {editingStepIdx === idx ? (
                 <StepEditor
@@ -138,6 +135,5 @@ export function TestCaseDetail({
           )}
         </div>
       </div>
-    </div>
   )
 }
