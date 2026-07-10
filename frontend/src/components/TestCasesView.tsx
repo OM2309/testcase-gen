@@ -13,6 +13,7 @@ import { SuiteSummary } from './testsuite/SuiteSummary'
 import { TestCaseList } from './testsuite/TestCaseList'
 import { TestCaseDetail } from './testsuite/TestCaseDetail'
 import { TestCaseDialogs, TestCaseForm } from './testsuite/TestCaseDialogs'
+import { AiGenerateDialog } from './testsuite/AiGenerateDialog'
 import { useProject } from '../contexts/ProjectContext'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 
@@ -83,6 +84,10 @@ export function TestCasesView() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [tcToDelete, setTcToDelete] = useState<string | null>(null)
+
+  // AI Generate Dialog States
+  const [isChoiceOpen, setIsChoiceOpen] = useState(false)
+  const [aiGenerating, setAiGenerating] = useState(false)
 
   // Form State
   const [form, setFormState] = useState<TestCaseForm>({
@@ -272,6 +277,40 @@ export function TestCasesView() {
     setIsCreateOpen(true)
   }
 
+  const handleAiGenerated = (generatedTc: any) => {
+    const newTc: TestCase = {
+      id: generatedTc.id || `TC-${Date.now()}`,
+      title: generatedTc.title || 'AI Generated Test Case',
+      description: generatedTc.description || '',
+      module: generatedTc.module || 'General',
+      feature: generatedTc.feature || '',
+      priority: generatedTc.priority || 'Medium',
+      type: generatedTc.type || 'functional',
+      scenario_type: generatedTc.scenario_type || 'positive',
+      tags: generatedTc.tags || [],
+      preconditions: generatedTc.preconditions || [],
+      test_data: generatedTc.test_data || {},
+      steps: (generatedTc.steps || []).map((s: any, idx: number) => ({
+        step_number: s.step_number || idx + 1,
+        action: s.action || 'click',
+        target: s.target || '',
+        value: s.value || '',
+        description: s.description || '',
+        expected: s.expected || '',
+        expected_url: s.expected_url || '',
+        expected_text: s.expected_text || ''
+      })),
+      expected_result: generatedTc.expected_result || '',
+      cleanup_steps: generatedTc.cleanup_steps || [],
+      source_requirements: generatedTc.source_requirements || []
+    }
+    const next = [...testCases, newTc]
+    setTestCases(next)
+    setSelectedId(newTc.id)
+    handleSave(next)
+    toast.success('AI generated test case added!')
+  }
+
   const handleCreateTestCase = () => {
     const newTc: TestCase = {
       id: `TC-${Date.now()}`,
@@ -415,7 +454,7 @@ export function TestCasesView() {
             <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export Excel
           </button>
           <button
-            onClick={openCreateDialog}
+            onClick={() => setIsChoiceOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-card text-foreground hover:bg-muted border border-border transition-colors"
           >
             <Plus className="w-4 h-4" /> New Test Case
@@ -471,6 +510,16 @@ export function TestCasesView() {
           )}
         </SheetContent>
       </Sheet>
+
+      <AiGenerateDialog
+        open={isChoiceOpen}
+        onOpenChange={setIsChoiceOpen}
+        onManualCreate={openCreateDialog}
+        onGenerated={handleAiGenerated}
+        projectId={project?._id || ''}
+        generating={aiGenerating}
+        setGenerating={setAiGenerating}
+      />
     </div>
   )
 }
