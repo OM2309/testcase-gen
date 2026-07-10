@@ -114,6 +114,20 @@ export async function executeStep({ page, step, baseUrl, screenshotDir }) {
         break
       }
 
+      case 'upload': {
+        const locator = await locateForAction(page, target)
+        const filePath = path.resolve('uploads/test-files', value)
+
+        // Intercept native file chooser event triggered by clicking the uploader button
+        const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 15000 })
+        
+        await locator.click({ timeout: STEP_TIMEOUT })
+        
+        const fileChooser = await fileChooserPromise
+        await fileChooser.setFiles(filePath)
+        break
+      }
+
       case 'fill': {
         const locator = await locateForFill(page, target)
         await locator.fill(value || '', { timeout: STEP_TIMEOUT })

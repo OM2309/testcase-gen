@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Trash2, X, Check } from 'lucide-react'
+import { Trash2, X, Check, Eye } from 'lucide-react'
 import { Step } from '../../types'
+import { InspectorModal } from './InspectorModal'
 
 export const ACTIONS = [
   'goto', 'click', 'fill', 'select', 'check', 'uncheck', 'hover', 'press',
-  'waitFor', 'assertText', 'assertVisible', 'assertHidden', 'assertURLContains',
+  'upload', 'waitFor', 'assertText', 'assertVisible', 'assertHidden', 'assertURLContains',
   'assertValue', 'assertCount', 'screenshot'
 ]
 
@@ -36,6 +37,7 @@ const ACTION_CONFIG: Record<string, ActionCfg> = {
   uncheck: { target: 'required', expected: true },
   hover: { target: 'required', expected: true },
   press: { target: 'optional', value: { label: 'Key', placeholder: 'Enter' }, expected: true },
+  upload: { target: 'required', value: { label: 'Test file', placeholder: 'Select file...' }, expected: true },
   waitFor: { target: 'optional', value: { label: 'Timeout (ms)', placeholder: '1000' } },
   assertText: { target: 'none', value: { label: 'Expected text', placeholder: 'Task added' } },
   assertVisible: { target: 'required' },
@@ -81,6 +83,7 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
   const [description, setDescription] = useState(step.description || '')
   const [expectedUrl, setExpectedUrl] = useState(step.expected_url || '')
   const [expectedText, setExpectedText] = useState(step.expected_text || '')
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false)
 
   const cfg = ACTION_CONFIG[action] || { target: 'optional' }
   const showTarget = cfg.target !== 'none'
@@ -107,11 +110,37 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
           </select>
         </div>
 
-        {/* Value (contextual) */}
         {cfg.value ? (
           <div>
             <label className="text-[10px] font-bold text-muted-foreground uppercase">{cfg.value.label}</label>
-            <input value={value} onChange={e => setValue(e.target.value)} placeholder={cfg.value.placeholder} className={inputCls} />
+            {action === 'upload' ? (
+              <div className="flex flex-col gap-1 mt-1">
+                <input
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    try {
+                      const { apiClient } = await import('../../services/apiClient')
+                      const res = await apiClient.post('/upload/test-file', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                      })
+                      if (res.data.success && res.data.data) {
+                        setValue(res.data.data.filename)
+                      }
+                    } catch (err: any) {
+                      alert('File upload failed: ' + err.response?.data?.message || err.message)
+                    }
+                  }}
+                  className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/95 cursor-pointer"
+                />
+                {value && <span className="text-[10px] text-emerald-400 truncate max-w-[150px]">Uploaded: {value}</span>}
+              </div>
+            ) : (
+              <input value={value} onChange={e => setValue(e.target.value)} placeholder={cfg.value.placeholder} className={inputCls} />
+            )}
           </div>
         ) : <div />}
       </div>
@@ -128,9 +157,18 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-muted-foreground uppercase">
-              {targetType === 'custom' ? 'Selector' : 'Label / name'}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase">
+                {targetType === 'custom' ? 'Selector' : 'Label / name'}
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsInspectorOpen(true)}
+                className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-0.5"
+              >
+                <Eye className="w-3 h-3" /> Pick from Page
+              </button>
+            </div>
             <input
               value={targetName}
               onChange={e => setTargetName(e.target.value)}
@@ -174,6 +212,15 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
           </button>
         </div>
       </div>
+
+      <InspectorModal
+        isOpen={isInspectorOpen}
+        onClose={() => setIsInspectorOpen(false)}
+        onSelect={(type, name) => {
+          setTargetType(type)
+          setTargetName(name)
+        }}
+      />
     </div>
   )
 }

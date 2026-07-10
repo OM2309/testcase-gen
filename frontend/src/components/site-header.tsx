@@ -31,10 +31,10 @@ export function SiteHeader({ title = 'Documents' }: SiteHeaderProps) {
               {agentRunning === 'agent1' ? 'Agent 1 running' : 'Agent 2 running'}
             </span>
           )}
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          {/* <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             API Connected
-          </span>
+          </span> */}
         </div>
       </div>
     </header>

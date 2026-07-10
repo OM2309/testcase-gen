@@ -94,17 +94,15 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader className="border-b border-sidebar-border px-6 py-5">
+      <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black text-sm">
-                TG
-              </div>
-              <div>
-                <span className="font-bold text-sm tracking-tight text-foreground block">TestGen AI</span>
-                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Playwright Agent MVP</span>
-              </div>
+            <div className="flex items-center justify-center w-full">
+              <img
+                src={theme === 'dark' ? "/Memorres-logo dark theme.png" : "/Memorres-logo-light theme.png"}
+                alt="Memorres Logo"
+                className="w-full h-auto max-h-16 object-contain"
+              />
             </div>
           </SidebarMenuItem>
         </SidebarMenu>

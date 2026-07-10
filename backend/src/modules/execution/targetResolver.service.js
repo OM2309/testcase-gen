@@ -26,6 +26,42 @@
 export function resolveTarget(page, target) {
   if (!target) return null
 
+  // Parse optional container/near modifiers: "button:Choose file | container:Vacancy rate"
+  let containerText = null
+  let cleanTarget = target
+  if (target.includes('|')) {
+    const parts = target.split('|')
+    cleanTarget = parts[0].trim()
+    for (let i = 1; i < parts.length; i++) {
+      const opt = parts[i].trim()
+      const optColonIdx = opt.indexOf(':')
+      if (optColonIdx !== -1) {
+        const optKey = opt.substring(0, optColonIdx).toLowerCase().trim()
+        if (optKey === 'container' || optKey === 'near') {
+          containerText = opt.substring(optColonIdx + 1).trim()
+        }
+      }
+    }
+  }
+
+  let locator = resolveBaseTarget(page, cleanTarget)
+
+  // Scope to container if specified
+  if (containerText && locator) {
+    const containerLocator = page.locator('div, form, section, li, tr, td, article, [class*="card"]')
+      .filter({ hasText: new RegExp(escapeRegex(containerText), 'i') })
+    locator = containerLocator.locator(locator).first()
+  }
+
+  return locator
+}
+
+/**
+ * Core target resolution logic (without container scoping).
+ */
+function resolveBaseTarget(page, target) {
+  if (!target) return null
+
   // If target contains : separator, parse semantic format
   const colonIdx = target.indexOf(':')
   if (colonIdx === -1) {

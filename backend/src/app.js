@@ -9,6 +9,8 @@ import projectRoutes from './modules/project/project.route.js'
 import requirementRoutes from './modules/requirement/requirement.route.js'
 import testsuiteRoutes from './modules/testsuite/testsuite.route.js'
 import executionRoutes from './modules/execution/execution.route.js'
+import inspectorRoutes from './modules/inspector/inspector.route.js'
+import testfileRoutes from './modules/execution/testfile.route.js'
 import { sendError } from './utils/responseHelper.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -34,6 +36,8 @@ app.use('/api', authMiddleware, projectRoutes)
 app.use('/api', authMiddleware, requirementRoutes)
 app.use('/api', authMiddleware, testsuiteRoutes)
 app.use('/api', authMiddleware, executionRoutes)
+app.use('/api', authMiddleware, inspectorRoutes)
+app.use('/api', authMiddleware, testfileRoutes)
 
 // Serve screenshots from uploads/test-runs
 app.use('/uploads/test-runs', express.static(path.join(__dirname, '../uploads/test-runs')))
