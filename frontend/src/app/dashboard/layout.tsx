@@ -17,7 +17,7 @@ export default function DashboardLayout({
   const { status } = useSession()
   const router = useRouter()
   const pathname = usePathname()
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [theme, setTheme] = useState<'dark' | 'light'>('light')
 
   useEffect(() => {
     if (status === 'unauthenticated') {
