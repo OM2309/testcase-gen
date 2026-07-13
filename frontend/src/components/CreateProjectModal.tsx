@@ -82,7 +82,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[480px] p-0 gap-0 overflow-hidden">
-        {/* Header */}
+
         <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border px-6 pt-6 pb-5">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-8 translate-x-8 pointer-events-none" />
           <DialogHeader className="relative">
