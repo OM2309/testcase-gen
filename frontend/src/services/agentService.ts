@@ -30,5 +30,13 @@ export const agentService = {
       `/test-suites/${projectId}/${suiteId}/test-cases/${testCaseId}/regressive`
     )
     return response.data
+  },
+
+  async aiGenerateTestCase(projectId: string, requirement: string, module?: string, priority?: string) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(
+      `/test-suites/ai-generate/${projectId}`,
+      { requirement, module, priority }
+    )
+    return response.data
   }
 }

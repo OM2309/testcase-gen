@@ -2,6 +2,8 @@ import Project from '../project/project.model.js'
 import RequirementAnalysis from '../requirement/requirement.model.js'
 import TestSuite from './testsuite.model.js'
 import { runAgent2 } from './testsuite.service.js'
+import { callOpenAI } from '../../shared/openai.service.js'
+import { aiGenerateSystemPrompt, buildAiGenerateUserPrompt } from './testsuite.aiGenerate.prompt.js'
 import { ApiError } from '../../utils/apiError.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
@@ -107,6 +109,44 @@ export async function toggleTestCaseRegressive(req, res, next) {
     await suite.save()
 
     return sendSuccess(res, 'Test case regressive status toggled.', suite)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function aiGenerateTestCase(req, res, next) {
+  const { projectId } = req.params
+  const { requirement, module, priority } = req.body
+
+  try {
+    if (!requirement || !requirement.trim()) {
+      throw new ApiError('Requirement description is required', 400)
+    }
+
+    const project = await Project.findById(projectId)
+    if (!project) {
+      throw new ApiError('Project not found', 404)
+    }
+
+    const userPrompt = buildAiGenerateUserPrompt({
+      requirement: requirement.trim(),
+      module: module || 'General',
+      priority: priority || 'Medium'
+    })
+
+    const testCase = await callOpenAI({
+      systemPrompt: aiGenerateSystemPrompt,
+      userPrompt,
+      temperature: 0.3,
+      jsonMode: true
+    })
+
+    // Ensure the test case has a unique id
+    if (!testCase.id || testCase.id === 'TC-<timestamp>') {
+      testCase.id = `TC-${Date.now()}`
+    }
+
+    return sendSuccess(res, 'Test case generated successfully.', testCase, 201)
   } catch (err) {
     next(err)
   }

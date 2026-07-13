@@ -3,12 +3,14 @@ import {
   generateTestSuite,
   getTestSuiteByProjectId,
   updateTestSuite,
-  toggleTestCaseRegressive
+  toggleTestCaseRegressive,
+  aiGenerateTestCase
 } from './testsuite.controller.js'
 
 const router = express.Router()
 
 router.post('/test-suites/generate/:projectId', generateTestSuite)
+router.post('/test-suites/ai-generate/:projectId', aiGenerateTestCase)
 router.get('/test-suites/:projectId', getTestSuiteByProjectId)
 router.put('/test-suites/:projectId/:suiteId', updateTestSuite)
 router.patch('/test-suites/:projectId/:suiteId/test-cases/:testCaseId/regressive', toggleTestCaseRegressive)
