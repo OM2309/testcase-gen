@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   PlayCircle, Loader2, AlertTriangle, Clock, ShieldAlert,
-  ChevronDown, ChevronRight, FileText, CheckCircle2, XCircle, Eye, FileDown, StopCircle
+  ChevronDown, ChevronRight, FileText, CheckCircle2, XCircle, Eye, FileDown, StopCircle, RefreshCw
 } from 'lucide-react'
 import { useSearchParams, useRouter, useParams } from 'next/navigation'
 import { useExecutionSocket } from '../hooks/useExecutionSocket'
@@ -107,7 +107,7 @@ export function ExecutionView() {
         <p className="text-sm">{socketError}</p>
         <button
           onClick={() => refetch()}
-          className="px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted cursor-pointer"
+          className="btn-secondary"
         >
           Retry
         </button>
@@ -169,7 +169,7 @@ function StopHistoryButton({ runId, onCancelled }: { runId: string; onCancelled:
     <button
       onClick={handleStop}
       disabled={cancelling}
-      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-muted text-foreground hover:bg-muted/80 border border-border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      className="btn-secondary"
       title="Stop execution run"
     >
       <StopCircle className={`w-4 h-4 ${cancelling ? 'animate-pulse' : ''}`} />
@@ -243,7 +243,7 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
         <p className="text-sm">{error}</p>
         <button
           onClick={fetchHistory}
-          className="px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted cursor-pointer"
+          className="btn-secondary"
         >
           Retry
         </button>
@@ -282,9 +282,9 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
         </div>
         <button
           onClick={fetchHistory}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted transition-colors cursor-pointer"
+          className="btn-secondary"
         >
-          Refresh History
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh History
         </button>
       </div>
 
@@ -356,7 +356,7 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
                   <button
                     onClick={() => downloadPdfReport(runItem)}
                     disabled={runItem.status === 'running' || runItem.status === 'queued'}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-border bg-card hover:bg-muted cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="btn-secondary"
                     title="Download PDF report"
                   >
                     <FileDown className="w-4 h-4 text-primary" /> PDF Report
@@ -364,7 +364,7 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
 
                   <button
                     onClick={() => onSelectRun(runItem._id)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+                    className="btn-primary"
                   >
                     <Eye className="w-4 h-4" /> Full Logs
                   </button>

@@ -3,9 +3,11 @@
 import React, { useState, useMemo } from 'react'
 import {
   BrainCircuit, Sparkles, FileText, Shield, AlertTriangle, Info,
-  Check, ChevronDown, ChevronRight, Loader2, FlaskConical, BookOpen
+  Check, ChevronDown, ChevronRight, Loader2, FlaskConical, BookOpen,
+  Layers, Cpu
 } from 'lucide-react'
 import { useProject } from '../contexts/ProjectContext'
+import { Badge } from "@/components/ui/badge"
 
 export function RequirementsView() {
   const {
@@ -127,7 +129,7 @@ export function RequirementsView() {
           </div>
           <button
             onClick={() => runAgent1(selectedSrsId || undefined)}
-            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            className="btn-primary h-10 px-5 text-sm"
           >
             <Sparkles className="w-4 h-4" /> Analyze with Agent 1
           </button>
@@ -154,19 +156,19 @@ export function RequirementsView() {
         <div className="flex items-center gap-3 flex-shrink-0">
           <button
             onClick={() => runAgent1(selectedSrsId || undefined)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted transition-colors"
+            className="btn-secondary"
           >
             <BrainCircuit className="w-3.5 h-3.5" /> Re-analyze
           </button>
           <button
             onClick={() => runAgent2(selectedSrsId || undefined)}
             disabled={agentRunning === 'agent2'}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
+            className="btn-primary"
           >
             {agentRunning === 'agent2' ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
             ) : (
-              <><FlaskConical className="w-4 h-4" /> Generate Test Suite</>
+              <><FlaskConical className="w-3.5 h-3.5" /> Generate Test Suite</>
             )}
           </button>
         </div>
@@ -201,34 +203,53 @@ export function RequirementsView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left — Module Nav */}
-        <div className="lg:col-span-1 space-y-1.5">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 mb-3">Modules ({modules.length})</h3>
-          {modules.map((mod: any, idx: number) => (
-            <button
-              key={idx}
-              onClick={() => setActiveModuleIdx(idx)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activeModuleIdx === idx ? 'bg-primary/10 text-primary border-l-[3px] border-primary pl-[10px]' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-            >
-              <FileText className="w-4 h-4 flex-shrink-0" />
-              <span className="line-clamp-1">{mod.module_name || `Module ${idx + 1}`}</span>
-            </button>
-          ))}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="space-y-1.5">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 mb-3">Modules ({modules.length})</h3>
+            {modules.map((mod: any, idx: number) => {
+              const isActive = activeModuleIdx === idx
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setActiveModuleIdx(idx)}
+                  className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-xs flex items-center justify-between gap-3 cursor-pointer ${
+                    isActive
+                      ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                      : 'bg-card/40 border-border hover:bg-card/60 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Layers className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="truncate">{mod.module_name || `Module ${idx + 1}`}</span>
+                  </div>
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
 
           {globalRoles.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border/40">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 mb-3">Roles</h3>
+            <div className="pt-4 border-t border-border/40 space-y-3">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2">System Roles</h3>
               {globalRoles.map((role: any, idx: number) => (
-                <div key={idx} className="px-3 py-2 rounded-lg bg-card border border-border/50 space-y-1.5 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-xs font-semibold">{role.role}</span>
-                  </div>
-                  {(role.permissions || []).map((perm: string, pidx: number) => (
-                    <div key={pidx} className="flex items-center gap-1 text-[10px] text-muted-foreground pl-5">
-                      <Check className="w-2.5 h-2.5 text-primary" />
-                      {perm}
+                <div key={idx} className="border border-border/60 bg-card/30 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-border/40">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                      <Shield className="w-3.5 h-3.5" />
                     </div>
-                  ))}
+                    <span className="text-xs font-bold text-foreground capitalize">{role.role}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(role.permissions || []).map((perm: string, pidx: number) => (
+                      <span
+                        key={pidx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted border border-border text-[10px] font-medium text-muted-foreground"
+                      >
+                        <Check className="w-3 h-3 text-primary flex-shrink-0" />
+                        {perm}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -239,9 +260,22 @@ export function RequirementsView() {
         <div className="lg:col-span-3 space-y-5">
           {activeModule ? (
             <>
-              <div className="border border-border bg-card/30 rounded-xl p-5 space-y-1">
-                <h2 className="text-base font-bold">{activeModule.module_name}</h2>
-                <p className="text-sm text-muted-foreground">{activeModule.description}</p>
+              <div className="border border-border bg-card/10 rounded-2xl p-6 space-y-3 relative overflow-hidden flex items-center justify-between gap-4 flex-wrap">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Active Module Details</span>
+                    <span className="px-2 py-0.5 rounded-full border bg-muted text-[10px] font-bold text-muted-foreground">
+                      {(activeModule.features || []).length} Features
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-bold text-foreground capitalize">{activeModule.module_name}</h2>
+                  {activeModule.description && (
+                    <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">{activeModule.description}</p>
+                  )}
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+                  <Layers className="w-5 h-5" />
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -255,7 +289,7 @@ export function RequirementsView() {
           )}
 
           {(ambiguities.length > 0 || clarifications.length > 0) && (
-            <div className="border border-border bg-card rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+            <div className="border border-border bg-card rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
               {ambiguities.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -288,47 +322,57 @@ function FeatureCard({ feature }: { feature: any }) {
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <div className="border border-border bg-card rounded-xl overflow-hidden">
+    <div className={`border rounded-2xl overflow-hidden transition-all duration-150 ${expanded ? 'border-primary/30 bg-card/60' : 'border-border/60 bg-card/20 hover:bg-card/30'}`}>
       <button
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors text-left"
       >
-        <div className="text-left">
-          <h4 className="font-semibold text-sm">{feature.feature_name}</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">{feature.description}</p>
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-xl border flex-shrink-0 ${expanded ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/60 border-border/80 text-muted-foreground'}`}>
+            <Cpu className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="font-bold text-sm text-foreground capitalize">{feature.feature_name}</h4>
+            {feature.description && (
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.description}</p>
+            )}
+          </div>
         </div>
         {expanded ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
       </button>
 
       {expanded && (
-        <div className="px-5 pb-5 space-y-4 border-t border-border/40">
+        <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
           {feature.actors?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-3">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mr-1 self-center">Actors:</span>
+            <div className="flex flex-wrap gap-1.5 items-center pb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mr-1">Actors:</span>
               {feature.actors.map((a: string, i: number) => (
-                <span key={i} className="px-2 py-0.5 text-[10px] rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{a}</span>
+                <Badge key={i} variant="secondary" className="px-2.5 py-0.5 text-[9px] font-bold">
+                  {a}
+                </Badge>
               ))}
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <SectionList label="Functional Requirements" items={feature.functional_requirements} color="yellow" />
-            <SectionList label="Business Rules" items={feature.business_rules} color="grey" />
-            <SectionList label="Validation Rules" items={feature.validation_rules} color="yellow" />
-            <SectionList label="Error Conditions" items={feature.error_conditions} color="grey" />
-            <SectionList label="State Changes" items={feature.state_changes} color="yellow" />
-            <SectionList label="Expected Outputs" items={feature.expected_outputs} color="grey" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SectionList label="Functional Requirements" items={feature.functional_requirements} type="functional" />
+            <SectionList label="Business Rules" items={feature.business_rules} type="business" />
+            <SectionList label="Validation Rules" items={feature.validation_rules} type="validation" />
+            <SectionList label="Error Conditions" items={feature.error_conditions} type="error" />
+            <SectionList label="State Changes" items={feature.state_changes} type="state" />
+            <SectionList label="Expected Outputs" items={feature.expected_outputs} type="output" />
           </div>
 
           {feature.input_fields?.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 border-t border-border/40 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground block">Input Fields</span>
               <div className="flex flex-wrap gap-2">
                 {feature.input_fields.map((field: any, fidx: number) => {
                   const label = typeof field === 'string' ? field : (field.label || field.name || JSON.stringify(field))
                   const isRequired = typeof field === 'object' && field.required
                   return (
-                    <span key={fidx} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg bg-muted/50 border border-border font-mono text-foreground">
+                    <span key={fidx} className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-muted border border-border font-mono text-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
                       {label}
                       {isRequired && <span className="text-primary text-[9px] font-bold">*</span>}
                     </span>
@@ -343,12 +387,41 @@ function FeatureCard({ feature }: { feature: any }) {
   )
 }
 
-function SectionList({ label, items, color }: { label: string; items: any[]; color: string }) {
+function SectionList({ label, items, type }: { label: string; items: any[]; type: 'functional' | 'business' | 'validation' | 'error' | 'state' | 'output' }) {
   if (!items || items.length === 0) return null
-  const colorMap: Record<string, string> = {
-    yellow: 'text-primary',
-    grey: 'text-muted-foreground',
-  }
+
+  const config = {
+    functional: {
+      border: 'border-primary/20 bg-primary/5 dark:bg-primary/10',
+      text: 'text-primary',
+      bullet: 'bg-primary'
+    },
+    business: {
+      border: 'border-border bg-card/60',
+      text: 'text-muted-foreground',
+      bullet: 'bg-muted-foreground/60'
+    },
+    validation: {
+      border: 'border-warning/20 bg-warning/5 dark:bg-warning/10',
+      text: 'text-warning',
+      bullet: 'bg-warning'
+    },
+    error: {
+      border: 'border-error/20 bg-error/5 dark:bg-error/10',
+      text: 'text-error',
+      bullet: 'bg-error'
+    },
+    state: {
+      border: 'border-primary/20 bg-primary/5 dark:bg-primary/10',
+      text: 'text-primary',
+      bullet: 'bg-primary'
+    },
+    output: {
+      border: 'border-success/20 bg-success/5 dark:bg-success/10',
+      text: 'text-success',
+      bullet: 'bg-success'
+    }
+  }[type] || { border: 'border-border bg-card', text: 'text-foreground', bullet: 'bg-foreground' }
 
   const renderItem = (item: any) => {
     if (item === null || item === undefined) return ''
@@ -362,12 +435,15 @@ function SectionList({ label, items, color }: { label: string; items: any[]; col
   }
 
   return (
-    <div className="space-y-1.5">
-      <span className={`text-[10px] font-bold uppercase tracking-wide ${colorMap[color] || 'text-muted-foreground'}`}>{label}</span>
-      <ul className="space-y-1 pl-3 list-disc text-xs text-muted-foreground">
+    <div className={`p-4 rounded-xl border ${config.border} space-y-2.5`}>
+      <span className={`text-[10px] font-bold uppercase tracking-wider ${config.text}`}>
+        {label}
+      </span>
+      <ul className="space-y-2 text-xs text-muted-foreground">
         {items.map((item: any, idx: number) => (
-          <li key={idx} className="leading-relaxed">
-            {renderItem(item)}
+          <li key={idx} className="flex items-start gap-2.5 leading-relaxed">
+            <span className={`w-1.5 h-1.5 rounded-full ${config.bullet} mt-1.5 flex-shrink-0`} />
+            <span>{renderItem(item)}</span>
           </li>
         ))}
       </ul>

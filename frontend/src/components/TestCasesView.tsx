@@ -15,7 +15,7 @@ import { TestCaseDetail } from './testsuite/TestCaseDetail'
 import { TestCaseDialogs, TestCaseForm } from './testsuite/TestCaseDialogs'
 import { AiGenerateDialog } from './testsuite/AiGenerateDialog'
 import { useProject } from '../contexts/ProjectContext'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 export function TestCasesView() {
   const router = useRouter()
@@ -441,28 +441,28 @@ export function TestCasesView() {
           <button
             onClick={() => handleSave()}
             disabled={saving}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${saveSuccess ? 'bg-primary/10 text-primary border-primary/20' : 'bg-card text-foreground hover:bg-muted border-border'}`}
+            className={saveSuccess ? 'btn-secondary bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : 'btn-secondary'}
           >
             {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
           </button>
           <button
             onClick={handleExportExcel}
             disabled={testCases.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-card text-foreground hover:bg-muted border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="btn-secondary"
             title={selectedModule === 'All' ? "Export all modules and test cases to Excel sheets" : `Export ${selectedModule} test cases to Excel`}
           >
             <FileSpreadsheet className="w-4 h-4 text-primary" /> Export Excel
           </button>
           <button
             onClick={() => setIsChoiceOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-card text-foreground hover:bg-muted border border-border transition-colors"
+            className="btn-secondary"
           >
             <Plus className="w-4 h-4" /> New Test Case
           </button>
           <button
             onClick={() => openRunDialog(null)}
             disabled={testCases.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="btn-primary"
           >
             <PlayCircle className="w-4 h-4" /> Run Test Suite
           </button>
@@ -487,16 +487,16 @@ export function TestCasesView() {
         />
       </div>
 
-      <Sheet open={!!selectedId} onOpenChange={(open) => { if (!open) setSelectedId(null) }}>
-        <SheetContent className="sm:max-w-2xl overflow-y-auto w-full p-6">
-          <SheetHeader className="pb-4 border-b border-border mb-4">
-            <SheetTitle className="text-lg font-bold text-foreground">
+      <Dialog open={!!selectedId} onOpenChange={(open) => { if (!open) setSelectedId(null) }}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto w-full p-6">
+          <DialogHeader className="pb-4 border-b border-border mb-4">
+            <DialogTitle className="text-lg font-bold text-foreground">
               {selectedTc ? `${selectedTc.id} — Details` : 'Test Case Details'}
-            </SheetTitle>
-            <SheetDescription className="text-xs text-muted-foreground">
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
               View expected results, preconditions, and manage step definitions.
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
           
           {selectedTc && (
             <TestCaseDetail
@@ -508,8 +508,8 @@ export function TestCasesView() {
               onReorder={(from, to) => { if (selectedTc) reorderSteps(selectedTc.id, from, to) }}
             />
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <AiGenerateDialog
         open={isChoiceOpen}

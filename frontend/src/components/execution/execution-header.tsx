@@ -55,14 +55,14 @@ export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning,
         <div className="flex items-center gap-2">
           <button
             onClick={onRefresh}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted transition-colors"
+            className="btn-secondary"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
           <button
             onClick={() => downloadPdfReport(run)}
             disabled={run.status === 'running' || run.status === 'queued'}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="btn-secondary"
             title="Download PDF execution report"
           >
             <FileDown className="w-3.5 h-3.5 text-primary" /> Report PDF
@@ -71,7 +71,7 @@ export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning,
             <button
               onClick={onCancel}
               disabled={cancelling}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-muted text-foreground border border-border hover:bg-muted/80 transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="btn-secondary"
               title="Abort running execution"
             >
               <StopCircle className={`w-3.5 h-3.5 ${cancelling ? 'animate-pulse' : ''}`} />
@@ -82,7 +82,7 @@ export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning,
             <button
               onClick={onRerun}
               disabled={rerunning || run.status === 'running' || run.status === 'queued'}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn-primary"
             >
               <RotateCw className={`w-3.5 h-3.5 ${rerunning ? 'animate-spin' : ''}`} />
               {rerunning ? 'Starting...' : 'Re-run'}

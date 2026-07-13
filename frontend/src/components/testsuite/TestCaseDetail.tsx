@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2, GripVertical, Pencil } from 'lucide-react'
+import { ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2, GripVertical, Pencil, Play } from 'lucide-react'
+import { toast } from 'sonner'
 import { getPriorityBadge } from '../../helpers/utils'
 import { Step, TestCase } from '../../types'
 import { StepEditor, StepRow } from './StepEditor'
@@ -88,40 +89,56 @@ export function TestCaseDetail({
             </div>
           )}
 
-          {testCase.steps.map((step, idx) => (
-            <div
-              key={idx}
-              draggable
-              onDragStart={() => setDraggedStepIdx(idx)}
-              onDragOver={e => { e.preventDefault(); setDragOverIdx(idx) }}
-              onDrop={e => handleDrop(e, idx)}
-              className={`border rounded-xl transition-all ${dragOverIdx === idx ? 'border-primary bg-primary/5' : 'border-border bg-card'} ${draggedStepIdx === idx ? 'opacity-40' : ''}`}
-            >
-              {editingStepIdx === idx ? (
-                <StepEditor
-                  step={step}
-                  onSave={(patch) => { onUpdateStep(idx, patch); setEditingStepIdx(null) }}
-                  onCancel={() => setEditingStepIdx(null)}
-                  onDelete={() => { onDeleteStep(idx); setEditingStepIdx(null) }}
-                />
-              ) : (
-                <div className="flex items-start gap-3 p-3 group/step">
-                  <div className="cursor-grab active:cursor-grabbing mt-1" title="Drag to reorder">
-                    <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {testCase.steps.map((step, idx) => (
+              <div
+                key={idx}
+                draggable
+                onDragStart={() => setDraggedStepIdx(idx)}
+                onDragOver={e => { e.preventDefault(); setDragOverIdx(idx) }}
+                onDrop={e => handleDrop(e, idx)}
+                className={`border rounded-xl transition-all ${dragOverIdx === idx ? 'border-primary bg-primary/5' : 'border-border bg-card'} ${draggedStepIdx === idx ? 'opacity-40' : ''}`}
+              >
+                {editingStepIdx === idx ? (
+                  <StepEditor
+                    step={step}
+                    onSave={(patch) => { onUpdateStep(idx, patch); setEditingStepIdx(null) }}
+                    onCancel={() => setEditingStepIdx(null)}
+                    onDelete={() => { onDeleteStep(idx); setEditingStepIdx(null) }}
+                  />
+                ) : (
+                  <div className="flex items-start gap-3 p-3 group/step relative">
+                    <div className="flex items-center gap-1 mt-1 flex-shrink-0">
+                      <div className="cursor-grab active:cursor-grabbing" title="Drag to reorder">
+                        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50" />
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toast.success(`Running simulation for step ${idx + 1}: ${step.action}`)
+                        }}
+                        className="p-1 rounded hover:bg-primary/10 text-primary transition-colors cursor-pointer"
+                        title="Simulate step execution"
+                      >
+                        <Play className="w-3 h-3 text-primary fill-primary/10" />
+                      </button>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <StepRow step={step} />
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover/step:opacity-100 transition-opacity flex-shrink-0 self-start">
+                      <button onClick={() => setEditingStepIdx(idx)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => onDeleteStep(idx)} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                  <StepRow step={step} />
-                  <div className="flex items-center gap-1 opacity-0 group-hover/step:opacity-100 transition-opacity flex-shrink-0">
-                    <button onClick={() => setEditingStepIdx(idx)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
-                      <Pencil className="w-3 h-3" />
-                    </button>
-                    <button onClick={() => onDeleteStep(idx)} className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            ))}
+          </div>
 
           {testCase.preconditions?.length > 0 && (
             <div className="pt-3 border-t border-border/40 space-y-1.5">

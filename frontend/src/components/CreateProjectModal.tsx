@@ -112,9 +112,9 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
                 autoComplete="off"
                 placeholder="e.g. Todo Application v2"
                 {...register('projectName')}
-                className={`w-full px-4 py-2.5 text-sm bg-card border rounded-xl focus:outline-none focus:ring-2 transition placeholder:text-muted-foreground ${errors.projectName
-                  ? 'border-border bg-muted/20 focus:ring-primary/20 focus:border-primary'
-                  : 'border-border focus:ring-primary/30 focus:border-primary'
+                className={`w-full px-3 py-2 text-sm bg-card border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition placeholder:text-muted-foreground ${errors.projectName
+                  ? 'border-error/50 bg-error/5 focus:ring-error focus:border-error'
+                  : 'border-border focus:ring-primary focus:border-primary'
                   }`}
               />
               {projectNameValue && !errors.projectName && (
@@ -122,7 +122,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
               )}
             </div>
             {errors.projectName && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+              <p className="text-xs text-error flex items-center gap-1.5 mt-1">
                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
                 {errors.projectName.message}
               </p>
@@ -141,9 +141,9 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
                 rows={3}
                 placeholder="Brief description of what this project covers..."
                 {...register('projectDescription')}
-                className={`w-full px-4 py-2.5 text-sm bg-card border rounded-xl focus:outline-none focus:ring-2 transition resize-none placeholder:text-muted-foreground ${errors.projectDescription
-                  ? 'border-border bg-muted/20 focus:ring-primary/20 focus:border-primary'
-                  : 'border-border focus:ring-primary/30 focus:border-primary'
+                className={`w-full px-3 py-2 text-sm bg-card border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition resize-none placeholder:text-muted-foreground ${errors.projectDescription
+                  ? 'border-error/50 bg-error/5 focus:ring-error focus:border-error'
+                  : 'border-border focus:ring-primary focus:border-primary'
                   }`}
               />
               <div className="absolute bottom-2.5 right-3 text-[10px] text-muted-foreground font-mono">
@@ -151,7 +151,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
               </div>
             </div>
             {errors.projectDescription && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+              <p className="text-xs text-error flex items-center gap-1.5 mt-1">
                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
                 {errors.projectDescription.message}
               </p>
@@ -165,14 +165,14 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold border border-border rounded-xl hover:bg-muted transition-colors disabled:opacity-40 cursor-pointer"
+              className="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-w-[130px] justify-center cursor-pointer"
+              className="btn-primary min-w-[130px]"
             >
               {isSubmitting ? (
                 <>

@@ -71,7 +71,7 @@ export function TestCaseList({
                       className="w-3.5 h-3.5 text-primary border-border rounded focus:ring-primary/40 bg-background cursor-pointer"
                     />
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-primary flex-shrink-0">{tc.id}</span>
+                  <span className="text-[10px] font-mono font-bold text-primary flex-shrink-0 min-w-[110px] whitespace-nowrap">{tc.id}</span>
                   <span className="text-xs font-semibold text-foreground truncate min-w-0 flex-1" title={tc.title}>
                     {tc.title}
                   </span>

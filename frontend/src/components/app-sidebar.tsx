@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut, ChevronDown, ChevronRight, BarChart3, FileText } from "lucide-react"
+import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut, ChevronDown, ChevronRight, BarChart3, FileText, Check, ChevronsUpDown, Sparkles } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
 import { useProject } from "../contexts/ProjectContext"
 import { projectService } from "../services/projectService"
@@ -32,6 +32,14 @@ export function AppSidebar({
   const router = useRouter()
   const { project, requirementAnalyses, testSuites } = useProject()
   const [allProjects, setAllProjects] = React.useState<Project[]>([])
+  const [projectQuery, setProjectQuery] = React.useState("")
+
+  const filteredProjects = React.useMemo(() => {
+    if (!projectQuery) return allProjects
+    return allProjects.filter(p =>
+      p.projectName.toLowerCase().includes(projectQuery.toLowerCase())
+    )
+  }, [allProjects, projectQuery])
   
   const isOnReportsPage = pathname.includes('/execution')
   const [isProjectMenuOpen, setIsProjectMenuOpen] = React.useState(!isOnReportsPage)
@@ -110,60 +118,97 @@ export function AppSidebar({
 
       <SidebarContent className="px-4 py-4 space-y-3">
         <SidebarMenu className="gap-1 cursor-pointer">
-          <SidebarMenuItem className="space-y-1">
-            <div className="flex items-center justify-between w-full group/menu">
-              <SidebarMenuButton
-                isActive={activeTab === 'projects'}
-                onClick={() => router.push('/dashboard/projects')}
-                className="flex-1 text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-2.5 hover:bg-muted/80 cursor-pointer"
-              >
+          <SidebarMenuItem className="space-y-1.5">
+            <button
+              onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
+              className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${
+                activeTab === 'projects' || isProjectMenuOpen ? 'bg-sidebar-accent/30 text-foreground font-bold shadow-sm' : ''
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
                 <FolderKanban className="w-4 h-4 text-muted-foreground" />
                 <span>Projects</span>
-              </SidebarMenuButton>
-              {project && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsProjectMenuOpen(!isProjectMenuOpen)
-                  }}
-                  className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer mr-1 flex-shrink-0"
-                  title={isProjectMenuOpen ? "Collapse menu" : "Expand menu"}
-                >
-                  {isProjectMenuOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                </button>
-              )}
-            </div>
+              </div>
+              {isProjectMenuOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
 
-            {project && isProjectMenuOpen && (
-              <div className="pl-4 ml-5 border-l border-border/80 flex flex-col gap-1 mt-1">
-                <SidebarMenuButton
-                  isActive={activeTab === 'modules'}
-                  onClick={() => navigateTo('modules')}
-                  className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50"
-                >
-                  <Layers className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>overview</span>
-                </SidebarMenuButton>
+            {isProjectMenuOpen && (
+              <div className="space-y-2 px-1">
+                {/* Search select panel */}
+                <div className="relative flex items-center border border-primary bg-background rounded-lg px-2.5 py-1.5 gap-2 text-xs text-muted-foreground">
+                  <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0 animate-pulse" />
+                  <input
+                    type="text"
+                    placeholder="Start typing to find proj"
+                    value={projectQuery}
+                    onChange={(e) => setProjectQuery(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-grow bg-transparent outline-none text-foreground placeholder-muted-foreground text-xs"
+                  />
+                  <ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+                </div>
 
-                <SidebarMenuButton
-                  isActive={activeTab === 'requirements'}
-                  disabled={!hasRequirements}
-                  onClick={() => navigateTo('requirements')}
-                  className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <FileCheck className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>requirements</span>
-                </SidebarMenuButton>
+                {/* Dropdown Card */}
+                <div className="border border-border bg-card/45 rounded-xl p-2.5 space-y-1.5 shadow-sm">
+                  <span className="text-[9px] font-bold text-muted-foreground/80 uppercase tracking-wider block px-1">
+                    Other Projects
+                  </span>
+                  <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar">
+                    {filteredProjects.length === 0 ? (
+                      <div className="text-[10px] text-muted-foreground text-center py-2 italic">
+                        No projects found
+                      </div>
+                    ) : (
+                      filteredProjects.map((p) => {
+                        const isCurrent = project && project._id === p._id
+                        return (
+                          <div
+                            key={p._id}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/dashboard/${p._id}/modules`)
+                            }}
+                            className={`px-2.5 py-2 rounded-lg text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
+                              isCurrent
+                                ? 'bg-muted/80 text-foreground font-semibold'
+                                : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Sparkles className={`w-3.5 h-3.5 flex-shrink-0 ${isCurrent ? 'text-primary' : 'text-muted-foreground/60'}`} />
+                              <span className="truncate">{p.projectName}</span>
+                            </div>
+                            {isCurrent && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                  <div className="border-t border-border/40 pt-1.5 mt-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push('/dashboard/projects')
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted/40 cursor-pointer"
+                    >
+                      View All Projects
+                    </button>
+                  </div>
+                </div>
 
-                <SidebarMenuButton
-                  isActive={activeTab === 'testcases'}
-                  disabled={!hasTestSuite}
-                  onClick={() => navigateTo('testcases')}
-                  className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>test suits</span>
-                </SidebarMenuButton>
+                {project && (
+                  <div className="pl-4 ml-5 border-l border-border/80 flex flex-col gap-1 mt-2">
+                    <SidebarMenuButton
+                      isActive={activeTab === 'testcases'}
+                      onClick={() => navigateTo('testcases')}
+                      className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>test suits</span>
+                    </SidebarMenuButton>
+                  </div>
+                )}
               </div>
             )}
           </SidebarMenuItem>
@@ -228,7 +273,7 @@ export function AppSidebar({
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-2 rounded-md hover:bg-muted border border-border/60 bg-card transition-colors text-foreground"
           >
-            {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-muted-foreground" />}
+            {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-primary" /> : <Moon className="w-3.5 h-3.5 text-muted-foreground" />}
           </button>
         </div>
       </SidebarFooter>

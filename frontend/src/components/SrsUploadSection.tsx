@@ -136,7 +136,7 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
                 type="button"
                 onClick={() => setFile(null)}
                 disabled={uploading}
-                className="text-xs text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-md hover:bg-muted transition-colors disabled:opacity-40"
+                className="btn-secondary h-7 px-2.5 text-xs"
               >
                 Change
               </button>
@@ -146,24 +146,24 @@ export function SrsUploadSection({ projectId, srsDocuments, onSrsUploaded }: Srs
               <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className="cursor-pointer flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="btn-primary flex-1"
               >
                 {uploading ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Uploading & Parsing...
+                    Uploading...
                   </>
                 ) : (
                   <>
                     <Upload className="w-3.5 h-3.5" />
-                    Upload Requirement Document
+                    Upload Document
                   </>
                 )}
               </button>
               <button
                 onClick={() => setFile(null)}
                 disabled={uploading}
-                className="p-2.5 border border-border rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                className="btn-secondary h-9 px-3"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

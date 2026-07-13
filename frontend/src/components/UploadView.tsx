@@ -122,7 +122,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
             value={projectName}
             onChange={e => setProjectName(e.target.value)}
             placeholder="e.g. Todo Application v2"
-            className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition placeholder:text-muted-foreground"
+            className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition placeholder:text-muted-foreground"
           />
         </div>
 
@@ -134,7 +134,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
             onChange={e => setProjectDescription(e.target.value)}
             placeholder="Brief description of what this project covers..."
             rows={3}
-            className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition resize-none placeholder:text-muted-foreground"
+            className="w-full px-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition resize-none placeholder:text-muted-foreground"
           />
         </div>
 
@@ -148,7 +148,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all flex flex-col items-center gap-4 ${dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 bg-card/20'}`}
+              className={`border-2 border-dashed rounded-md p-12 text-center cursor-pointer transition-all flex flex-col items-center gap-4 ${dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 bg-card/20'}`}
             >
               <input
                 type="file"
@@ -166,7 +166,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
               </div>
             </div>
           ) : (
-            <div className="border border-border bg-card rounded-xl p-4 flex items-center justify-between gap-4">
+            <div className="border border-border bg-card rounded-md p-4 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-primary" />
@@ -179,7 +179,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
               <button
                 type="button"
                 onClick={() => setFile(null)}
-                className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
+                className="btn-secondary h-8 px-3 text-xs"
               >
                 Change
               </button>
@@ -191,7 +191,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
         <button
           type="submit"
           disabled={!file || !projectName.trim()}
-          className="w-full py-3 text-sm font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="btn-primary w-full h-10 text-sm"
         >
           <Upload className="w-4 h-4" />
           Create Project & Upload Document

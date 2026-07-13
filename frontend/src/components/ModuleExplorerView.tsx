@@ -23,6 +23,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 interface FeatureGroup {
   name: string
@@ -417,14 +427,14 @@ export function ModuleExplorerView() {
           <DialogFooter>
             <button
               onClick={() => setIsRunOpen(false)}
-              className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold"
+              className="btn-secondary"
             >
               Cancel
             </button>
             <button
               onClick={handleStartRun}
               disabled={starting}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:opacity-90 inline-flex items-center gap-1.5 disabled:opacity-40"
+              className="btn-primary"
             >
               {starting ? (
                 <>
@@ -447,7 +457,7 @@ export function ModuleExplorerView() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push(window.location.pathname)}
-                className="inline-flex items-center justify-center p-2 rounded-xl border border-border bg-card/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                className="btn-secondary h-9 w-9 p-0"
                 title="Back to Overview"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -472,7 +482,7 @@ export function ModuleExplorerView() {
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => handleDownloadExcel(selectedSrs.originalFileName, selectedSrsModules)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border border-border bg-card/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="btn-secondary"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-primary" /> Export Excel
                 </button>
@@ -481,7 +491,7 @@ export function ModuleExplorerView() {
                     const allDocTcs = selectedSrsModules.flatMap(m => m.features.flatMap(f => f.testCases))
                     handleOpenRunDialog('srs', selectedSrs.originalFileName, allDocTcs, selectedSuite._id)
                   }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+                  className="btn-primary"
                 >
                   <PlayCircle className="w-4.5 h-4.5" /> Run Suite ({selectedSrsModules.reduce((acc, m) => acc + m.testCasesCount, 0)})
                 </button>
@@ -497,13 +507,12 @@ export function ModuleExplorerView() {
                 <div className="lg:w-[70%] flex flex-col justify-between gap-4">
                   <div className="space-y-2">
                     <h4 className="text-lg font-extrabold text-foreground tracking-wide block">Accuracy Rating</h4>
-                    <div className={`text-xs text-muted-foreground leading-relaxed whitespace-pre-line ${
-                      !isFeedbackExpanded ? 'line-clamp-4 overflow-hidden' : 'max-h-[250px] overflow-y-auto pr-2 custom-scrollbar'
-                    }`}>
+                    <div className={`text-xs text-muted-foreground leading-relaxed whitespace-pre-line ${!isFeedbackExpanded ? 'line-clamp-4 overflow-hidden' : 'max-h-[250px] overflow-y-auto pr-2 custom-scrollbar'
+                      }`}>
                       {selectedAnalysis.agent0Feedback}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => setIsFeedbackExpanded(!isFeedbackExpanded)}
@@ -577,11 +586,10 @@ export function ModuleExplorerView() {
                         <button
                           key={mod.name}
                           onClick={() => setActiveModuleName(mod.name)}
-                          className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all text-xs flex items-center justify-between gap-3 cursor-pointer w-full ${
-                            isActive
+                          className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all text-xs flex items-center justify-between gap-3 cursor-pointer w-full ${isActive
                               ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
                               : 'bg-card/40 border-border hover:bg-card/60 text-muted-foreground hover:text-foreground'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Layers className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -629,7 +637,7 @@ export function ModuleExplorerView() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleDownloadExcel(`${selectedSrs.originalFileName}_${activeMod.name}`, [activeMod])}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                className="btn-secondary animate-none h-8 px-3 text-xs"
                                 title="Export module to Excel"
                               >
                                 <FileSpreadsheet className="w-3.5 h-3.5 text-primary" /> Export Excel
@@ -639,10 +647,10 @@ export function ModuleExplorerView() {
                                   const allModTcs = activeMod.features.flatMap(f => f.testCases)
                                   handleOpenRunDialog('module', activeMod.name, allModTcs, selectedSuite._id)
                                 }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+                                className="btn-primary h-8 px-3 text-xs"
                                 title="Run module tests"
                               >
-                                <PlayCircle className="w-3.5 h-3.5" /> Run Module Tests
+                                <PlayCircle className="w-3.5 h-3.5" /> Run Tests
                               </button>
                             </div>
                           )}
@@ -697,8 +705,8 @@ export function ModuleExplorerView() {
                                             onClick={() => handleEditTestCase(tc.id)}
                                             className="flex items-center justify-between py-2.5 hover:bg-muted/40 px-2.5 rounded-lg cursor-pointer transition-colors gap-3"
                                           >
-                                            <div className="flex items-center gap-3 min-w-0">
-                                              <span className="text-[10px] font-mono font-bold text-primary flex-shrink-0 w-12">{tc.id}</span>
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                              <span className="text-[10px] font-mono font-bold text-primary flex-shrink-0 min-w-[110px] whitespace-nowrap">{tc.id}</span>
                                               <span className="font-semibold text-foreground truncate capitalize">{tc.title}</span>
                                             </div>
                                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -761,7 +769,7 @@ export function ModuleExplorerView() {
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Requirement Docs</span>
               <span className="text-2xl font-extrabold text-foreground mt-2 block">{srsDocumentsList.length}</span>
             </div>
-            
+
             {/* Card 2: Total Modules */}
             <div className="border border-border bg-card/40 rounded-xl p-4 flex flex-col justify-between">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Modules</span>
@@ -834,85 +842,73 @@ export function ModuleExplorerView() {
                   const isAnalyzing = analysis && analysis.status === 'analyzing'
                   const isSuiteGenerated = suite && suite.testCases?.length > 0
 
+                  const unsplashImages = [
+                    // "https://images.unsplash.com/photo-1618401471353-b98aedd07871?auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80",
+                    "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=600&q=80"
+                  ]
+                  const imageUrl = unsplashImages[srsIdx % unsplashImages.length]
+
                   return (
-                    <div
+                    <Card
                       key={doc._id}
                       onClick={() => router.push(`?srsId=${doc._id}`)}
-                      className="border rounded-2xl bg-card/30 border-border/80 hover:border-primary/40 hover:bg-card/50 transition-all duration-200 p-5 flex flex-col justify-between gap-4 cursor-pointer relative overflow-hidden group shadow-sm"
+                      className="relative w-full pt-0 cursor-pointer border border-border bg-card/20 hover:border-primary/40 hover:bg-card/40 transition-all duration-200 flex flex-col justify-between"
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                            <FileText className="w-4.5 h-4.5 text-primary" />
-                          </div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                            Requirement Doc {srsIdx + 1}
-                          </span>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors capitalize">
-                            {doc.originalFileName || 'Specification Document'}
-                          </h3>
-                          {doc.uploadedAt && (
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                              Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Accuracy score circular indicator directly on the card if analyzed */}
-                      <div className="border-t border-border/40 pt-4 flex items-center justify-between gap-3" onClick={e => e.stopPropagation()}>
-                        {isAnalyzed && analysis && analysis.agent0Score !== null && analysis.agent0Score !== undefined ? (
-                          <div className="flex items-center gap-3">
-                            <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-background border border-border">
-                              <svg className="w-8 h-8 transform -rotate-90">
-                                <circle cx="16" cy="16" r="12" className="stroke-muted" strokeWidth="2.5" fill="transparent" />
-                                <circle cx="16" cy="16" r="12" className="stroke-primary" strokeWidth="2.5" fill="transparent" strokeDasharray={`${2 * Math.PI * 12}`} strokeDashoffset={`${2 * Math.PI * 12 * (1 - (analysis.agent0Score || 0) / 100)}`} strokeLinecap="round" />
-                              </svg>
-                              <span className="absolute text-[8px] font-black text-primary">{analysis.agent0Score}%</span>
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-bold text-foreground leading-none">Accuracy Score</p>
-                              <p className="text-[9px] text-muted-foreground mt-0.5">Parsed details rank</p>
-                            </div>
-                          </div>
-                        ) : isAnalyzing ? (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                            <span>Analyzing document...</span>
-                          </div>
-                        ) : (
-                          <div className="text-[10px] font-semibold text-muted-foreground">
-                            Not analyzed yet
-                          </div>
-                        )}
-
-                        {/* Suite Actions */}
-                        <div>
-                          {!isAnalyzed ? (
-                            <button
-                              onClick={() => runAgent1(doc._id)}
-                              className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-bold hover:opacity-90 transition-opacity cursor-pointer"
-                            >
-                              Analyze
-                            </button>
-                          ) : !isSuiteGenerated ? (
-                            <button
-                              onClick={() => runAgent2(doc._id)}
-                              className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-bold hover:opacity-90 transition-opacity cursor-pointer inline-flex items-center gap-1"
-                            >
-                              <Sparkles className="w-3 h-3" /> Generate Suite
-                            </button>
+                      <div className="absolute top-0 left-0 right-0 z-30 aspect-video bg-black/25 rounded-t-xl pointer-events-none" />
+                      <img
+                        src={imageUrl}
+                        alt="Document cover"
+                        className="relative z-20 aspect-video w-full object-cover brightness-75 grayscale-30 dark:brightness-50 rounded-t-xl"
+                      />
+                      <CardHeader>
+                        <CardAction onClick={e => e.stopPropagation()}>
+                          {isAnalyzed && analysis && analysis.agent0Score !== null && analysis.agent0Score !== undefined ? (
+                            <Badge variant="default" className="font-mono bg-primary/20 text-primary border border-primary/30">
+                              {analysis.agent0Score}% Score
+                            </Badge>
+                          ) : isAnalyzing ? (
+                            <Badge variant="secondary" className="animate-pulse">
+                              Analyzing
+                            </Badge>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-bold text-primary">
-                              <CheckCircle2 className="w-3 h-3 text-primary" /> Fully Covered
-                            </span>
+                            <Badge variant="outline">
+                              New
+                            </Badge>
                           )}
-                        </div>
-                      </div>
-                    </div>
+                        </CardAction>
+                        <CardTitle className="truncate capitalize">{doc.originalFileName || 'Specification Document'}</CardTitle>
+                        <CardDescription>
+                          {doc.uploadedAt && `Uploaded ${new Date(doc.uploadedAt).toLocaleDateString()}`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardFooter onClick={e => e.stopPropagation()}>
+                        {!isAnalyzed ? (
+                          <Button
+                            onClick={() => runAgent1(doc._id)}
+                            className="w-full btn-primary h-8 text-xs font-semibold"
+                          >
+                            Analyze Document
+                          </Button>
+                        ) : !isSuiteGenerated ? (
+                          <Button
+                            onClick={() => runAgent2(doc._id)}
+                            className="w-full btn-primary h-8 text-xs font-semibold inline-flex items-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" /> Generate Test Suite
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => router.push(`?srsId=${doc._id}`)}
+                            className="w-full btn-secondary h-8 text-xs font-semibold"
+                          >
+                            View Test Suite
+                          </Button>
+                        )}
+                      </CardFooter>
+                    </Card>
                   )
                 })}
               </div>

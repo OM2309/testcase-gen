@@ -78,8 +78,8 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <button onClick={() => setIsDeleteOpen(false)} className="px-3 py-1.5 border rounded-lg hover:bg-muted text-xs font-semibold cursor-pointer">Cancel</button>
-            <button onClick={confirmDelete} className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded-lg text-xs font-semibold hover:opacity-90 cursor-pointer">Delete</button>
+            <button onClick={() => setIsDeleteOpen(false)} className="btn-secondary">Cancel</button>
+            <button onClick={confirmDelete} className="btn-destructive">Delete</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -133,7 +133,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
 
               <button
                 onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+                className="btn-primary"
               >
                 <Plus className="w-3.5 h-3.5" /> New Project
               </button>
@@ -165,7 +165,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
           </div>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
+            className="btn-primary"
           >
             <Plus className="w-3.5 h-3.5" /> Create Project
           </button>

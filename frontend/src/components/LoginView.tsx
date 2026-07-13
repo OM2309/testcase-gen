@@ -113,7 +113,7 @@ export function LoginView() {
           {/* Username Input (Only for Sign Up) */}
           {activeTab === 'signup' && (
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Username</label>
               <div className="relative">
                 <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
@@ -122,7 +122,7 @@ export function LoginView() {
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   placeholder="Choose a username"
-                  className="w-full pl-10 pr-3 py-2.5 bg-background/50 border border-border/80 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50 text-xs text-foreground placeholder:text-muted-foreground transition-all"
+                  className="w-full pl-10 pr-3 py-2 bg-background/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-sm text-foreground placeholder:text-muted-foreground transition-all"
                 />
               </div>
             </div>
@@ -130,7 +130,7 @@ export function LoginView() {
 
           {/* Email Input */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Email Address</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Email Address</label>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -139,7 +139,7 @@ export function LoginView() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full pl-10 pr-3 py-2.5 bg-background/50 border border-border/80 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50 text-xs text-foreground placeholder:text-muted-foreground transition-all"
+                className="w-full pl-10 pr-3 py-2 bg-background/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-sm text-foreground placeholder:text-muted-foreground transition-all"
               />
             </div>
           </div>
@@ -147,7 +147,7 @@ export function LoginView() {
           {/* Password Input */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Password</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Password</label>
             </div>
             <div className="relative">
               <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -157,7 +157,7 @@ export function LoginView() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-3 py-2.5 bg-background/50 border border-border/80 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/50 text-xs text-foreground placeholder:text-muted-foreground transition-all"
+                className="w-full pl-10 pr-3 py-2 bg-background/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-sm text-foreground placeholder:text-muted-foreground transition-all"
               />
             </div>
           </div>
@@ -166,7 +166,7 @@ export function LoginView() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-3 bg-primary text-primary-foreground font-bold rounded-xl text-xs hover:opacity-95 transition-opacity shadow-lg shadow-primary/10 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary w-full mt-2 h-10 text-sm flex items-center justify-center gap-1.5"
           >
             {loading ? (
               <>
