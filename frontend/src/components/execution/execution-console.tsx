@@ -6,9 +6,9 @@ import { ExecutionLog } from '../../types'
 import { formatTime } from './execution-utils'
 
 const LEVEL_STYLE: Record<string, { color: string; icon: React.ReactNode }> = {
-  success: { color: 'text-emerald-500', icon: <CheckCircle2 className="w-3 h-3" /> },
-  error: { color: 'text-rose-500', icon: <XCircle className="w-3 h-3" /> },
-  info: { color: 'text-muted-foreground', icon: <Info className="w-3 h-3" /> }
+  success: { color: 'text-primary', icon: <CheckCircle2 className="w-3 h-3 text-primary" /> },
+  error: { color: 'text-muted-foreground', icon: <XCircle className="w-3 h-3 text-muted-foreground" /> },
+  info: { color: 'text-muted-foreground', icon: <Info className="w-3 h-3 text-muted-foreground" /> }
 }
 
 export function ExecutionConsole({ logs, isPolling }: { logs: ExecutionLog[]; isPolling: boolean }) {
@@ -29,7 +29,7 @@ export function ExecutionConsole({ logs, isPolling }: { logs: ExecutionLog[]; is
         </span>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground tabular-nums">{logs.length} lines</span>
-          {isPolling && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+          {isPolling && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
         </div>
       </div>
 

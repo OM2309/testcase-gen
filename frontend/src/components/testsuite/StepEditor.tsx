@@ -100,7 +100,7 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
   }
 
   return (
-    <div className="p-3 space-y-3 bg-[#FF6B00]/5 border border-[#FF6B00]/30 rounded-xl">
+    <div className="p-3 space-y-3 bg-primary/5 border border-primary/20 rounded-xl">
       <div className="grid grid-cols-2 gap-2">
         {/* Action */}
         <div>
@@ -134,9 +134,9 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
                       alert('File upload failed: ' + err.response?.data?.message || err.message)
                     }
                   }}
-                  className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/95 cursor-pointer"
+                  className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[11px] file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90 cursor-pointer"
                 />
-                {value && <span className="text-[10px] text-emerald-400 truncate max-w-[150px]">Uploaded: {value}</span>}
+                {value && <span className="text-[10px] text-primary truncate max-w-[150px]">Uploaded: {value}</span>}
               </div>
             ) : (
               <input value={value} onChange={e => setValue(e.target.value)} placeholder={cfg.value.placeholder} className={inputCls} />
@@ -200,14 +200,14 @@ export function StepEditor({ step, onSave, onCancel, onDelete }: {
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <button onClick={onDelete} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 border border-rose-500/20 font-semibold">
-          <Trash2 className="w-3 h-3" /> Delete
+        <button onClick={onDelete} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg text-muted-foreground hover:bg-muted border border-border font-semibold">
+          <Trash2 className="w-3 h-3 text-muted-foreground" /> Delete
         </button>
         <div className="flex gap-1.5">
           <button onClick={onCancel} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg border border-border hover:bg-muted font-semibold">
             <X className="w-3 h-3" /> Cancel
           </button>
-          <button onClick={save} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-[#FF6B00] text-white hover:bg-[#FF6B00]/90 font-semibold">
+          <button onClick={save} className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 font-semibold">
             <Check className="w-3 h-3" /> Save
           </button>
         </div>
@@ -231,16 +231,16 @@ export function StepRow({ step }: { step: Step }) {
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-1 flex-wrap">
         <span className="text-[10px] font-bold text-muted-foreground">STEP {step.step_number}</span>
-        <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/20">{step.action}</span>
+        <span className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-primary/10 text-primary border border-primary/20">{step.action}</span>
         {step.target && <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[140px]">{step.target}</span>}
         {step.value && <span className="text-[10px] font-mono text-muted-foreground/70 truncate max-w-[120px]">= {step.value}</span>}
       </div>
       {step.description && <p className="text-xs text-foreground">{step.description}</p>}
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-        {step.expected_url && <span className="text-[10px] text-blue-400">→ url: {step.expected_url}</span>}
-        {step.expected_text && <span className="text-[10px] text-emerald-400">→ text: {step.expected_text}</span>}
+        {step.expected_url && <span className="text-[10px] text-primary">→ url: {step.expected_url}</span>}
+        {step.expected_text && <span className="text-[10px] text-primary">→ text: {step.expected_text}</span>}
         {!step.expected_url && !step.expected_text && step.expected && (
-          <span className="text-[10px] text-emerald-400">{step.expected}</span>
+          <span className="text-[10px] text-primary">{step.expected}</span>
         )}
       </div>
     </div>

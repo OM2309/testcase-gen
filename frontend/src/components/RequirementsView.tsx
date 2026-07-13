@@ -92,8 +92,8 @@ export function RequirementsView() {
         </div>
 
         {error && (
-          <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-4 rounded-xl flex items-center gap-3 text-sm">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <div className="border border-border bg-muted/40 text-muted-foreground p-4 rounded-xl flex items-center gap-3 text-sm">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
             {error}
           </div>
         )}
@@ -173,8 +173,8 @@ export function RequirementsView() {
       </div>
 
       {error && (
-        <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-4 rounded-xl flex items-center gap-3 text-sm">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+        <div className="border border-border bg-muted/40 text-muted-foreground p-4 rounded-xl flex items-center gap-3 text-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
           {error}
         </div>
       )}
@@ -225,7 +225,7 @@ export function RequirementsView() {
                   </div>
                   {(role.permissions || []).map((perm: string, pidx: number) => (
                     <div key={pidx} className="flex items-center gap-1 text-[10px] text-muted-foreground pl-5">
-                      <Check className="w-2.5 h-2.5 text-emerald-500" />
+                      <Check className="w-2.5 h-2.5 text-primary" />
                       {perm}
                     </div>
                   ))}
@@ -258,8 +258,8 @@ export function RequirementsView() {
             <div className="border border-border bg-card rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
               {ambiguities.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-rose-400 flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4" /> Ambiguities
+                  <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-muted-foreground" /> Ambiguities
                   </h4>
                   <ul className="space-y-1 pl-4 list-disc text-xs text-muted-foreground">
                     {ambiguities.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
@@ -268,8 +268,8 @@ export function RequirementsView() {
               )}
               {clarifications.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-amber-400 flex items-center gap-1.5">
-                    <Info className="w-4 h-4" /> Clarifications Needed
+                  <h4 className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                    <Info className="w-4 h-4 text-primary" /> Clarifications Needed
                   </h4>
                   <ul className="space-y-1 pl-4 list-disc text-xs text-muted-foreground">
                     {clarifications.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
@@ -312,12 +312,12 @@ function FeatureCard({ feature }: { feature: any }) {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <SectionList label="Functional Requirements" items={feature.functional_requirements} color="blue" />
-            <SectionList label="Business Rules" items={feature.business_rules} color="purple" />
-            <SectionList label="Validation Rules" items={feature.validation_rules} color="orange" />
-            <SectionList label="Error Conditions" items={feature.error_conditions} color="red" />
-            <SectionList label="State Changes" items={feature.state_changes} color="emerald" />
-            <SectionList label="Expected Outputs" items={feature.expected_outputs} color="teal" />
+            <SectionList label="Functional Requirements" items={feature.functional_requirements} color="yellow" />
+            <SectionList label="Business Rules" items={feature.business_rules} color="grey" />
+            <SectionList label="Validation Rules" items={feature.validation_rules} color="yellow" />
+            <SectionList label="Error Conditions" items={feature.error_conditions} color="grey" />
+            <SectionList label="State Changes" items={feature.state_changes} color="yellow" />
+            <SectionList label="Expected Outputs" items={feature.expected_outputs} color="grey" />
           </div>
 
           {feature.input_fields?.length > 0 && (
@@ -330,7 +330,7 @@ function FeatureCard({ feature }: { feature: any }) {
                   return (
                     <span key={fidx} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg bg-muted/50 border border-border font-mono text-foreground">
                       {label}
-                      {isRequired && <span className="text-rose-400 text-[9px] font-bold">*</span>}
+                      {isRequired && <span className="text-primary text-[9px] font-bold">*</span>}
                     </span>
                   )
                 })}
@@ -346,12 +346,8 @@ function FeatureCard({ feature }: { feature: any }) {
 function SectionList({ label, items, color }: { label: string; items: any[]; color: string }) {
   if (!items || items.length === 0) return null
   const colorMap: Record<string, string> = {
-    blue: 'text-blue-400',
-    purple: 'text-purple-400',
-    orange: 'text-orange-400',
-    red: 'text-rose-400',
-    emerald: 'text-emerald-400',
-    teal: 'text-teal-400',
+    yellow: 'text-primary',
+    grey: 'text-muted-foreground',
   }
 
   const renderItem = (item: any) => {

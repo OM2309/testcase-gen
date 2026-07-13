@@ -44,26 +44,26 @@ export function ExecutionSummaryCards({ run }: { run: TestRun }) {
         <SummaryCard
           label="Passed"
           value={run.passedTests}
-          icon={<CheckCircle2 className="w-4.5 h-4.5 text-emerald-500" />}
-          accent="bg-emerald-500/10"
+          icon={<CheckCircle2 className="w-4.5 h-4.5 text-primary" />}
+          accent="bg-primary/10"
         />
         <SummaryCard
           label="Failed"
           value={run.failedTests}
-          icon={<XCircle className="w-4.5 h-4.5 text-rose-500" />}
-          accent="bg-rose-500/10"
+          icon={<XCircle className="w-4.5 h-4.5 text-muted-foreground" />}
+          accent="bg-muted"
         />
         <SummaryCard
           label="Running"
           value={runningCount}
-          icon={<Loader2 className={`w-4.5 h-4.5 text-blue-500 ${runningCount > 0 ? 'animate-spin' : ''}`} />}
-          accent="bg-blue-500/10"
+          icon={<Loader2 className={`w-4.5 h-4.5 text-primary ${runningCount > 0 ? 'animate-spin' : ''}`} />}
+          accent="bg-primary/10"
         />
         <SummaryCard
           label="Duration"
           value={<span className="text-base">{elapsedBetween(run.startedAt, run.completedAt)}</span>}
-          icon={<Timer className="w-4.5 h-4.5 text-amber-500" />}
-          accent="bg-amber-500/10"
+          icon={<Timer className="w-4.5 h-4.5 text-primary" />}
+          accent="bg-primary/10"
         />
       </div>
 
@@ -75,11 +75,11 @@ export function ExecutionSummaryCards({ run }: { run: TestRun }) {
         </div>
         <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
           <div
-            className="h-full bg-emerald-500 transition-all duration-500"
+            className="h-full bg-primary transition-all duration-500"
             style={{ width: `${total ? (run.passedTests / total) * 100 : 0}%` }}
           />
           <div
-            className="h-full bg-rose-500 transition-all duration-500"
+            className="h-full bg-muted-foreground transition-all duration-500"
             style={{ width: `${total ? (run.failedTests / total) * 100 : 0}%` }}
           />
           <div

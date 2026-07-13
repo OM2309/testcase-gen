@@ -19,7 +19,7 @@ export function ExecutionStepList({ steps }: { steps: StepResult[] }) {
         return (
           <div
             key={step.stepNumber}
-            className={`flex items-start gap-3 px-3 py-2.5 ${isRunning ? 'bg-blue-500/5' : ''} ${isFailed ? 'bg-rose-500/5' : ''}`}
+            className={`flex items-start gap-3 px-3 py-2.5 ${isRunning ? 'bg-primary/5' : ''} ${isFailed ? 'bg-muted/40' : ''}`}
           >
             <span className={`mt-0.5 ${style.className.split(' ').find(c => c.startsWith('text-')) || ''}`}>
               {style.icon}
@@ -42,7 +42,7 @@ export function ExecutionStepList({ steps }: { steps: StepResult[] }) {
                 )}
               </div>
               {isFailed && step.errorMessage && (
-                <p className="mt-1 text-[11px] text-rose-500 bg-rose-500/5 border border-rose-500/20 rounded px-2 py-1 font-mono break-words">
+                <p className="mt-1 text-[11px] text-muted-foreground bg-muted/20 border border-border rounded px-2 py-1 font-mono break-words">
                   {step.errorMessage}
                 </p>
               )}

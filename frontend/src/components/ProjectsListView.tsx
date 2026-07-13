@@ -52,11 +52,11 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'tests_generated': return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-      case 'analyzed': return <BrainCircuit className="w-3.5 h-3.5 text-violet-400" />
-      case 'uploaded': return <UploadCloud className="w-3.5 h-3.5 text-blue-400" />
-      case 'analyzing': return <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-      case 'failed': return <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+      case 'tests_generated': return <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+      case 'analyzed': return <BrainCircuit className="w-3.5 h-3.5 text-primary" />
+      case 'uploaded': return <UploadCloud className="w-3.5 h-3.5 text-primary" />
+      case 'analyzing': return <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+      case 'failed': return <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
       default: return <FileText className="w-3.5 h-3.5 text-muted-foreground" />
     }
   }
@@ -143,8 +143,8 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
       </div>
 
       {isError && (
-        <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-3 rounded-lg flex items-center gap-2 text-xs">
-          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+        <div className="border border-border bg-muted/40 text-muted-foreground p-3 rounded-lg flex items-center gap-2 text-xs">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
           Could not load projects. Make sure the backend is running.
         </div>
       )}
@@ -204,8 +204,8 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                       {srsCount} {srsCount === 1 ? 'Doc' : 'Docs'}
                     </span>
                     {project.hasTestSuite && (
-                      <span className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded-md font-semibold">
-                        <FlaskConical className="w-3 h-3" />
+                      <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary px-2 py-1 rounded-md font-semibold">
+                        <FlaskConical className="w-3 h-3 text-primary" />
                         {project.testCasesCount} Cases
                       </span>
                     )}
@@ -221,7 +221,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                     </span>
                     <button
                       onClick={e => handleDelete(project._id, e)}
-                      className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-all cursor-pointer"
+                      className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
                       title="Delete Project"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -245,7 +245,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
               >
                 <button
                   onClick={e => handleDelete(project._id, e)}
-                  className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-all cursor-pointer"
+                  className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -266,8 +266,8 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                       {srsCount} {srsCount === 1 ? 'Doc' : 'Docs'}
                     </span>
                     {project.hasTestSuite && (
-                      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                        <FlaskConical className="w-3 h-3" />
+                      <span className="flex items-center gap-1 text-primary font-semibold">
+                        <FlaskConical className="w-3 h-3 text-primary" />
                         {project.testCasesCount}
                       </span>
                     )}

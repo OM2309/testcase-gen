@@ -441,7 +441,7 @@ export function TestCasesView() {
           <button
             onClick={() => handleSave()}
             disabled={saving}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${saveSuccess ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-card text-foreground hover:bg-muted border-border'}`}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${saveSuccess ? 'bg-primary/10 text-primary border-primary/20' : 'bg-card text-foreground hover:bg-muted border-border'}`}
           >
             {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
           </button>
@@ -451,7 +451,7 @@ export function TestCasesView() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-card text-foreground hover:bg-muted border border-border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             title={selectedModule === 'All' ? "Export all modules and test cases to Excel sheets" : `Export ${selectedModule} test cases to Excel`}
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export Excel
+            <FileSpreadsheet className="w-4 h-4 text-primary" /> Export Excel
           </button>
           <button
             onClick={() => setIsChoiceOpen(true)}
@@ -462,7 +462,7 @@ export function TestCasesView() {
           <button
             onClick={() => openRunDialog(null)}
             disabled={testCases.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#FF6B00] hover:bg-[#E05300] text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <PlayCircle className="w-4 h-4" /> Run Test Suite
           </button>

@@ -29,8 +29,8 @@ export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning,
             </h1>
             <ExecutionStatusBadge status={run.status} size="md" />
             {isPolling && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-blue-500 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" /> Live
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-primary font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" /> Live
               </span>
             )}
           </div>
@@ -71,7 +71,7 @@ export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning,
             <button
               onClick={onCancel}
               disabled={cancelling}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-500 transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-muted text-foreground border border-border hover:bg-muted/80 transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               title="Abort running execution"
             >
               <StopCircle className={`w-3.5 h-3.5 ${cancelling ? 'animate-pulse' : ''}`} />

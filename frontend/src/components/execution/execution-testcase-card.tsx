@@ -21,9 +21,9 @@ export function ExecutionTestCaseCard({ testCase, expanded, onToggle }: Executio
   const isFailed = testCase.status === 'failed'
 
   const borderAccent = isFailed
-    ? 'border-rose-500/30'
+    ? 'border-border'
     : isRunning
-      ? 'border-blue-500/40'
+      ? 'border-primary/40'
       : 'border-border'
 
   return (
@@ -47,8 +47,8 @@ export function ExecutionTestCaseCard({ testCase, expanded, onToggle }: Executio
             <span>· {done}/{total} steps</span>
             {testCase.durationMs > 0 && <span>· {formatDuration(testCase.durationMs)}</span>}
             {testCase.screenshotPath && (
-              <span className="inline-flex items-center gap-0.5 text-amber-500">
-                <ImageIcon className="w-3 h-3" /> screenshot
+              <span className="inline-flex items-center gap-0.5 text-primary">
+                <ImageIcon className="w-3 h-3 text-primary" /> screenshot
               </span>
             )}
           </div>
@@ -57,11 +57,11 @@ export function ExecutionTestCaseCard({ testCase, expanded, onToggle }: Executio
           <Progress
             className="mt-2 h-1"
             value={total ? (done / total) * 100 : 0}
-            indicatorClassName={isFailed ? 'bg-rose-500' : isRunning ? 'bg-blue-500' : 'bg-emerald-500'}
+            indicatorClassName={isFailed ? 'bg-muted-foreground' : isRunning ? 'bg-primary' : 'bg-primary'}
           />
 
           {isFailed && testCase.errorMessage && (
-            <p className="mt-2 text-[11px] text-rose-500 line-clamp-2">
+            <p className="mt-2 text-[11px] text-muted-foreground line-clamp-2">
               Step {testCase.failedStepNumber}: {testCase.errorMessage}
             </p>
           )}

@@ -92,9 +92,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
               </div>
               <DialogTitle className="text-lg font-bold">Create New Project</DialogTitle>
             </div>
-            <DialogDescription className="text-xs text-muted-foreground ml-12">
-              Set up your project workspace. You'll upload SRS documents after creation.
-            </DialogDescription>
+
           </DialogHeader>
         </div>
 
@@ -104,7 +102,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
           <div className="space-y-1.5">
             <label htmlFor="projectName" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
               Project Name
-              <span className="text-rose-400 text-xs">*</span>
+              <span className="text-primary text-xs">*</span>
             </label>
             <div className="relative">
               <input
@@ -114,18 +112,17 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
                 autoComplete="off"
                 placeholder="e.g. Todo Application v2"
                 {...register('projectName')}
-                className={`w-full px-4 py-2.5 text-sm bg-card border rounded-xl focus:outline-none focus:ring-2 transition placeholder:text-muted-foreground ${
-                  errors.projectName
-                    ? 'border-rose-500/50 bg-rose-500/5 focus:ring-rose-500/20 focus:border-rose-500'
-                    : 'border-border focus:ring-primary/30 focus:border-primary'
-                }`}
+                className={`w-full px-4 py-2.5 text-sm bg-card border rounded-xl focus:outline-none focus:ring-2 transition placeholder:text-muted-foreground ${errors.projectName
+                  ? 'border-border bg-muted/20 focus:ring-primary/20 focus:border-primary'
+                  : 'border-border focus:ring-primary/30 focus:border-primary'
+                  }`}
               />
               {projectNameValue && !errors.projectName && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
               )}
             </div>
             {errors.projectName && (
-              <p className="text-xs text-rose-400 flex items-center gap-1.5 mt-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
                 {errors.projectName.message}
               </p>
@@ -136,7 +133,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
           <div className="space-y-1.5">
             <label htmlFor="projectDescription" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
               Description
-              <span className="text-rose-400 text-xs">*</span>
+              <span className="text-primary text-xs">*</span>
             </label>
             <div className="relative">
               <textarea
@@ -144,28 +141,23 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }: Cre
                 rows={3}
                 placeholder="Brief description of what this project covers..."
                 {...register('projectDescription')}
-                className={`w-full px-4 py-2.5 text-sm bg-card border rounded-xl focus:outline-none focus:ring-2 transition resize-none placeholder:text-muted-foreground ${
-                  errors.projectDescription
-                    ? 'border-rose-500/50 bg-rose-500/5 focus:ring-rose-500/20 focus:border-rose-500'
-                    : 'border-border focus:ring-primary/30 focus:border-primary'
-                }`}
+                className={`w-full px-4 py-2.5 text-sm bg-card border rounded-xl focus:outline-none focus:ring-2 transition resize-none placeholder:text-muted-foreground ${errors.projectDescription
+                  ? 'border-border bg-muted/20 focus:ring-primary/20 focus:border-primary'
+                  : 'border-border focus:ring-primary/30 focus:border-primary'
+                  }`}
               />
               <div className="absolute bottom-2.5 right-3 text-[10px] text-muted-foreground font-mono">
                 {projectDescValue.length}/500
               </div>
             </div>
             {errors.projectDescription && (
-              <p className="text-xs text-rose-400 flex items-center gap-1.5 mt-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
                 {errors.projectDescription.message}
               </p>
             )}
           </div>
 
-          {/* Info hint */}
-          <div className="bg-muted/40 border border-border/60 rounded-xl px-4 py-3 text-[11px] text-muted-foreground leading-relaxed">
-            💡 After creating the project, you can upload one or more SRS documents directly from the project workspace.
-          </div>
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-1">

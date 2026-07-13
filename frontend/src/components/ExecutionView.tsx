@@ -102,8 +102,8 @@ export function ExecutionView() {
 
   if (socketError && !run) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-rose-500 gap-3">
-        <AlertTriangle className="w-8 h-8" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground gap-3">
+        <AlertTriangle className="w-8 h-8 text-primary" />
         <p className="text-sm">{socketError}</p>
         <button
           onClick={() => refetch()}
@@ -169,7 +169,7 @@ function StopHistoryButton({ runId, onCancelled }: { runId: string; onCancelled:
     <button
       onClick={handleStop}
       disabled={cancelling}
-      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-rose-600 text-white hover:bg-rose-500 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-muted text-foreground hover:bg-muted/80 border border-border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
       title="Stop execution run"
     >
       <StopCircle className={`w-4 h-4 ${cancelling ? 'animate-pulse' : ''}`} />
@@ -217,13 +217,13 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">Completed</span>
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold text-primary">Completed</span>
       case 'failed':
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-400">Failed</span>
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-[10px] font-bold text-muted-foreground">Failed</span>
       case 'running':
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-400"><Loader2 className="w-2.5 h-2.5 animate-spin" /> Running</span>
+        return <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold text-primary"><Loader2 className="w-2.5 h-2.5 animate-spin text-primary" /> Running</span>
       default:
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400">Queued</span>
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted border border-border text-[10px] font-bold text-muted-foreground">Queued</span>
     }
   }
 
@@ -238,8 +238,8 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-rose-500 gap-3">
-        <AlertTriangle className="w-8 h-8" />
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground gap-3">
+        <AlertTriangle className="w-8 h-8 text-primary" />
         <p className="text-sm">{error}</p>
         <button
           onClick={fetchHistory}
@@ -336,13 +336,13 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
                       Total: <span className="text-foreground font-bold">{runItem.totalTests}</span>
                     </span>
                     <span className="w-1.5 h-1.5 rounded-full bg-border" />
-                    <span className="flex items-center gap-1 text-emerald-400">
+                    <span className="flex items-center gap-1 text-primary">
                       Passed: <span className="font-bold">{runItem.passedTests}</span>
                     </span>
                     {runItem.failedTests > 0 && (
                       <>
                         <span className="w-1.5 h-1.5 rounded-full bg-border" />
-                        <span className="flex items-center gap-1 text-rose-400 font-bold">
+                        <span className="flex items-center gap-1 text-muted-foreground font-bold">
                           Failed: {runItem.failedTests}
                         </span>
                       </>
@@ -388,8 +388,8 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
                   </div>
 
                   {failedCases.length === 0 ? (
-                    <div className="border border-emerald-500/20 bg-emerald-500/5 p-4 rounded-xl flex items-center gap-3 text-xs text-emerald-400">
-                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                    <div className="border border-primary/20 bg-primary/5 p-4 rounded-xl flex items-center gap-3 text-xs text-primary">
+                      <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-primary" />
                       <div>
                         <span className="font-bold block">100% Success Rate!</span>
                         All automated Playwright tests passed smoothly on this execution run.
@@ -397,18 +397,18 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider block flex items-center gap-1.5">
-                        <ShieldAlert className="w-4 h-4" /> Failure Details ({failedCases.length} Test Cases Failed)
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block flex items-center gap-1.5">
+                        <ShieldAlert className="w-4 h-4 text-muted-foreground" /> Failure Details ({failedCases.length} Test Cases Failed)
                       </span>
                       <div className="grid grid-cols-1 gap-3">
                         {failedCases.map((tc, idx) => (
                           <div
                             key={idx}
-                            className="border border-rose-500/20 bg-rose-500/5 p-4 rounded-xl flex flex-col md:flex-row justify-between gap-4"
+                            className="border border-border bg-muted/40 p-4 rounded-xl flex flex-col md:flex-row justify-between gap-4"
                           >
                             <div className="space-y-2 min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-mono text-[10px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/15">
+                                <span className="font-mono text-[10px] font-bold text-muted-foreground bg-muted/20 px-1.5 py-0.5 rounded border border-border">
                                   {tc.testCaseId}
                                 </span>
                                 <h4 className="text-xs font-bold text-foreground truncate">{tc.title}</h4>
@@ -416,9 +416,9 @@ function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListPr
 
                               <div className="space-y-1 pl-1 text-[11px]">
                                 <p className="text-muted-foreground font-semibold">
-                                  ❌ Failed on <span className="text-rose-400 font-bold">Step {tc.failedStepNumber}</span>:
+                                  ❌ Failed on <span className="text-muted-foreground font-bold">Step {tc.failedStepNumber}</span>:
                                 </p>
-                                <p className="text-xs text-rose-400 font-mono leading-relaxed bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-lg whitespace-pre-wrap">
+                                <p className="text-xs text-muted-foreground font-mono leading-relaxed bg-muted/20 border border-border p-2.5 rounded-lg whitespace-pre-wrap">
                                   {tc.errorMessage || 'No specific assertion message provided.'}
                                 </p>
                               </div>

@@ -142,7 +142,7 @@ export function AppSidebar({
                   className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50"
                 >
                   <Layers className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>modules</span>
+                  <span>overview</span>
                 </SidebarMenuButton>
 
                 <SidebarMenuButton
@@ -228,7 +228,7 @@ export function AppSidebar({
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-2 rounded-md hover:bg-muted border border-border/60 bg-card transition-colors text-foreground"
           >
-            {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-blue-400" />}
+            {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-muted-foreground" />}
           </button>
         </div>
       </SidebarFooter>

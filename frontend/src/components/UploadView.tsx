@@ -88,8 +88,8 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
   if (status === 'done') {
     return (
       <div className="max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[70vh] gap-6 text-center">
-        <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/40 flex items-center justify-center">
-          <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+        <div className="w-20 h-20 rounded-full bg-primary/10 border-2 border-primary/40 flex items-center justify-center">
+          <CheckCircle2 className="w-10 h-10 text-primary" />
         </div>
         <div className="space-y-1">
           <h2 className="text-xl font-bold">Project Created!</h2>
@@ -107,8 +107,8 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
       </div>
 
       {error && (
-        <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-4 rounded-xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        <div className="border border-border bg-muted/40 text-muted-foreground p-4 rounded-xl flex items-center gap-3 text-sm">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
           {error}
         </div>
       )}
@@ -116,7 +116,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Project Name */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-foreground block">Project Name <span className="text-rose-400">*</span></label>
+          <label className="text-sm font-semibold text-foreground block">Project Name <span className="text-primary">*</span></label>
           <input
             type="text"
             value={projectName}
@@ -140,7 +140,7 @@ export function UploadView({ onProjectCreated }: UploadViewProps) {
 
         {/* File Upload Zone */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-foreground block">Requirements Document <span className="text-rose-400">*</span></label>
+          <label className="text-sm font-semibold text-foreground block">Requirements Document <span className="text-primary">*</span></label>
 
           {!file ? (
             <div

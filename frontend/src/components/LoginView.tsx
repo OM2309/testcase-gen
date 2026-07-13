@@ -59,7 +59,7 @@ export function LoginView() {
     <div className="min-h-screen flex flex-col justify-center items-center bg-background relative overflow-hidden px-4">
       {/* Decorative premium radial glows */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] rounded-full bg-violet-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
 
       {/* Main Glassmorphic Wrapper */}
       <div className="w-full max-w-[420px] bg-card/40 border border-border/80 rounded-3xl shadow-xl backdrop-blur-md p-8 relative z-10 space-y-6">
@@ -101,8 +101,8 @@ export function LoginView() {
 
         {/* Error Alert Box */}
         {error && (
-          <div className="border border-rose-500/20 bg-rose-500/10 text-rose-400 p-3 rounded-xl flex items-start gap-2.5 text-xs animate-shake">
-            <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div className="border border-border bg-muted/40 text-muted-foreground p-3 rounded-xl flex items-start gap-2.5 text-xs animate-shake">
+            <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-muted-foreground" />
             <div className="leading-relaxed">{error}</div>
           </div>
         )}

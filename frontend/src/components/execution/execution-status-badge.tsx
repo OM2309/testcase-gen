@@ -26,39 +26,39 @@ export function getStatusStyle(status: AnyStatus, spin = true): StatusStyle {
     case 'completed':
       return {
         label: status === 'passed' ? 'Passed' : 'Completed',
-        className: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-        icon: <CheckCircle2 className="w-3.5 h-3.5" />
+        className: 'bg-primary/10 text-primary border-primary/20',
+        icon: <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
       }
     case 'failed':
       return {
         label: 'Failed',
-        className: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-        icon: <XCircle className="w-3.5 h-3.5" />
+        className: 'bg-muted text-muted-foreground border-border',
+        icon: <XCircle className="w-3.5 h-3.5 text-muted-foreground" />
       }
     case 'running':
       return {
         label: 'Running',
-        className: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-        icon: <Loader2 className={`w-3.5 h-3.5 ${spin ? 'animate-spin' : ''}`} />
+        className: 'bg-primary/10 text-primary border-primary/20',
+        icon: <Loader2 className={`w-3.5 h-3.5 text-primary ${spin ? 'animate-spin' : ''}`} />
       }
     case 'queued':
       return {
         label: 'Queued',
-        className: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-        icon: <Clock className="w-3.5 h-3.5" />
+        className: 'bg-muted text-muted-foreground border-border',
+        icon: <Clock className="w-3.5 h-3.5 text-muted-foreground" />
       }
     case 'skipped':
       return {
         label: 'Skipped',
         className: 'bg-muted text-muted-foreground border-border',
-        icon: <MinusCircle className="w-3.5 h-3.5" />
+        icon: <MinusCircle className="w-3.5 h-3.5 text-muted-foreground" />
       }
     case 'pending':
     default:
       return {
         label: 'Pending',
         className: 'bg-muted text-muted-foreground border-border',
-        icon: <Clock className="w-3.5 h-3.5" />
+        icon: <Clock className="w-3.5 h-3.5 text-muted-foreground" />
       }
   }
 }
