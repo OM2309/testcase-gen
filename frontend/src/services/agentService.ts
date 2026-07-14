@@ -38,5 +38,13 @@ export const agentService = {
       { requirement, module, priority }
     )
     return response.data
+  },
+
+  async generateGapFill(projectId: string, srsDocumentId?: string) {
+    const url = srsDocumentId
+      ? `/requirements/gap-fill/${projectId}/${srsDocumentId}`
+      : `/requirements/gap-fill/${projectId}`
+    const response = await apiClient.post<{ success: boolean; data: any }>(url)
+    return response.data
   }
 }

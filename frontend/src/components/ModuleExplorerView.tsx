@@ -6,13 +6,15 @@ import {
   FolderOpen, FolderClosed, Layers, Cpu, PlayCircle, Eye, Loader2,
   AlertCircle, Sparkles, BrainCircuit, FlaskConical, Search, ChevronDown,
   ChevronRight, Play, Info, FileText, ArrowRight, Settings, Plus, CheckCircle2,
-  FileSpreadsheet, RotateCcw, ArrowLeft
+  FileSpreadsheet, RotateCcw, ArrowLeft,
+  ChevronLeft, Lightbulb, ShieldAlert, Zap, Target
 } from 'lucide-react'
-import { TestCase } from '../types'
+import { TestCase, Agent0Feedback, GapFillItem } from '../types'
 import { SrsUploadSection } from './SrsUploadSection'
 import { getPriorityBadge } from '../helpers/utils'
 import { executionService } from '../services/executionService'
 import { useProject } from '../contexts/ProjectContext'
+import { agentService } from '../services/agentService'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 import {
@@ -60,6 +62,7 @@ export function ModuleExplorerView() {
     agentError,
     runAgent1,
     runAgent2,
+    runGapFill,
     refreshProject
   } = useProject()
 
@@ -70,6 +73,9 @@ export function ModuleExplorerView() {
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
   const [expandedFeatures, setExpandedFeatures] = useState<Record<string, boolean>>({})
   const [expandedSrsScores, setExpandedSrsScores] = useState<Record<string, boolean>>({})
+  const [expandedGaps, setExpandedGaps] = useState<Record<string, boolean>>({})
+  const [selectedGapTestCases, setSelectedGapTestCases] = useState<Record<string, boolean>>({})
+  const [addingGapCases, setAddingGapCases] = useState(false)
 
   // Run execution dialog state
   const [isRunOpen, setIsRunOpen] = useState(false)
@@ -457,19 +463,19 @@ export function ModuleExplorerView() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push(window.location.pathname)}
-                className="btn-secondary h-9 w-9 p-0"
+                className="h-9 w-9 p-0 border border-gray-300 cursor-pointer"
                 title="Back to Overview"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ChevronLeft size={20} className='flex mx-auto' />
               </button>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-primary tracking-wider uppercase">Document View</span>
-                  {selectedSuite && selectedSuite.testCases?.length > 0 && (
+                  {/* {selectedSuite && selectedSuite.testCases?.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold text-primary">
                       Fully Covered
                     </span>
-                  )}
+                  )} */}
                 </div>
                 <h1 className="text-xl font-bold text-foreground capitalize mt-0.5">
                   {selectedSrs.originalFileName || 'Requirement Specification'}
@@ -502,48 +508,134 @@ export function ModuleExplorerView() {
           {/* Accuracy Score Card (Full Width on Top) */}
           <div>
             {selectedAnalysis && selectedAnalysis.status === 'completed' && selectedAnalysis.agent0Score !== undefined && selectedAnalysis.agent0Score !== null ? (
-              <div className="border border-border bg-card/20 rounded-2xl p-6 flex flex-col lg:flex-row items-stretch justify-between gap-6">
-                {/* Left Column: 70% space for text */}
-                <div className="lg:w-[70%] flex flex-col justify-between gap-4">
-                  <div className="space-y-2">
-                    <h4 className="text-lg font-extrabold text-foreground tracking-wide block">Accuracy Rating</h4>
-                    <div className={`text-xs text-muted-foreground leading-relaxed whitespace-pre-line ${!isFeedbackExpanded ? 'line-clamp-4 overflow-hidden' : 'max-h-[250px] overflow-y-auto pr-2 custom-scrollbar'
-                      }`}>
-                      {selectedAnalysis.agent0Feedback}
+              (() => {
+                // Support both legacy string and new structured feedback
+                const feedback = selectedAnalysis.agent0Feedback
+                const isStructured = feedback && typeof feedback === 'object' && !Array.isArray(feedback)
+                const structured = isStructured ? (feedback as Agent0Feedback) : null
+                const legacyText = typeof feedback === 'string' ? feedback : null
+
+                return (
+                  <div className="border border-border bg-card/20 rounded-2xl p-6 flex flex-col lg:flex-row items-stretch justify-between gap-6">
+                    {/* Left Column: 70% space for bullet-point feedback */}
+                    <div className="lg:w-[70%] flex flex-col justify-between gap-4">
+                      <div className="space-y-3">
+                        <h4 className="text-lg font-extrabold text-foreground tracking-wide block">Accuracy Rating</h4>
+
+                        {structured ? (
+                          <div className={`space-y-3 text-xs ${!isFeedbackExpanded ? 'max-h-[160px] overflow-hidden' : 'max-h-[350px] overflow-y-auto pr-2 custom-scrollbar'}`}>
+                            {/* Summary */}
+                            <p className="text-sm text-foreground/80 leading-relaxed">{structured.summary}</p>
+
+                            {/* Strengths */}
+                            {structured.strengths?.length > 0 && (
+                              <div>
+                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                                  <CheckCircle2 className="w-3 h-3" /> Strengths
+                                </span>
+                                <ul className="space-y-1 pl-0.5">
+                                  {structured.strengths.map((s, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-muted-foreground leading-relaxed">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                                      {s}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Missing Details */}
+                            {structured.missing_details?.length > 0 && (
+                              <div>
+                                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                                  <ShieldAlert className="w-3 h-3" /> Missing Details
+                                </span>
+                                <ul className="space-y-1 pl-0.5">
+                                  {structured.missing_details.map((d, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-muted-foreground leading-relaxed">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                                      {d}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Ambiguities */}
+                            {structured.ambiguities?.length > 0 && (
+                              <div>
+                                <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                                  <AlertCircle className="w-3 h-3" /> Ambiguities
+                                </span>
+                                <ul className="space-y-1 pl-0.5">
+                                  {structured.ambiguities.map((a, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-muted-foreground leading-relaxed">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-1.5 flex-shrink-0" />
+                                      {a}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Recommendations */}
+                            {structured.recommendations?.length > 0 && (
+                              <div>
+                                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                                  <Lightbulb className="w-3 h-3" /> Recommendations
+                                </span>
+                                <ul className="space-y-1 pl-0.5">
+                                  {structured.recommendations.map((r, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-muted-foreground leading-relaxed">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                                      {r}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* Legacy string-based feedback fallback */
+                          <div className={`text-xs text-muted-foreground leading-relaxed whitespace-pre-line ${!isFeedbackExpanded ? 'line-clamp-4 overflow-hidden' : 'max-h-[250px] overflow-y-auto pr-2 custom-scrollbar'}`}>
+                            {legacyText}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => setIsFeedbackExpanded(!isFeedbackExpanded)}
+                          className="text-[10px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-1 uppercase tracking-wider"
+                        >
+                          {isFeedbackExpanded ? 'Read Less ▲' : 'Read More ▼'}
+                        </button>
+
+                        {selectedAnalysis.agent0Score < 70 && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold">
+                            Score below 70%: Review details above.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Column: 30% space for the big graph */}
+                    <div className="lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border/40 pt-6 lg:pt-0 lg:pl-6 flex flex-col items-center justify-center text-center gap-3 flex-shrink-0">
+                      <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-background border border-border">
+                        <svg className="w-24 h-24 transform -rotate-90">
+                          <circle cx="48" cy="48" r="42" className="stroke-muted" strokeWidth="5" fill="transparent" />
+                          <circle cx="48" cy="48" r="42" className="stroke-primary" strokeWidth="5" fill="transparent" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={`${2 * Math.PI * 42 * (1 - (selectedAnalysis.agent0Score || 0) / 100)}`} strokeLinecap="round" />
+                        </svg>
+                        <span className="absolute text-2xl font-black text-primary">{selectedAnalysis.agent0Score}%</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-foreground uppercase tracking-wider block">Coverage Rating</span>
+                        <span className="text-[9px] text-muted-foreground mt-0.5 block">Functional detail score</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setIsFeedbackExpanded(!isFeedbackExpanded)}
-                      className="text-[10px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-1 uppercase tracking-wider"
-                    >
-                      {isFeedbackExpanded ? 'Read Less ▲' : 'Read More ▼'}
-                    </button>
-
-                    {selectedAnalysis.agent0Score < 70 && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-bold">
-                        Score below 70%: Review details below.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Column: 30% space for the big graph */}
-                <div className="lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border/40 pt-6 lg:pt-0 lg:pl-6 flex flex-col items-center justify-center text-center gap-3 flex-shrink-0">
-                  <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-background border border-border">
-                    <svg className="w-24 h-24 transform -rotate-90">
-                      <circle cx="48" cy="48" r="42" className="stroke-muted" strokeWidth="5" fill="transparent" />
-                      <circle cx="48" cy="48" r="42" className="stroke-primary" strokeWidth="5" fill="transparent" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={`${2 * Math.PI * 42 * (1 - (selectedAnalysis.agent0Score || 0) / 100)}`} strokeLinecap="round" />
-                    </svg>
-                    <span className="absolute text-2xl font-black text-primary">{selectedAnalysis.agent0Score}%</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-foreground uppercase tracking-wider block">Coverage Rating</span>
-                    <span className="text-[9px] text-muted-foreground mt-0.5 block">Functional detail score</span>
-                  </div>
-                </div>
-              </div>
+                )
+              })()
             ) : selectedAnalysis && selectedAnalysis.status === 'analyzing' ? (
               <div className="border border-border bg-card/20 rounded-2xl p-6 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -556,6 +648,200 @@ export function ModuleExplorerView() {
               </div>
             )}
           </div>
+
+          {/* AI Gap Analysis & Test Case Suggestions Section */}
+          {selectedAnalysis && selectedAnalysis.status === 'completed' && selectedAnalysis.agent0Status === 'completed' && (() => {
+            const feedback = selectedAnalysis.agent0Feedback
+            const isStructured = feedback && typeof feedback === 'object' && !Array.isArray(feedback)
+            const structured = isStructured ? (feedback as Agent0Feedback) : null
+            const hasGaps = structured && ((structured.missing_details?.length || 0) + (structured.ambiguities?.length || 0)) > 0
+            const gapFillData = selectedAnalysis.gapFillData
+            const gapFillStatus = selectedAnalysis.gapFillStatus
+            const filledGaps: GapFillItem[] = gapFillData?.filled_gaps || []
+
+            const handleToggleGapCase = (tcId: string) => {
+              setSelectedGapTestCases(prev => ({ ...prev, [tcId]: !prev[tcId] }))
+            }
+
+            const handleAddSelectedToSuite = async () => {
+              if (!selectedSuite || !project) return
+              const selectedIds = Object.entries(selectedGapTestCases).filter(([, v]) => v).map(([k]) => k)
+              if (selectedIds.length === 0) {
+                toast.error('Please select at least one test case to add.')
+                return
+              }
+
+              const newTestCases = filledGaps
+                .flatMap(g => g.suggested_test_cases)
+                .filter(tc => selectedIds.includes(tc.id))
+                .map(tc => ({
+                  ...tc,
+                  id: tc.id || `TC-GAP-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                  type: 'functional',
+                  isRegressive: false,
+                  severity: 'Major',
+                  test_data: {},
+                  cleanup_steps: [],
+                  source_requirements: [],
+                  tags: tc.tags || ['gap-fill', 'ai-suggested'],
+                  preconditions: tc.preconditions || [],
+                  steps: (tc.steps || []).map((s: any, idx: number) => ({
+                    step_number: s.step_number || idx + 1,
+                    action: s.action || '',
+                    target: s.target || '',
+                    value: s.value || '',
+                    description: s.description || '',
+                    expected: s.expected || '',
+                    expected_url: s.expected_url || '',
+                    expected_text: s.expected_text || ''
+                  }))
+                }))
+
+              setAddingGapCases(true)
+              try {
+                const mergedCases = [...selectedSuite.testCases, ...newTestCases]
+                await agentService.saveTestSuite(project._id, selectedSuite._id, mergedCases)
+                await refreshProject()
+                setSelectedGapTestCases({})
+                toast.success(`${newTestCases.length} test case(s) added to the suite! ✅`)
+              } catch (err: any) {
+                toast.error(err?.response?.data?.message || 'Failed to add test cases.')
+              } finally {
+                setAddingGapCases(false)
+              }
+            }
+
+            if (!hasGaps) return null
+
+            return (
+              <div className="border border-border bg-card/20 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-base font-extrabold text-foreground flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-primary" />
+                      AI Gap Analysis & Suggestions
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {gapFillStatus === 'completed'
+                        ? `${filledGaps.length} gaps analyzed with ${filledGaps.reduce((acc, g) => acc + g.suggested_test_cases.length, 0)} suggested test cases.`
+                        : 'AI can auto-fill incomplete details and suggest test cases for gaps found in your document.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {gapFillStatus === 'completed' && filledGaps.length > 0 && (
+                      <button
+                        onClick={handleAddSelectedToSuite}
+                        disabled={addingGapCases || Object.values(selectedGapTestCases).filter(Boolean).length === 0 || !selectedSuite}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer transition-colors"
+                      >
+                        {addingGapCases ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        Add Selected ({Object.values(selectedGapTestCases).filter(Boolean).length})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => selectedSrs && runGapFill(selectedSrs._id)}
+                      disabled={agentRunning === 'gapfill'}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                    >
+                      {agentRunning === 'gapfill' ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...</>
+                      ) : (
+                        <><Sparkles className="w-3.5 h-3.5" /> {gapFillStatus === 'completed' ? 'Re-analyze Gaps' : 'Fill Gaps with AI'}</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gap-fill results */}
+                {gapFillStatus === 'completed' && filledGaps.length > 0 && (
+                  <div className="space-y-3">
+                    {filledGaps.map((gap) => {
+                      const isExpanded = expandedGaps[gap.id] || false
+                      const confidenceColors = {
+                        high: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                        medium: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                        low: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      }
+                      return (
+                        <div key={gap.id} className="border border-border/60 rounded-xl bg-card/30 overflow-hidden">
+                          {/* Gap Header */}
+                          <button
+                            onClick={() => setExpandedGaps(prev => ({ ...prev, [gap.id]: !prev[gap.id] }))}
+                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/20 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              <Target className={`w-4 h-4 mt-0.5 flex-shrink-0 ${gap.category === 'missing_detail' ? 'text-amber-500' : 'text-yellow-500'}`} />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-foreground">{gap.original_issue}</span>
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold ${confidenceColors[gap.confidence]}`}>
+                                    {gap.confidence} confidence
+                                  </span>
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${gap.category === 'missing_detail' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20'}`}>
+                                    {gap.category === 'missing_detail' ? 'Missing Detail' : 'Ambiguity'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="text-[10px] text-muted-foreground">{gap.suggested_test_cases.length} test case(s)</span>
+                              {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                            </div>
+                          </button>
+
+                          {/* Expanded Content */}
+                          {isExpanded && (
+                            <div className="px-4 pb-4 space-y-3 border-t border-border/30">
+                              {/* AI-Filled Detail */}
+                              <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/15">
+                                <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1 mb-1">
+                                  <Sparkles className="w-3 h-3" /> AI-Suggested Detail
+                                </span>
+                                <p className="text-xs text-foreground/80 leading-relaxed">{gap.ai_filled_detail}</p>
+                              </div>
+
+                              {/* Suggested Test Cases */}
+                              <div className="space-y-2">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Suggested Test Cases</span>
+                                {gap.suggested_test_cases.map(tc => (
+                                  <label
+                                    key={tc.id}
+                                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all hover:bg-muted/20 ${selectedGapTestCases[tc.id] ? 'border-primary/50 bg-primary/5' : 'border-border/40'}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedGapTestCases[tc.id] || false}
+                                      onChange={() => handleToggleGapCase(tc.id)}
+                                      className="mt-0.5 rounded border-border accent-primary cursor-pointer"
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs font-bold text-foreground">{tc.title}</span>
+                                        {getPriorityBadge(tc.priority)}
+                                        <span className={`text-[8px] px-1.5 py-0.5 rounded border font-medium ${tc.scenario_type === 'negative' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : tc.scenario_type === 'edge_case' ? 'bg-violet-500/10 text-violet-500 border-violet-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
+                                          {tc.scenario_type}
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{tc.description}</p>
+                                      <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                                        <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {tc.module}</span>
+                                        <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> {tc.feature}</span>
+                                        <span>{tc.steps?.length || 0} steps</span>
+                                      </div>
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Requirement Modules Section (Master-Detail Layout) */}
           <div className="space-y-4 pt-2">
@@ -587,8 +873,8 @@ export function ModuleExplorerView() {
                           key={mod.name}
                           onClick={() => setActiveModuleName(mod.name)}
                           className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all text-xs flex items-center justify-between gap-3 cursor-pointer w-full ${isActive
-                              ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
-                              : 'bg-card/40 border-border hover:bg-card/60 text-muted-foreground hover:text-foreground'
+                            ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                            : 'bg-card/40 border-border hover:bg-card/60 text-muted-foreground hover:text-foreground'
                             }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -904,7 +1190,7 @@ export function ModuleExplorerView() {
                             onClick={() => router.push(`?srsId=${doc._id}`)}
                             className="w-full btn-secondary h-8 text-xs font-semibold"
                           >
-                            View Test Suite
+                            View Modules
                           </Button>
                         )}
                       </CardFooter>

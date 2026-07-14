@@ -22,6 +22,42 @@ export interface Project {
   srsDocuments?: SrsDocument[]
 }
 
+export interface Agent0Feedback {
+  score?: number
+  summary: string
+  strengths: string[]
+  missing_details: string[]
+  ambiguities: string[]
+  recommendations: string[]
+}
+
+export interface SuggestedTestCase {
+  id: string
+  title: string
+  description: string
+  module: string
+  feature: string
+  priority: string
+  scenario_type: string
+  preconditions: string[]
+  steps: Step[]
+  expected_result: string
+  tags: string[]
+}
+
+export interface GapFillItem {
+  id: string
+  original_issue: string
+  category: 'missing_detail' | 'ambiguity'
+  ai_filled_detail: string
+  confidence: 'high' | 'medium' | 'low'
+  suggested_test_cases: SuggestedTestCase[]
+}
+
+export interface GapFillData {
+  filled_gaps: GapFillItem[]
+}
+
 export interface RequirementAnalysis {
   _id: string
   projectId: string
@@ -29,8 +65,10 @@ export interface RequirementAnalysis {
   analyzedData: any
   status: string
   agent0Score?: number | null
-  agent0Feedback?: string | null
+  agent0Feedback?: Agent0Feedback | string | null
   agent0Status?: 'pending' | 'completed' | 'failed' | null
+  gapFillData?: GapFillData | null
+  gapFillStatus?: 'pending' | 'completed' | 'failed' | null
 }
 
 export interface TestSuiteData {

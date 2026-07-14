@@ -16,10 +16,11 @@ interface ProjectContextType {
   testSuites: TestSuiteData[]
   loading: boolean
   error: string | null
-  agentRunning: 'agent1' | 'agent2' | null
+  agentRunning: 'agent1' | 'agent2' | 'gapfill' | null
   agentError: string | null
   runAgent1: (srsId?: string) => Promise<void>
   runAgent2: (srsId?: string) => Promise<void>
+  runGapFill: (srsId?: string) => Promise<void>
   refreshProject: () => Promise<void>
   setProject: React.Dispatch<React.SetStateAction<Project | null>>
 }
@@ -34,7 +35,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [testSuites, setTestSuites] = useState<TestSuiteData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [agentRunning, setAgentRunning] = useState<'agent1' | 'agent2' | null>(null)
+  const [agentRunning, setAgentRunning] = useState<'agent1' | 'agent2' | 'gapfill' | null>(null)
   const [agentError, setAgentError] = useState<string | null>(null)
 
   const refreshProject = useCallback(async () => {
@@ -137,6 +138,26 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const runGapFill = async (srsId?: string) => {
+    if (!projectId || agentRunning) return
+    const targetSrsId = srsId || selectedSrsId || undefined
+    setAgentError(null)
+    setAgentRunning('gapfill')
+    try {
+      const res = await agentService.generateGapFill(projectId, targetSrsId)
+      if (res.success) {
+        await refreshProject()
+        toast.success('AI Gap Analysis completed! Review the suggested improvements. 🔍')
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Gap-fill analysis failed. Please try again.'
+      setAgentError(msg)
+      toast.error('Gap-fill analysis failed.')
+    } finally {
+      setAgentRunning(null)
+    }
+  }
+
   return (
     <ProjectContext.Provider value={{
       project,
@@ -150,6 +171,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       agentError,
       runAgent1,
       runAgent2,
+      runGapFill,
       refreshProject,
       setProject
     }}>

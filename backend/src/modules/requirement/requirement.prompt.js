@@ -119,16 +119,9 @@ You must evaluate:
 2. Specificity: Are input fields, validation rules, error handling, and expected outputs explicitly defined (with types, required fields, formats, etc.) rather than using vague placeholders?
 3. Clarity: Are there contradictions, ambiguities, or missing details that would require developer/QA guesswork?
 
-Provide a percentage score (integer between 0 and 100) reflecting the SRS detailing level for test case generation:
-- 100: Exceptionally complete and clear, all inputs, validation rules, workflows, and outputs are thoroughly documented, requiring no assumptions.
-- 70-99: Good coverage but missing minor details (e.g. some input field types or validation constraints not specified).
-- 50-69: Moderate coverage, missing significant validation rules, error conditions, or edge cases.
-- Under 50: Poor coverage, high ambiguity, missing major functional steps or page structures.
+Provide a percentage score (integer between 0 and 100) reflecting the SRS detailing level for test case generation.
 
-Additionally, provide constructive, detailed feedback summarizing:
-1. Missing Details (e.g., validations, error cases, specific input fields).
-2. Contradictions/Ambiguities (vague words, unclear flows).
-3. Recommended improvements to help make the SRS perfect.
+Your output MUST be structured as bullet-point arrays (not paragraphs) for easy scanning.
 
 Output MUST be valid JSON only. Do not include markdown code block wrappers (like \`\`\`json) or other text.
 `;
@@ -210,32 +203,131 @@ Scoring Rules:
 
 Interpretation:
 
-90-100:
-Excellent. The SRS is highly suitable for automated test case generation with minimal assumptions.
-
-75-89:
-Good. Minor details are missing, but reliable test cases can still be generated.
-
-60-74:
-Average. Several important testing details are missing, requiring assumptions.
-
-40-59:
-Poor. Significant information is missing, making automated test generation unreliable.
-
-0-39:
-Insufficient. The document lacks enough functional detail for meaningful automated test generation.
+90-100: Excellent. Highly suitable for automated test case generation with minimal assumptions.
+75-89: Good. Minor details missing, but reliable test cases can still be generated.
+60-74: Average. Several important testing details missing, requiring assumptions.
+40-59: Poor. Significant information missing, making automated test generation unreliable.
+0-39: Insufficient. Lacks enough functional detail for meaningful automated test generation.
 
 Return ONLY valid JSON using this schema:
 
 {
   "score": <integer between 0 and 100>,
-  "feedback": "<Explain why this score was assigned. Mention the strongest parts of the SRS, the missing information that reduced the score, and provide specific recommendations to improve its suitability for AI-generated test case generation. Do not mention individual section scores or calculations.>"
+  "summary": "<Brief 1-2 sentence overall verdict explaining the score>",
+  "strengths": [
+    "<Concise bullet describing a strong point of the SRS>",
+    "<Another strength bullet>"
+  ],
+  "missing_details": [
+    "<Specific detail that is missing, e.g. 'No validation rules specified for email input field'>",
+    "<Another missing detail>"
+  ],
+  "ambiguities": [
+    "<Vague or contradictory statement found, e.g. 'fast response time is mentioned but no measurable threshold defined'>",
+    "<Another ambiguity>"
+  ],
+  "recommendations": [
+    "<Actionable recommendation to improve the SRS for test generation>",
+    "<Another recommendation>"
+  ]
 }
+
+Rules for the arrays:
+- Each array item must be a single concise sentence (not a paragraph).
+- "strengths" should have 2-5 items highlighting what the SRS does well.
+- "missing_details" should list all specific gaps that reduce test coverage (can be 0-15 items).
+- "ambiguities" should list vague/contradictory/unclear statements (can be 0-10 items).
+- "recommendations" should list 2-5 actionable improvements.
+- Do NOT repeat the same point across arrays.
+- Do NOT mention individual section scores or calculations.
 
 Document Name:
 ${documentName}
 
 Document Content:
 ${documentText}
+`;
+}
+
+export const agent3GapFillSystemPrompt = `
+You are an expert QA analyst and business analyst specializing in gap analysis for software requirement documents.
+
+Your job is to:
+1. Receive a list of missing details and ambiguities identified in an SRS document.
+2. For each gap, provide a reasonable AI-inferred detail that fills the gap based on industry best practices and common software patterns.
+3. For each filled gap, suggest 1-3 actionable test cases that specifically test the filled detail.
+
+Rules:
+- Clearly mark all filled details as AI-inferred suggestions (not confirmed requirements).
+- Test cases must be practical, specific, and include concrete steps.
+- Each test case must have a unique id in the format "TC-GAP-<timestamp>-<index>".
+- Do NOT invent unrelated requirements. Only fill the specific gaps provided.
+- Output MUST be valid JSON only. Do not include markdown code block wrappers or other text.
+`;
+
+export function buildAgent3GapFillUserPrompt({ documentName, documentText, missingDetails, ambiguities }) {
+  return `
+Analyze the following gaps identified in an SRS document and provide AI-inferred details with suggested test cases.
+
+The original document is provided for context so you can make informed inferences.
+
+Document Name: ${documentName}
+
+Document Content (for context):
+${documentText}
+
+---
+
+Identified Missing Details:
+${missingDetails.map((d, i) => `${i + 1}. ${d}`).join('\n')}
+
+Identified Ambiguities:
+${ambiguities.map((a, i) => `${i + 1}. ${a}`).join('\n')}
+
+---
+
+Return ONLY valid JSON using this schema:
+
+{
+  "filled_gaps": [
+    {
+      "id": "gap-<index>",
+      "original_issue": "<The exact missing detail or ambiguity text>",
+      "category": "missing_detail" | "ambiguity",
+      "ai_filled_detail": "<Your suggested detail to fill this gap, based on industry best practices>",
+      "confidence": "high" | "medium" | "low",
+      "suggested_test_cases": [
+        {
+          "id": "TC-GAP-${Date.now()}-<index>",
+          "title": "<Descriptive test case title>",
+          "description": "<What this test validates>",
+          "module": "<Inferred module name from context>",
+          "feature": "<Inferred feature name from context>",
+          "priority": "High" | "Medium" | "Low",
+          "scenario_type": "positive" | "negative" | "edge_case",
+          "preconditions": ["<precondition>"],
+          "steps": [
+            {
+              "step_number": 1,
+              "action": "<action verb: navigate, click, type, verify, etc.>",
+              "target": "<CSS selector or element description>",
+              "value": "<value to input if applicable>",
+              "description": "<Human-readable step description>",
+              "expected": "<Expected result of this step>"
+            }
+          ],
+          "expected_result": "<Overall expected outcome>",
+          "tags": ["gap-fill", "ai-suggested"]
+        }
+      ]
+    }
+  ]
+}
+
+Important:
+- Process ALL missing details and ALL ambiguities.
+- Each gap should produce 1-3 relevant test cases.
+- Test case steps should be realistic Playwright-compatible actions.
+- Use unique IDs for each test case.
 `;
 }

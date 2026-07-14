@@ -30,10 +30,19 @@ const requirementAnalysisSchema = new mongoose.Schema({
     default: null
   },
   agent0Feedback: {
-    type: String,
+    type: mongoose.Schema.Types.Mixed,
     default: null
   },
   agent0Status: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
+  gapFillData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  gapFillStatus: {
     type: String,
     enum: ['pending', 'completed', 'failed'],
     default: 'pending'
