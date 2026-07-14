@@ -76,6 +76,25 @@ export function ModuleExplorerView() {
   const [expandedGaps, setExpandedGaps] = useState<Record<string, boolean>>({})
   const [selectedGapTestCases, setSelectedGapTestCases] = useState<Record<string, boolean>>({})
   const [addingGapCases, setAddingGapCases] = useState(false)
+  const [runningActionDocId, setRunningActionDocId] = useState<string | null>(null)
+
+  const handleLocalRunAgent1 = async (docId: string) => {
+    setRunningActionDocId(docId)
+    try {
+      await runAgent1(docId)
+    } finally {
+      setRunningActionDocId(null)
+    }
+  }
+
+  const handleLocalRunAgent2 = async (docId: string) => {
+    setRunningActionDocId(docId)
+    try {
+      await runAgent2(docId)
+    } finally {
+      setRunningActionDocId(null)
+    }
+  }
 
   // Run execution dialog state
   const [isRunOpen, setIsRunOpen] = useState(false)
@@ -483,8 +502,8 @@ export function ModuleExplorerView() {
               </div>
             </div>
 
-            {/* Sub-view Actions: Export Excel and Run Suite */}
-            {selectedSuite && selectedSuite.testCases?.length > 0 && (
+            {/* Sub-view Actions: Export Excel / Run Suite OR Generate Suite */}
+            {selectedSuite && selectedSuite.testCases?.length > 0 ? (
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => handleDownloadExcel(selectedSrs.originalFileName, selectedSrsModules)}
@@ -500,6 +519,20 @@ export function ModuleExplorerView() {
                   className="btn-primary"
                 >
                   <PlayCircle className="w-4.5 h-4.5" /> Run Suite ({selectedSrsModules.reduce((acc, m) => acc + m.testCasesCount, 0)})
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={agentRunning !== null}
+                  onClick={() => handleLocalRunAgent2(selectedSrs._id)}
+                  className="btn-primary h-9 px-4 text-xs font-bold inline-flex items-center gap-1.5"
+                >
+                  {agentRunning === 'agent2' && runningActionDocId === selectedSrs._id ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating test cases...</>
+                  ) : (
+                    <><Sparkles className="w-3.5 h-3.5" /> Generate Test Suite</>
+                  )}
                 </button>
               </div>
             )}
@@ -1033,14 +1066,11 @@ export function ModuleExplorerView() {
         </div>
       ) : (
         /* Overview Dashboard */
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fadeIn">
           {/* Project Header */}
           <div className="space-y-2 relative overflow-hidden pb-2 border-b border-border/40">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-primary tracking-wider uppercase">Project Workspace</span>
-              <span className="px-2 py-0.5 rounded-full border bg-muted text-[10px] font-semibold">
-                {srsDocumentsList.length} Requirement document{srsDocumentsList.length > 1 ? 's' : ''}
-              </span>
+              <span className="text-xs font-bold text-primary tracking-wider uppercase">Project Name</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground capitalize">{project.projectName}</h1>
             {project.projectDescription && (
@@ -1051,34 +1081,54 @@ export function ModuleExplorerView() {
           {/* 4 Small Metrics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
             {/* Card 1: Requirement Docs */}
-            <div className="border border-border bg-card/40 rounded-xl p-4 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Requirement Docs</span>
-              <span className="text-2xl font-extrabold text-foreground mt-2 block">{srsDocumentsList.length}</span>
+            <div className="border border-border bg-card/40 rounded-xl p-4 flex items-center justify-between hover:bg-card/60 transition-all duration-200">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Requirement Docs</span>
+                <span className="text-2xl font-extrabold text-foreground mt-1">{srsDocumentsList.length}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <FileText className="w-5 h-5" />
+              </div>
             </div>
 
             {/* Card 2: Total Modules */}
-            <div className="border border-border bg-card/40 rounded-xl p-4 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Modules</span>
-              <span className="text-2xl font-extrabold text-foreground mt-2 block">{overallStats.totalModules}</span>
+            <div className="border border-border bg-card/40 rounded-xl p-4 flex items-center justify-between hover:bg-card/60 transition-all duration-200">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Modules</span>
+                <span className="text-2xl font-extrabold text-foreground mt-1">{overallStats.totalModules}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <Layers className="w-5 h-5" />
+              </div>
             </div>
 
             {/* Card 3: Total Features */}
-            <div className="border border-border bg-card/40 rounded-xl p-4 flex flex-col justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Features</span>
-              <span className="text-2xl font-extrabold text-foreground mt-2 block">{overallStats.totalFeatures}</span>
+            <div className="border border-border bg-card/40 rounded-xl p-4 flex items-center justify-between hover:bg-card/60 transition-all duration-200">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Features</span>
+                <span className="text-2xl font-extrabold text-foreground mt-1">{overallStats.totalFeatures}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                <Cpu className="w-5 h-5" />
+              </div>
             </div>
 
             {/* Card 4: Generated Tests */}
-            <div className="border border-border bg-card/40 rounded-xl p-4 flex flex-col justify-between">
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Generated Tests</span>
-                {overallStats.totalRegressive > 0 && (
-                  <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.2 rounded font-semibold uppercase tracking-wider">
-                    {overallStats.totalRegressive} Regressive
-                  </span>
-                )}
+            <div className="border border-border bg-card/40 rounded-xl p-4 flex items-center justify-between hover:bg-card/60 transition-all duration-200">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Generated Tests</span>
+                  {overallStats.totalRegressive > 0 && (
+                    <span className="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.2 rounded font-bold uppercase tracking-wider">
+                      {overallStats.totalRegressive} Regressive
+                    </span>
+                  )}
+                </div>
+                <span className="text-2xl font-extrabold text-foreground mt-1">{overallStats.totalTests}</span>
               </div>
-              <span className="text-2xl font-extrabold text-foreground mt-2 block">{overallStats.totalTests}</span>
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <FlaskConical className="w-5 h-5" />
+              </div>
             </div>
           </div>
 
@@ -1095,7 +1145,7 @@ export function ModuleExplorerView() {
           </div>
 
           {agentError && (
-            <div className="border border-border bg-muted/40 text-muted-foreground p-4 rounded-xl flex items-center gap-3 text-sm">
+            <div className="border border-border bg-muted/40 text-muted-foreground p-4 rounded-xl flex items-center gap-3 text-sm animate-fadeIn">
               <AlertCircle className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
               {agentError}
             </div>
@@ -1108,7 +1158,7 @@ export function ModuleExplorerView() {
             {srsDocumentsList.length === 0 ? (
               <div className="border border-dashed border-border rounded-2xl bg-card/10 flex flex-col items-center justify-center p-16 text-center gap-6">
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <BrainCircuit className="w-8 h-8 text-primary" />
+                  <BrainCircuit className="w-8 h-8 text-primary animate-pulse" />
                 </div>
                 <div className="space-y-1.5 max-w-sm">
                   <h3 className="font-semibold text-lg">Upload a Requirement Document</h3>
@@ -1129,13 +1179,15 @@ export function ModuleExplorerView() {
                   const isSuiteGenerated = suite && suite.testCases?.length > 0
 
                   const unsplashImages = [
-                    // "https://images.unsplash.com/photo-1618401471353-b98aedd07871?auto=format&fit=crop&w=600&q=80",
                     "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80",
                     "https://images.unsplash.com/photo-1542831371-29b0f74f9713?auto=format&fit=crop&w=600&q=80",
                     "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80",
                     "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=600&q=80"
                   ]
                   const imageUrl = unsplashImages[srsIdx % unsplashImages.length]
+
+                  const isThisAgent1Running = agentRunning === 'agent1' && selectedSrsId === doc._id
+                  const isThisAgent2Running = agentRunning === 'agent2' && selectedSrsId === doc._id
 
                   return (
                     <Card
@@ -1155,7 +1207,7 @@ export function ModuleExplorerView() {
                             <Badge variant="default" className="font-mono bg-primary/20 text-primary border border-primary/30">
                               {analysis.agent0Score}% Score
                             </Badge>
-                          ) : isAnalyzing ? (
+                          ) : isAnalyzing || isThisAgent1Running ? (
                             <Badge variant="secondary" className="animate-pulse">
                               Analyzing
                             </Badge>
@@ -1173,17 +1225,27 @@ export function ModuleExplorerView() {
                       <CardFooter onClick={e => e.stopPropagation()}>
                         {!isAnalyzed ? (
                           <Button
-                            onClick={() => runAgent1(doc._id)}
-                            className="w-full btn-primary h-8 text-xs font-semibold"
+                            onClick={() => handleLocalRunAgent1(doc._id)}
+                            disabled={agentRunning !== null}
+                            className="w-full btn-primary h-8 text-xs font-semibold inline-flex items-center justify-center gap-1.5"
                           >
-                            Analyze Document
+                            {agentRunning === 'agent1' && runningActionDocId === doc._id ? (
+                              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Extracting...</>
+                            ) : (
+                              'Analyze Document'
+                            )}
                           </Button>
                         ) : !isSuiteGenerated ? (
                           <Button
-                            onClick={() => runAgent2(doc._id)}
-                            className="w-full btn-primary h-8 text-xs font-semibold inline-flex items-center gap-1.5"
+                            onClick={() => handleLocalRunAgent2(doc._id)}
+                            disabled={agentRunning !== null}
+                            className="w-full btn-primary h-8 text-xs font-semibold inline-flex items-center justify-center gap-1.5"
                           >
-                            <Sparkles className="w-3.5 h-3.5" /> Generate Test Suite
+                            {agentRunning === 'agent2' && runningActionDocId === doc._id ? (
+                              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                            ) : (
+                              <><Sparkles className="w-3.5 h-3.5" /> Generate Test Suite</>
+                            )}
                           </Button>
                         ) : (
                           <Button

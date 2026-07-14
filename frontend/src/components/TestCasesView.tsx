@@ -51,13 +51,15 @@ export function TestCasesView() {
   useEffect(() => {
     setTestCases(initialTestCases)
     if (initialTestCases.length > 0 && !selectedId) {
-      setSelectedId(initialTestCases[0].id)
+      // setSelectedId(initialTestCases[0].id)
+      setSelectedId(null)
     }
   }, [initialTestCases])
 
   useEffect(() => {
     if (caseIdParam) {
-      setSelectedId(caseIdParam)
+      // setSelectedId(caseIdParam)
+      setSelectedId(null)
       const tc = testCases.find(t => t.id === caseIdParam)
       if (tc) {
         setSelectedModule(tc.module || 'General')
@@ -106,7 +108,8 @@ export function TestCasesView() {
       ...list,
       { name: 'Regressive', count: regressiveTotal },
     ])
-    if (testCases.length > 0 && !selectedId) setSelectedId(testCases[0].id)
+    // if (testCases.length > 0 && !selectedId) setSelectedId(testCases[0].id)
+    if (testCases.length > 0 && !selectedId) setSelectedId(null)
   }, [testCases])
 
   const filteredTcs = testCases.filter(tc => {
@@ -404,6 +407,9 @@ export function TestCasesView() {
     )
   }
 
+  console.log("selected id ", selectedId)
+
+
   return (
     <div className="flex flex-col gap-6">
       <TestCaseDialogs
@@ -487,7 +493,7 @@ export function TestCasesView() {
         />
       </div>
 
-      <Dialog open={!!selectedId} onOpenChange={(open) => { if (!open) setSelectedId(null) }}>
+      <Dialog open={selectedId ? true : false} onOpenChange={(open) => { if (!open) setSelectedId(null) }}>
         <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto w-full p-6">
           <DialogHeader className="pb-4 border-b border-border mb-4">
             <DialogTitle className="text-lg font-bold text-foreground">
@@ -497,7 +503,7 @@ export function TestCasesView() {
               View expected results, preconditions, and manage step definitions.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedTc && (
             <TestCaseDetail
               testCase={selectedTc}

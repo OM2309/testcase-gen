@@ -61,10 +61,14 @@ export function RequirementsView() {
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse inline-block" />
-            Agent {agentNum} Running
+            {agentRunning === 'agent1'
+              ? 'Extracting Requirements...'
+              : agentRunning === 'agent2'
+                ? 'Generating Test Cases...'
+                : 'Analyzing Gaps...'}
           </div>
           <h2 className="text-2xl font-bold tracking-tight mt-3">
-            {agentNum === 1 ? 'Analyzing Requirements...' : 'Generating Test Suite...'}
+            {agentRunning === 'agent1' ? 'Extracting Requirements...' : 'Generating Test Suite...'}
           </h2>
           <RotatingMessage messages={messages} />
         </div>

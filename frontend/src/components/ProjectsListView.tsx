@@ -97,11 +97,10 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
               <div className="flex items-center bg-muted/60 border border-border/60 p-0.5 rounded-lg mr-1.5">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                    viewMode === 'grid'
-                      ? 'bg-card text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'grid'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   title="Grid View"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -113,11 +112,10 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                    viewMode === 'list'
-                      ? 'bg-card text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'list'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
                   title="List View"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -216,12 +214,12 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                   </div>
 
                   <div className="flex items-center gap-3 pl-2.5 border-l border-border/60">
-                    <span className="w-6 h-6 flex items-center justify-center">
+                    {/* <span className="w-6 h-6 flex items-center justify-center">
                       {getStatusIcon(project.status)}
-                    </span>
+                    </span> */}
                     <button
                       onClick={e => handleDelete(project._id, e)}
-                      className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
+                      className="p-1.5 rounded-md hover:bg-white text-muted-foreground hover:text-red-600 transition-all cursor-pointer"
                       title="Delete Project"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

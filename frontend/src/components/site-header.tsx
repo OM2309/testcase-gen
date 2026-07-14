@@ -28,7 +28,11 @@ export function SiteHeader({ title = 'Documents' }: SiteHeaderProps) {
           {agentRunning && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded bg-primary/10 text-primary border border-primary/20">
               <Loader2 className="w-3 h-3 animate-spin" />
-              {agentRunning === 'agent1' ? 'Agent 1 running' : 'Agent 2 running'}
+              {agentRunning === 'agent1'
+                ? 'Extracting requirements...'
+                : agentRunning === 'agent2'
+                  ? 'Generating test cases...'
+                  : 'Analyzing requirement gaps...'}
             </span>
           )}
           {/* <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
