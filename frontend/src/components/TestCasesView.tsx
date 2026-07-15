@@ -25,9 +25,19 @@ export function TestCasesView() {
   const {
     project,
     selectedSrsId,
+    setSelectedSrsId,
     testSuites,
     refreshProject
   } = useProject()
+
+  const srsIdParam = searchParams.get('srsId')
+
+  // Sync srsId from URL into the context so the correct SRS test suite is shown
+  useEffect(() => {
+    if (srsIdParam && srsIdParam !== selectedSrsId) {
+      setSelectedSrsId(srsIdParam)
+    }
+  }, [srsIdParam, selectedSrsId, setSelectedSrsId])
 
   // Find active test suite for selected SRS
   const activeTestSuite = useMemo(() => {
@@ -57,12 +67,11 @@ export function TestCasesView() {
   }, [initialTestCases])
 
   useEffect(() => {
-    if (caseIdParam) {
-      // setSelectedId(caseIdParam)
-      setSelectedId(null)
+    if (caseIdParam && testCases.length > 0) {
       const tc = testCases.find(t => t.id === caseIdParam)
       if (tc) {
         setSelectedModule(tc.module || 'General')
+        setSelectedId(caseIdParam)
       }
     }
   }, [caseIdParam, testCases])

@@ -32,8 +32,8 @@ export function getStatusStyle(status: AnyStatus, spin = true): StatusStyle {
     case 'failed':
       return {
         label: 'Failed',
-        className: 'bg-muted text-muted-foreground border-border',
-        icon: <XCircle className="w-3.5 h-3.5 text-muted-foreground" />
+        className: 'bg-error/10 text-error border-error/20',
+        icon: <XCircle className="w-3.5 h-3.5 text-error" />
       }
     case 'running':
       return {

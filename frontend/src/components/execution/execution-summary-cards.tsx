@@ -50,8 +50,8 @@ export function ExecutionSummaryCards({ run }: { run: TestRun }) {
         <SummaryCard
           label="Failed"
           value={run.failedTests}
-          icon={<XCircle className="w-4.5 h-4.5 text-muted-foreground" />}
-          accent="bg-muted"
+          icon={<XCircle className="w-4.5 h-4.5 text-error" />}
+          accent="bg-error/10"
         />
         <SummaryCard
           label="Running"
@@ -79,7 +79,7 @@ export function ExecutionSummaryCards({ run }: { run: TestRun }) {
             style={{ width: `${total ? (run.passedTests / total) * 100 : 0}%` }}
           />
           <div
-            className="h-full bg-muted-foreground transition-all duration-500"
+            className="h-full bg-error transition-all duration-500"
             style={{ width: `${total ? (run.failedTests / total) * 100 : 0}%` }}
           />
           <div

@@ -372,7 +372,8 @@ export function ModuleExplorerView() {
 
   const handleEditTestCase = (id: string) => {
     if (!project) return
-    router.push(`/dashboard/${project._id}/test-cases?caseId=${id}`)
+    const srsParam = selectedSrsId ? `&srsId=${selectedSrsId}` : ''
+    router.push(`/dashboard/${project._id}/test-cases?caseId=${id}${srsParam}`)
   }
 
   if (loading && !project) {

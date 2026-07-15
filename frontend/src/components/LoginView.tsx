@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { KeyRound, Mail, User, ShieldAlert, Sparkles, Loader2, Lock, ArrowRight } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 
@@ -9,10 +9,24 @@ export function LoginView() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  
+
   // Loading & Error states
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [theme, setTheme] = useState<'dark' | 'light'>('light')
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark')
+    if (isDark) {
+      setTheme('dark')
+    } else {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      if (mediaQuery.matches) {
+        setTheme('dark')
+      }
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,11 +77,15 @@ export function LoginView() {
 
       {/* Main Glassmorphic Wrapper */}
       <div className="w-full max-w-[420px] bg-card/40 border border-border/80 rounded-3xl shadow-xl backdrop-blur-md p-8 relative z-10 space-y-6">
-        
+
         {/* Header Branding */}
         <div className="flex flex-col items-center text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-black text-lg shadow-lg shadow-primary/20">
-            TG
+          <div className="flex items-center justify-center w-full mb-2">
+            <img
+              src={theme === 'light' ? "/Memorres-logo dark theme.png" : "/Memorres-logo-light theme.png"}
+              alt="Memorres Logo"
+              className="h-auto max-h-12 object-contain"
+            />
           </div>
           <div>
             <h2 className="text-xl font-bold tracking-tight text-foreground">Welcome to TestGen AI</h2>
@@ -109,7 +127,7 @@ export function LoginView() {
 
         {/* Auth Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          
+
           {/* Username Input (Only for Sign Up) */}
           {activeTab === 'signup' && (
             <div className="space-y-1.5">

@@ -30,7 +30,7 @@ export function AppSidebar({
   const { data: session } = useSession()
   const pathname = usePathname()
   const router = useRouter()
-  const { project, requirementAnalyses, testSuites } = useProject()
+  const { project, selectedSrsId, requirementAnalyses, testSuites } = useProject()
   const [allProjects, setAllProjects] = React.useState<Project[]>([])
   const [projectQuery, setProjectQuery] = React.useState("")
 
@@ -86,7 +86,10 @@ export function AppSidebar({
     if (tab === 'projects') router.push('/dashboard/projects')
     else if (tab === 'modules') router.push(`/dashboard/${id}/modules`)
     else if (tab === 'requirements') router.push(`/dashboard/${id}/requirements`)
-    else if (tab === 'testcases') router.push(`/dashboard/${id}/test-cases`)
+    else if (tab === 'testcases') {
+      const srsParam = selectedSrsId ? `?srsId=${selectedSrsId}` : ''
+      router.push(`/dashboard/${id}/test-cases${srsParam}`)
+    }
     else if (tab === 'execution') router.push(`/dashboard/${id}/execution`)
   }
 

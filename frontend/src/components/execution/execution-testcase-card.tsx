@@ -21,7 +21,7 @@ export function ExecutionTestCaseCard({ testCase, expanded, onToggle }: Executio
   const isFailed = testCase.status === 'failed'
 
   const borderAccent = isFailed
-    ? 'border-border'
+    ? 'border-error/40'
     : isRunning
       ? 'border-primary/40'
       : 'border-border'
@@ -57,11 +57,11 @@ export function ExecutionTestCaseCard({ testCase, expanded, onToggle }: Executio
           <Progress
             className="mt-2 h-1"
             value={total ? (done / total) * 100 : 0}
-            indicatorClassName={isFailed ? 'bg-muted-foreground' : isRunning ? 'bg-primary' : 'bg-primary'}
+            indicatorClassName={isFailed ? 'bg-error' : isRunning ? 'bg-primary' : 'bg-primary'}
           />
 
           {isFailed && testCase.errorMessage && (
-            <p className="mt-2 text-[11px] text-muted-foreground line-clamp-2">
+            <p className="mt-2 text-[11px] text-error line-clamp-2">
               Step {testCase.failedStepNumber}: {testCase.errorMessage}
             </p>
           )}

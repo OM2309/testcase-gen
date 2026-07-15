@@ -7,7 +7,7 @@ import { formatTime } from './execution-utils'
 
 const LEVEL_STYLE: Record<string, { color: string; icon: React.ReactNode }> = {
   success: { color: 'text-primary', icon: <CheckCircle2 className="w-3 h-3 text-primary" /> },
-  error: { color: 'text-muted-foreground', icon: <XCircle className="w-3 h-3 text-muted-foreground" /> },
+  error: { color: 'text-error', icon: <XCircle className="w-3 h-3 text-error" /> },
   info: { color: 'text-muted-foreground', icon: <Info className="w-3 h-3 text-muted-foreground" /> }
 }
 

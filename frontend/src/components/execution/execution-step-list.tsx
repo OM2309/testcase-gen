@@ -42,7 +42,7 @@ export function ExecutionStepList({ steps }: { steps: StepResult[] }) {
                 )}
               </div>
               {isFailed && step.errorMessage && (
-                <p className="mt-1 text-[11px] text-muted-foreground bg-muted/20 border border-border rounded px-2 py-1 font-mono break-words">
+                <p className="mt-1 text-[11px] text-error bg-error/5 border border-error/20 rounded px-2 py-1 font-mono break-words">
                   {step.errorMessage}
                 </p>
               )}
