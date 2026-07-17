@@ -8,7 +8,10 @@ import {
   getProjectById,
   deleteProject,
   assignUsersToProject,
-  updateProject
+  updateProject,
+  connectJira,
+  getJiraIssues,
+  importJiraStories
 } from './project.controller.js'
 import { projectAccessMiddleware } from '../../middleware/projectAccess.js'
 
@@ -22,5 +25,8 @@ router.get('/projects/:projectId', projectAccessMiddleware, getProjectById)
 router.put('/projects/:projectId', projectAccessMiddleware, updateProject)
 router.delete('/projects/:projectId', projectAccessMiddleware, deleteProject)
 router.put('/projects/:projectId/assign', projectAccessMiddleware, assignUsersToProject)
+router.put('/projects/:projectId/jira-connect', projectAccessMiddleware, connectJira)
+router.get('/projects/:projectId/jira-issues', projectAccessMiddleware, getJiraIssues)
+router.post('/projects/:projectId/jira-import', projectAccessMiddleware, importJiraStories)
 
 export default router

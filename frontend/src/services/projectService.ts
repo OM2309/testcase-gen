@@ -29,5 +29,20 @@ export const projectService = {
   async updateProject(projectId: string, payload: { projectName: string; projectDescription: string }) {
     const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}`, payload)
     return response.data
+  },
+
+  async connectJira(projectId: string, payload: { host: string; email: string; token: string; projectKey: string }) {
+    const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/jira-connect`, payload)
+    return response.data
+  },
+
+  async getJiraIssues(projectId: string, search: string = '') {
+    const response = await apiClient.get<{ success: boolean; data: any[] }>(`/projects/${projectId}/jira-issues?search=${encodeURIComponent(search)}`)
+    return response.data
+  },
+
+  async importJiraStories(projectId: string, issueKeys: string[]) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(`/projects/${projectId}/jira-import`, { issueKeys })
+    return response.data
   }
 }

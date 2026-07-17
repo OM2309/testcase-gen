@@ -6,6 +6,7 @@ import TestSuite from '../testsuite/testsuite.model.js'
 import { parseFile } from '../../shared/fileParser.service.js'
 import { ApiError } from '../../utils/apiError.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
+import { encrypt, decrypt } from '../../utils/cryptoHelper.js'
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id)
@@ -300,6 +301,208 @@ export async function updateProject(req, res, next) {
     await project.save()
 
     return sendSuccess(res, 'Project updated successfully.', project)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function connectJira(req, res, next) {
+  try {
+    const { host, email, token, projectKey } = req.body
+    const project = req.project
+
+    if (!host || !email || !token || !projectKey) {
+      throw new ApiError('All Jira fields (host, email, token, projectKey) are required.', 400)
+    }
+
+    // Format host URL
+    let formattedHost = host.trim()
+    if (!formattedHost.startsWith('http://') && !formattedHost.startsWith('https://')) {
+      formattedHost = 'https://' + formattedHost
+    }
+    // Remove trailing slash if present
+    if (formattedHost.endsWith('/')) {
+      formattedHost = formattedHost.slice(0, -1)
+    }
+
+    // Test connection to Jira (fetch project by key)
+    const authString = Buffer.from(`${email.trim()}:${token.trim()}`).toString('base64')
+    const testUrl = `${formattedHost}/rest/api/3/project/${projectKey.trim()}`
+    
+    try {
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${authString}`,
+          'Accept': 'application/json'
+        }
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Jira returned status ${response.status}: ${errorText || response.statusText}`)
+      }
+    } catch (connErr) {
+      throw new ApiError(`Failed to connect to Jira: ${connErr.message}`, 400)
+    }
+
+    // Save encrypted credentials
+    project.jiraHost = formattedHost
+    project.jiraEmail = email.trim()
+    project.jiraToken = encrypt(token.trim())
+    project.jiraProjectKey = projectKey.trim()
+    project.jiraConnected = true
+
+    await project.save()
+
+    return sendSuccess(res, 'Connected to Jira successfully.', {
+      jiraHost: project.jiraHost,
+      jiraEmail: project.jiraEmail,
+      jiraProjectKey: project.jiraProjectKey,
+      jiraConnected: project.jiraConnected
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+function parseADF(node) {
+  if (!node) return ''
+  if (typeof node === 'string') return node
+  if (node.type === 'text' && node.text) {
+    return node.text
+  }
+  let text = ''
+  if (node.content && Array.isArray(node.content)) {
+    text += node.content.map(parseADF).join('')
+  }
+  if (node.type === 'paragraph' || node.type === 'heading' || node.type === 'bulletList' || node.type === 'listItem') {
+    text += '\n'
+  }
+  return text
+}
+
+export async function getJiraIssues(req, res, next) {
+  try {
+    const project = req.project
+    if (!project.jiraConnected || !project.jiraToken) {
+      throw new ApiError('Jira is not connected to this project.', 400)
+    }
+
+    const { search = '' } = req.query
+    const decryptedToken = decrypt(project.jiraToken)
+    const authString = Buffer.from(`${project.jiraEmail}:${decryptedToken}`).toString('base64')
+
+    let jql = `project = "${project.jiraProjectKey}" AND issuetype in (Story, Task, Bug)`
+    if (search.trim()) {
+      jql += ` AND (summary ~ "${search.trim()}" OR description ~ "${search.trim()}")`
+    }
+    jql += ' ORDER BY created DESC'
+
+    const searchUrl = `${project.jiraHost}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=50&fields=summary,description`
+    
+    const response = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new ApiError(`Jira API error: ${response.status} - ${errorText}`, 400)
+    }
+
+    const data = await response.json()
+    const issues = (data.issues || []).map(issue => {
+      const rawDesc = issue.fields.description
+      const parsedDesc = parseADF(rawDesc)
+
+      return {
+        key: issue.key,
+        id: issue.id,
+        title: issue.fields.summary || '',
+        description: parsedDesc
+      }
+    })
+
+    return sendSuccess(res, 'Jira issues fetched successfully.', issues)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function importJiraStories(req, res, next) {
+  try {
+    const project = req.project
+    const { issueKeys } = req.body
+
+    if (!issueKeys || !Array.isArray(issueKeys) || issueKeys.length === 0) {
+      throw new ApiError('An array of issueKeys is required to import.', 400)
+    }
+
+    if (!project.jiraConnected || !project.jiraToken) {
+      throw new ApiError('Jira is not connected to this project.', 400)
+    }
+
+    const decryptedToken = decrypt(project.jiraToken)
+    const authString = Buffer.from(`${project.jiraEmail}:${decryptedToken}`).toString('base64')
+
+    // Fetch details for the selected issue keys
+    const jql = `key in (${issueKeys.map(k => `"${k}"`).join(',')})`
+    const searchUrl = `${project.jiraHost}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=summary,description`
+
+    const response = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new ApiError(`Jira API error during import: ${response.status} - ${errorText}`, 400)
+    }
+
+    const data = await response.json()
+    const fetchedIssues = data.issues || []
+
+    if (fetchedIssues.length === 0) {
+      throw new ApiError('No matching stories found in your Jira project.', 404)
+    }
+
+    // Format stories into a virtual SRS text document
+    let combinedText = `JIRA IMPORTED STORIES\n`
+    combinedText += `=====================\n\n`
+    combinedText += `Imported At: ${new Date().toLocaleString()}\n`
+    combinedText += `Jira Instance: ${project.jiraHost}\n`
+    combinedText += `Project Key: ${project.jiraProjectKey}\n\n`
+
+    for (const issue of fetchedIssues) {
+      const key = issue.key
+      const title = issue.fields.summary || 'Untitled Story'
+      const desc = parseADF(issue.fields.description)
+      
+      combinedText += `STORY: ${key}\n`
+      combinedText += `TITLE: ${title}\n`
+      combinedText += `DESCRIPTION:\n${desc || 'No description provided.'}\n`
+      combinedText += `--------------------------------------------------\n\n`
+    }
+
+    // Append as virtual SRS document
+    const newDoc = {
+      originalFileName: `Jira Import (${issueKeys.join(', ')})`,
+      filePath: 'virtual://jira',
+      parsedText: combinedText,
+      uploadedAt: new Date()
+    }
+
+    project.srsDocuments.push(newDoc)
+    project.status = 'uploaded'
+    await project.save()
+
+    return sendSuccess(res, 'Jira stories imported successfully.', project)
   } catch (err) {
     next(err)
   }

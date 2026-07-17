@@ -50,6 +50,26 @@ const projectSchema = new mongoose.Schema({
     type: [srsDocumentSchema],
     default: []
   },
+  jiraHost: {
+    type: String,
+    default: ''
+  },
+  jiraEmail: {
+    type: String,
+    default: ''
+  },
+  jiraToken: {
+    type: String,
+    default: ''
+  },
+  jiraProjectKey: {
+    type: String,
+    default: ''
+  },
+  jiraConnected: {
+    type: Boolean,
+    default: false
+  },
   status: {
     type: String,
     enum: ['created', 'uploaded', 'analyzing', 'analyzed', 'tests_generated', 'failed'],

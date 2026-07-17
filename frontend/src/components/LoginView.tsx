@@ -127,11 +127,11 @@ export function LoginView() {
             <div className="flex items-center gap-3.5 pt-1">
               <Avatar className="w-9 h-9 border border-white/20 shadow-lg">
                 <AvatarFallback className="bg-gradient-to-tr from-indigo-400 to-sky-400 text-indigo-950 font-bold text-xs">
-                  MC
+                  AS
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h4 className="font-bold text-white text-sm">Michael Carter</h4>
+                <h4 className="font-bold text-white text-sm">Anurag Sharma</h4>
                 <p className="text-[11px] text-white/60">Software Engineer at DevCore</p>
               </div>
             </div>

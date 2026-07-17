@@ -60,21 +60,21 @@ export default function ChooseRolePage() {
     {
       id: 'developer' as const,
       title: 'Developer',
-      description: 'Implement software features, review PRD constraints, and debug issues.',
+      description: '',
       icon: Code,
       color: 'text-sky-500 bg-sky-500/10 border-sky-500/20'
     },
     {
       id: 'qa' as const,
       title: 'QA Engineer',
-      description: 'AnalyzeSRS gaps, build comprehensive test suites, and execute test cases.',
+      description: '',
       icon: ShieldCheck,
       color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
     },
     {
       id: 'project_manager' as const,
       title: 'Project Manager',
-      description: 'Define requirements, scope projects, and assign QAs/Developers.',
+      description: '',
       icon: ClipboardList,
       color: 'text-violet-500 bg-violet-500/10 border-violet-500/20'
     }
@@ -107,11 +107,10 @@ export default function ChooseRolePage() {
               <div
                 key={role.id}
                 onClick={() => handleSelectRole(role.id)}
-                className={`border rounded-2xl p-5 bg-card cursor-pointer transition-all duration-300 relative flex flex-col justify-between hover:shadow-md ${
-                  isSelected
-                    ? 'border-primary ring-2 ring-primary/20 scale-[1.02]'
-                    : 'border-border hover:border-muted-foreground/45 hover:scale-[1.01]'
-                }`}
+                className={`border rounded-2xl p-5 bg-card cursor-pointer transition-all duration-300 relative flex flex-col justify-between hover:shadow-md ${isSelected
+                  ? 'border-primary ring-2 ring-primary/20 scale-[1.02]'
+                  : 'border-border hover:border-muted-foreground/45 hover:scale-[1.01]'
+                  }`}
               >
                 <div className="space-y-4">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${role.color}`}>

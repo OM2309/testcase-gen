@@ -21,6 +21,10 @@ export interface Project {
   parsedText?: string
   srsDocuments?: SrsDocument[]
   assignedUsers?: any[]
+  jiraHost?: string
+  jiraEmail?: string
+  jiraProjectKey?: string
+  jiraConnected?: boolean
 }
 
 export interface Agent0Feedback {
