@@ -6,16 +6,19 @@ import {
   addSrsToProject,
   getProjects,
   getProjectById,
-  deleteProject
+  deleteProject,
+  assignUsersToProject
 } from './project.controller.js'
+import { projectAccessMiddleware } from '../../middleware/projectAccess.js'
 
 const router = express.Router()
 
 router.post('/projects/create', createProjectOnly)
 router.post('/projects', upload.single('srs'), createProject)
-router.post('/projects/:projectId/srs', upload.single('srs'), addSrsToProject)
+router.post('/projects/:projectId/srs', projectAccessMiddleware, upload.single('srs'), addSrsToProject)
 router.get('/projects', getProjects)
-router.get('/projects/:projectId', getProjectById)
-router.delete('/projects/:projectId', deleteProject)
+router.get('/projects/:projectId', projectAccessMiddleware, getProjectById)
+router.delete('/projects/:projectId', projectAccessMiddleware, deleteProject)
+router.put('/projects/:projectId/assign', projectAccessMiddleware, assignUsersToProject)
 
 export default router

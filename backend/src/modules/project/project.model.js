@@ -13,6 +13,10 @@ const projectSchema = new mongoose.Schema({
     ref: 'User',
     index: true
   },
+  assignedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   projectName: {
     type: String,
     trim: true,

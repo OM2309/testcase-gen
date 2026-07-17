@@ -14,7 +14,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const pathname = usePathname()
   const [theme, setTheme] = useState<'dark' | 'light'>('light')
@@ -22,8 +22,13 @@ export default function DashboardLayout({
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login')
+    } else if (status === 'authenticated') {
+      const sessionRole = (session as any)?.user?.role
+      if (sessionRole === 'pending') {
+        router.replace('/choose-role')
+      }
     }
-  }, [status, router])
+  }, [status, session, router])
 
   useEffect(() => {
     const htmlElement = document.documentElement

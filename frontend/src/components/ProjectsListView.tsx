@@ -1,12 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { projectService } from '../services/projectService'
+import { authService, User } from '../services/authService'
+import { useSession } from 'next-auth/react'
 import { useProjectsQuery } from '../hooks/queries'
 import {
   FolderOpen, Trash2, Plus, Clock, FileText, FlaskConical,
-  Loader2, AlertCircle, CheckCircle2, UploadCloud, BrainCircuit
+  Loader2, AlertCircle, CheckCircle2, UploadCloud, BrainCircuit,
+  UserPlus, Users
 } from 'lucide-react'
 import {
   Dialog,
@@ -17,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CreateProjectModal } from './CreateProjectModal'
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from './ui/avatar'
 
 interface ProjectsListViewProps {
   onSelectProject: (projectId: string) => void
@@ -25,11 +29,63 @@ interface ProjectsListViewProps {
 export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
   const queryClient = useQueryClient()
   const { data: projects = [], isLoading: loading, isError } = useProjectsQuery()
+  const { data: session } = useSession()
+  
+  const userRole = (session as any)?.user?.role
+  const canAssign = userRole === 'admin' || userRole === 'project_manager'
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+
+  const [isAssignOpen, setIsAssignOpen] = useState(false)
+  const [projectToAssign, setProjectToAssign] = useState<string | null>(null)
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+  const [savingAssign, setSavingAssign] = useState(false)
+
+  useEffect(() => {
+    if (isAssignOpen && canAssign) {
+      authService.getUsers()
+        .then(res => {
+          if (res.success && res.data) {
+            setAllUsers(res.data)
+          }
+        })
+        .catch(err => console.error("Failed to load users for project assignment", err))
+    }
+  }, [isAssignOpen, canAssign])
+
+  const handleAssignClick = (id: string, currentlyAssigned: any[] = [], e: React.MouseEvent) => {
+    e.stopPropagation()
+    setProjectToAssign(id)
+    setSelectedUserIds(currentlyAssigned.map(u => u._id || u))
+    setIsAssignOpen(true)
+  }
+
+  const confirmAssign = async () => {
+    if (!projectToAssign) return
+    setSavingAssign(true)
+    try {
+      await projectService.assignUsers(projectToAssign, selectedUserIds)
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      setIsAssignOpen(false)
+      setProjectToAssign(null)
+    } catch (err) {
+      console.error('Assignment failed', err)
+    } finally {
+      setSavingAssign(false)
+    }
+  }
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId) 
+        : [...prev, userId]
+    )
+  }
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -80,6 +136,69 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
           <DialogFooter>
             <button onClick={() => setIsDeleteOpen(false)} className="btn-secondary">Cancel</button>
             <button onClick={confirmDelete} className="btn-destructive">Delete</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" /> Assign Team Members
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Assign developers and QAs to this project so they can view and participate.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2.5 my-3 max-h-[220px] overflow-y-auto pr-1">
+            {allUsers.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic text-center py-4">No users found in the system.</p>
+            ) : (
+              allUsers.map((u) => {
+                const isSelected = selectedUserIds.includes(u._id)
+                return (
+                  <div 
+                    key={u._id}
+                    onClick={() => toggleUserSelection(u._id)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs cursor-pointer hover:bg-muted/40 transition-colors ${
+                      isSelected ? 'border-primary bg-primary/5' : 'border-border'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Avatar size="sm" className="w-7 h-7">
+                        <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                          {u.username.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-semibold text-foreground">{u.username}</div>
+                        <div className="text-[10px] text-muted-foreground">{u.email}</div>
+                      </div>
+                    </div>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                      u.role === 'admin' 
+                        ? 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                        : u.role === 'project_manager'
+                          ? 'bg-violet-500/10 text-violet-500 border-violet-500/20'
+                          : u.role === 'qa'
+                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                            : u.role === 'developer'
+                              ? 'bg-sky-500/10 text-sky-500 border-sky-500/20'
+                              : 'bg-muted text-muted-foreground border-border/80'
+                    }`}>
+                      {u.role === 'project_manager' ? 'PM' : u.role.toUpperCase()}
+                    </span>
+                  </div>
+                )
+              })
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <button onClick={() => setIsAssignOpen(false)} className="btn-secondary">Cancel</button>
+            <button onClick={confirmAssign} disabled={savingAssign} className="btn-primary flex items-center gap-1.5 cursor-pointer">
+              {savingAssign && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Save Assignments
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -211,12 +330,34 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                       <Clock className="w-3 h-3 text-muted-foreground" />
                       {new Date(project.createdAt).toLocaleDateString()}
                     </span>
+                    {project.assignedUsers && project.assignedUsers.length > 0 && (
+                      <AvatarGroup className="pl-1.5 *:data-[slot=avatar]:size-5 *:data-[slot=avatar]:ring-1">
+                        {project.assignedUsers.slice(0, 3).map((u: any) => (
+                          <Avatar key={u._id || u} size="sm">
+                            <AvatarFallback className="bg-primary/10 text-primary font-bold text-[8px]">
+                              {(u.username || 'U').substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {project.assignedUsers.length > 3 && (
+                          <AvatarGroupCount className="size-5 text-[8px] font-bold">
+                            +{project.assignedUsers.length - 3}
+                          </AvatarGroupCount>
+                        )}
+                      </AvatarGroup>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 pl-2.5 border-l border-border/60">
-                    {/* <span className="w-6 h-6 flex items-center justify-center">
-                      {getStatusIcon(project.status)}
-                    </span> */}
+                    {canAssign && (
+                      <button
+                        onClick={e => handleAssignClick(project._id, project.assignedUsers || [], e)}
+                        className="p-1.5 rounded-md hover:bg-white text-muted-foreground hover:text-primary transition-all cursor-pointer"
+                        title="Assign Members"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={e => handleDelete(project._id, e)}
                       className="p-1.5 rounded-md hover:bg-white text-muted-foreground hover:text-red-600 transition-all cursor-pointer"
@@ -241,12 +382,24 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                 onClick={() => onSelectProject(project._id)}
                 className="group relative border border-border bg-card hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] rounded-xl p-4 cursor-pointer transition-all duration-200"
               >
-                <button
-                  onClick={e => handleDelete(project._id, e)}
-                  className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  {canAssign && (
+                    <button
+                      onClick={e => handleAssignClick(project._id, project.assignedUsers || [], e)}
+                      className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
+                      title="Assign Members"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={e => handleDelete(project._id, e)}
+                    className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all cursor-pointer"
+                    title="Delete Project"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
                 <div className="pr-6 space-y-1 mb-4">
                   <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-1">
@@ -273,6 +426,22 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
                       <Clock className="w-3 h-3" />
                       {new Date(project.createdAt).toLocaleDateString()}
                     </span>
+                    {project.assignedUsers && project.assignedUsers.length > 0 && (
+                      <AvatarGroup className="pl-1 *:data-[slot=avatar]:size-4.5 *:data-[slot=avatar]:ring-1">
+                        {project.assignedUsers.slice(0, 3).map((u: any) => (
+                          <Avatar key={u._id || u} size="sm">
+                            <AvatarFallback className="bg-primary/10 text-primary font-bold text-[7px]">
+                              {(u.username || 'U').substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {project.assignedUsers.length > 3 && (
+                          <AvatarGroupCount className="size-4.5 text-[7px] font-bold">
+                            +{project.assignedUsers.length - 3}
+                          </AvatarGroupCount>
+                        )}
+                      </AvatarGroup>
+                    )}
                   </div>
                   {getStatusIcon(project.status)}
                 </div>

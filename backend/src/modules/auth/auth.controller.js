@@ -6,7 +6,7 @@ import { ApiError } from '../../utils/apiError.js'
 
 function generateToken(user) {
   return jwt.sign(
-    { id: user._id, email: user.email, username: user.username },
+    { id: user._id, email: user.email, username: user.username, role: user.role },
     env.jwtSecret || 'supersecretjwtkeyforauth',
     { expiresIn: '7d' }
   )
@@ -169,5 +169,147 @@ export async function googleCallback(req, res, next) {
   } catch (err) {
     console.error('Error in googleCallback:', err)
     return res.redirect('http://localhost:3000/login?error=Internal+Server+Error+during+Google+Sign-In')
+  }
+}
+
+export async function googleNext(req, res, next) {
+  try {
+    const { email, username } = req.body
+
+    if (!email) {
+      throw new ApiError('Email is required.', 400)
+    }
+
+    let user = await User.findOne({ email: email.toLowerCase() })
+
+    if (!user) {
+      // Determine if they should be admin
+      const isConfiguredAdmin = email.toLowerCase() === 'admin@memorres.com'
+      const userCount = await User.countDocuments()
+      const role = (isConfiguredAdmin || userCount === 0) ? 'admin' : 'pending'
+
+      user = new User({
+        username: username || email.split('@')[0],
+        email: email.toLowerCase(),
+        role
+      })
+      await user.save()
+    }
+
+    const token = generateToken(user)
+
+    return sendSuccess(res, 'Google authenticated successfully.', {
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function updateRole(req, res, next) {
+  try {
+    const { role } = req.body
+
+    if (!['project_manager', 'qa', 'developer'].includes(role)) {
+      throw new ApiError('Invalid profession. Choose developer, qa, or project_manager.', 400)
+    }
+
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      throw new ApiError('User not found.', 404)
+    }
+
+    user.role = role
+    await user.save()
+
+    return sendSuccess(res, 'Profession selected successfully.', {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function getUsers(req, res, next) {
+  try {
+    if (req.user.role !== 'admin') {
+      throw new ApiError('Access denied. Admin privileges required.', 403)
+    }
+
+    const users = await User.find({}).select('-password').sort({ createdAt: -1 })
+    return sendSuccess(res, 'Users fetched successfully.', users)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function updateUserRole(req, res, next) {
+  try {
+    if (req.user.role !== 'admin') {
+      throw new ApiError('Access denied. Admin privileges required.', 403)
+    }
+
+    const { id } = req.params
+    const { role } = req.body
+
+    if (!['admin', 'project_manager', 'qa', 'developer', 'pending'].includes(role)) {
+      throw new ApiError('Invalid role.', 400)
+    }
+
+    const user = await User.findById(id)
+    if (!user) {
+      throw new ApiError('User not found.', 404)
+    }
+
+    user.role = role
+    await user.save()
+
+    return sendSuccess(res, 'User role updated successfully.', {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function updateProfile(req, res, next) {
+  try {
+    const { username, role } = req.body
+
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      throw new ApiError('User not found.', 404)
+    }
+
+    if (username && username.trim()) {
+      user.username = username.trim()
+    }
+
+    if (role && ['project_manager', 'qa', 'developer'].includes(role)) {
+      user.role = role
+    }
+
+    await user.save()
+
+    return sendSuccess(res, 'Profile updated successfully.', {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role
+    })
+  } catch (err) {
+    next(err)
   }
 }

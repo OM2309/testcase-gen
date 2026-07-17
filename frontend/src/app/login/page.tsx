@@ -16,14 +16,19 @@ function LoginLoading() {
 }
 
 export default function LoginPage() {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.replace('/dashboard/projects')
+      const sessionRole = (session as any)?.user?.role
+      if (sessionRole === 'pending') {
+        router.replace('/choose-role')
+      } else {
+        router.replace('/dashboard/projects')
+      }
     }
-  }, [status, router])
+  }, [status, session, router])
 
   if (status === 'loading' || status === 'authenticated') {
     return null

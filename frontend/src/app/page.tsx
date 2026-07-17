@@ -6,16 +6,21 @@ import { useSession } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
 
 export default function Home() {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.replace('/dashboard/projects')
+      const sessionRole = (session as any)?.user?.role
+      if (sessionRole === 'pending') {
+        router.replace('/choose-role')
+      } else {
+        router.replace('/dashboard/projects')
+      }
     } else if (status === 'unauthenticated') {
       router.replace('/login')
     }
-  }, [status, router])
+  }, [status, session, router])
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">

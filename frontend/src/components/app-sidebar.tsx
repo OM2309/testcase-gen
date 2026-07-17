@@ -11,8 +11,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut, ChevronDown, ChevronRight, BarChart3, FileText, Check, ChevronsUpDown, Sparkles } from "lucide-react"
+import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, LogOut, ChevronDown, ChevronRight, BarChart3, FileText, Check, ChevronsUpDown, Sparkles, Users } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useProject } from "../contexts/ProjectContext"
 import { projectService } from "../services/projectService"
 import { Project } from "../types"
@@ -30,6 +31,16 @@ export function AppSidebar({
   const { data: session } = useSession()
   const pathname = usePathname()
   const router = useRouter()
+
+  const formatRole = (r?: string) => {
+    if (!r) return 'Pending'
+    if (r === 'project_manager') return 'Project Manager'
+    if (r === 'qa') return 'QA Engineer'
+    if (r === 'developer') return 'Developer'
+    if (r === 'admin') return 'Administrator'
+    return r
+  }
+
   const { project, selectedSrsId, requirementAnalyses, testSuites } = useProject()
   const [allProjects, setAllProjects] = React.useState<Project[]>([])
   const [projectQuery, setProjectQuery] = React.useState("")
@@ -249,21 +260,51 @@ export function AppSidebar({
               </div>
             )}
           </SidebarMenuItem>
+
+          {session?.user && (session as any).user.role === 'admin' && (
+            <SidebarMenuItem className="space-y-1">
+              <button
+                onClick={() => router.push('/dashboard/users')}
+                className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${
+                  pathname === '/dashboard/users' ? 'bg-sidebar-accent text-sidebar-accent-foreground font-bold shadow-sm' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span>User Management</span>
+                </div>
+              </button>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-4 bg-muted/10">
 
         {session?.user && (
-          <div className="border border-border/60 bg-card rounded-lg p-3 flex items-center justify-between gap-2.5 animate-fadeIn">
-            <div className="min-w-0">
-              <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold block">Developer</span>
-              <span className="font-semibold text-xs text-foreground block truncate">{session.user.name || session.user.email}</span>
+          <div className="border border-border/60 bg-card rounded-lg p-2.5 flex items-center justify-between gap-2 animate-fadeIn">
+            <div className="flex items-center gap-2 min-w-0 flex-grow">
+              <Avatar size="sm" className="cursor-pointer border border-border/50 shrink-0" onClick={() => router.push('/dashboard/profile')}>
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-[10px]">
+                  {(session.user.name || session.user.email || 'US').substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div 
+                onClick={() => router.push('/dashboard/profile')}
+                className="min-w-0 cursor-pointer text-left group flex-grow"
+              >
+                <span className="text-[8px] uppercase tracking-wider text-muted-foreground font-bold block group-hover:text-primary transition-colors truncate">
+                  {formatRole((session as any).user.role)}
+                </span>
+                <span className="font-semibold text-xs text-foreground block truncate group-hover:text-primary transition-colors">
+                  {session.user.name || session.user.email}
+                </span>
+              </div>
             </div>
             <button
               onClick={() => signOut()}
               title="Log Out"
-              className="p-2 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 border border-transparent hover:border-rose-500/20 bg-card transition-all"
+              className="p-2 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 border border-transparent hover:border-rose-500/20 bg-card transition-all cursor-pointer shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>

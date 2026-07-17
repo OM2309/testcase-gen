@@ -1,9 +1,14 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
 import axios from 'axios'
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || ''
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -33,7 +38,8 @@ export const authOptions: NextAuthOptions = {
                 id: user.id,
                 name: user.username,
                 email: user.email,
-                accessToken: token
+                accessToken: token,
+                role: user.role
               }
             }
             return null
@@ -56,7 +62,8 @@ export const authOptions: NextAuthOptions = {
               id: user.id,
               name: user.username,
               email: user.email,
-              accessToken: token
+              accessToken: token,
+              role: user.role
             }
           }
           return null
@@ -68,11 +75,41 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google') {
+        try {
+          const response = await axios.post('http://localhost:5000/api/auth/google-next', {
+            email: user.email,
+            username: user.name || user.email?.split('@')[0]
+          })
+
+          if (response.data?.success && response.data?.data) {
+            const backendData = response.data.data
+            ;(user as any).id = backendData.user.id
+            ;(user as any).name = backendData.user.username
+            ;(user as any).email = backendData.user.email
+            ;(user as any).accessToken = backendData.token
+            ;(user as any).role = backendData.user.role
+            return true
+          }
+          return false
+        } catch (err: any) {
+          console.error('Google register in backend failed:', err?.response?.data || err.message)
+          return false
+        }
+      }
+      return true
+    },
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
         token.accessToken = (user as any).accessToken
         token.name = user.name
+        token.role = (user as any).role
+      }
+      if (trigger === 'update' && session) {
+        if (session.name) token.name = session.name
+        if (session.role) token.role = session.role
       }
       return token
     },
@@ -80,10 +117,11 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         const anySession = session as any
         anySession.user = {
+          id: token.id as string,
           name: token.name as string,
-          email: token.email as string
+          email: token.email as string,
+          role: token.role as string
         }
-        anySession.user.id = token.id as string
         anySession.accessToken = token.accessToken
       }
       return session

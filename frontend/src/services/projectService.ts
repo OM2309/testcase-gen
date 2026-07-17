@@ -15,5 +15,10 @@ export const projectService = {
   async deleteProject(id: string) {
     const response = await apiClient.delete<{ success: boolean; message: string }>(`/projects/${id}`)
     return response.data
+  },
+
+  async assignUsers(projectId: string, userIds: string[]) {
+    const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/assign`, { userIds })
+    return response.data
   }
 }

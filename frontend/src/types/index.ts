@@ -20,6 +20,7 @@ export interface Project {
   testCasesCount?: number
   parsedText?: string
   srsDocuments?: SrsDocument[]
+  assignedUsers?: any[]
 }
 
 export interface Agent0Feedback {

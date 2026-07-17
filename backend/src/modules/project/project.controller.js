@@ -40,24 +40,11 @@ export async function createProjectOnly(req, res, next) {
 
 export async function addSrsToProject(req, res, next) {
   try {
-    const { projectId } = req.params
-
-    if (!isValidObjectId(projectId)) {
-      throw new ApiError('Invalid project ID format.', 400)
-    }
-
     if (!req.file) {
       throw new ApiError('No file uploaded. Send a PDF or DOCX file with field name "srs".', 400)
     }
 
-    const project = await Project.findById(projectId)
-    if (!project) {
-      throw new ApiError('Project not found.', 404)
-    }
-
-    if (project.userId && project.userId.toString() !== req.user.id) {
-      throw new ApiError('Access denied. You do not own this project.', 403)
-    }
+    const project = req.project
 
     const parsedText = await parseFile(req.file.path)
 
@@ -132,13 +119,20 @@ export async function createProject(req, res, next) {
 
 export async function getProjects(req, res, next) {
   try {
-    const projects = await Project.find({
-      $or: [
-        { userId: req.user.id },
-        { userId: { $exists: false } }
-      ]
-    })
+    let query = {}
+    if (req.user.role !== 'admin') {
+      query = {
+        $or: [
+          { userId: req.user.id },
+          { assignedUsers: req.user.id },
+          { userId: { $exists: false } }
+        ]
+      }
+    }
+
+    const projects = await Project.find(query)
       .sort({ createdAt: -1 })
+      .populate('assignedUsers', 'username email role')
       .lean()
 
     const projectsWithDetails = await Promise.all(projects.map(async (project) => {
@@ -158,24 +152,13 @@ export async function getProjects(req, res, next) {
 
 export async function getProjectById(req, res, next) {
   try {
-    const { projectId } = req.params
-
-    if (!isValidObjectId(projectId)) {
-      throw new ApiError('Invalid project ID format.', 400)
-    }
-
-    const project = await Project.findById(projectId).lean()
-    if (!project) {
-      throw new ApiError('Project not found.', 404)
-    }
-
-    if (project.userId && project.userId.toString() !== req.user.id) {
-      throw new ApiError('Access denied. You do not own this project.', 403)
-    }
+    const project = await Project.findById(req.project._id)
+      .populate('assignedUsers', 'username email role')
+      .lean()
 
     const [requirementAnalyses, testSuites] = await Promise.all([
-      RequirementAnalysis.find({ projectId }).lean(),
-      TestSuite.find({ projectId }).lean()
+      RequirementAnalysis.find({ projectId: project._id }).lean(),
+      TestSuite.find({ projectId: project._id }).lean()
     ])
 
     return sendSuccess(res, 'Project fetched successfully.', {
@@ -190,19 +173,12 @@ export async function getProjectById(req, res, next) {
 
 export async function deleteProject(req, res, next) {
   try {
-    const { projectId } = req.params
+    const project = req.project
+    const projectId = project._id
 
-    if (!isValidObjectId(projectId)) {
-      throw new ApiError('Invalid project ID format.', 400)
-    }
-
-    const project = await Project.findById(projectId)
-    if (!project) {
-      throw new ApiError('Project not found.', 404)
-    }
-
-    if (project.userId && project.userId.toString() !== req.user.id) {
-      throw new ApiError('Access denied. You do not own this project.', 403)
+    // Only Admin or the project creator can delete
+    if (req.user.role !== 'admin' && project.userId && project.userId.toString() !== req.user.id) {
+      throw new ApiError('Access denied. Only the project owner or an admin can delete this project.', 403)
     }
 
     const allFiles = [
@@ -227,6 +203,35 @@ export async function deleteProject(req, res, next) {
     ])
 
     return sendSuccess(res, 'Project and all associated data deleted successfully.')
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function assignUsersToProject(req, res, next) {
+  try {
+    const { userIds } = req.body
+    const project = req.project
+
+    // Only Admin or the project owner PM can assign users
+    const isOwnerPM = req.user.role === 'project_manager' && project.userId && project.userId.toString() === req.user.id
+    if (req.user.role !== 'admin' && !isOwnerPM) {
+      throw new ApiError('Access denied. Only admins or the project manager who created the project can assign members.', 403)
+    }
+
+    if (!Array.isArray(userIds)) {
+      throw new ApiError('userIds must be an array.', 400)
+    }
+
+    const invalidIds = userIds.filter(id => !isValidObjectId(id))
+    if (invalidIds.length > 0) {
+      throw new ApiError('Invalid user ID formats detected.', 400)
+    }
+
+    project.assignedUsers = userIds.map(id => new mongoose.Types.ObjectId(id))
+    await project.save()
+
+    return sendSuccess(res, 'Project members updated successfully.', project)
   } catch (err) {
     next(err)
   }
