@@ -7,7 +7,10 @@ const env = {
   openaiApiKey: process.env.OPENAI_API_KEY,
   openaiModel: process.env.OPENAI_MODEL || 'gpt-4o',
   corsOrigin: process.env.CORS_ORIGIN || '*',
-  jwtSecret: process.env.JWT_SECRET || 'supersecretjwtkeyforauth'
+  jwtSecret: process.env.JWT_SECRET || 'supersecretjwtkeyforauth',
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL
 }
 
 // Simple validation

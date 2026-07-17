@@ -10,12 +10,35 @@ export const authOptions: NextAuthOptions = {
         username: { type: 'text' },
         email: { type: 'email' },
         password: { type: 'password' },
-        action: { type: 'text' }
+        action: { type: 'text' },
+        token: { type: 'text' }
       },
       async authorize(credentials) {
         if (!credentials) return null
 
         try {
+          const isGoogle = credentials.action === 'google'
+          if (isGoogle) {
+            const token = credentials.token
+            if (!token) throw new Error('No token provided.')
+
+            // Validate token with backend
+            const response = await axios.get('http://localhost:5000/api/auth/me', {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+
+            if (response.data?.success && response.data?.data) {
+              const user = response.data.data
+              return {
+                id: user.id,
+                name: user.username,
+                email: user.email,
+                accessToken: token
+              }
+            }
+            return null
+          }
+
           const isSignup = credentials.action === 'signup'
           const url = isSignup 
             ? 'http://localhost:5000/api/auth/register' 

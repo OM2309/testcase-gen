@@ -15,8 +15,7 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   password: {
-    type: String,
-    required: true
+    type: String
   }
 }, {
   timestamps: true
@@ -24,7 +23,7 @@ const userSchema = new mongoose.Schema({
 
 // Hash password before saving (Mongoose 9: async pre hooks don't use next())
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return
+  if (!this.password || !this.isModified('password')) return
   const salt = await bcrypt.genSalt(10)
   this.password = await bcrypt.hash(this.password, salt)
 })

@@ -1,19 +1,17 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { KeyRound, Mail, User, ShieldAlert, Sparkles, Loader2, Lock, ArrowRight } from 'lucide-react'
+import { ShieldAlert, Sparkles, Loader2 } from 'lucide-react'
 import { signIn } from 'next-auth/react'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 export function LoginView() {
-  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin')
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
   // Loading & Error states
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
   const [theme, setTheme] = useState<'dark' | 'light'>('light')
 
   useEffect(() => {
@@ -28,45 +26,42 @@ export function LoginView() {
     }
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    // Basic Validation
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all required fields.')
-      return
+  useEffect(() => {
+    const errParam = searchParams?.get('error')
+    if (errParam) {
+      setError(decodeURIComponent(errParam))
     }
+  }, [searchParams])
 
-    if (activeTab === 'signup' && !username.trim()) {
-      setError('Please choose a username.')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.')
-      return
-    }
-
-    try {
+  useEffect(() => {
+    const token = searchParams?.get('token')
+    if (token) {
       setLoading(true)
-      const res = await signIn('credentials', {
+      setError(null)
+      signIn('credentials', {
         redirect: false,
-        email: email.trim(),
-        password,
-        username: username.trim(),
-        action: activeTab
+        token: token,
+        action: 'google'
+      }).then((res) => {
+        if (res?.error) {
+          setError(res.error)
+          setLoading(false)
+        } else {
+          router.replace('/dashboard/projects')
+        }
+      }).catch((err) => {
+        console.error('Google callback auth error:', err)
+        setError('An error occurred during authentication.')
+        setLoading(false)
       })
-
-      if (res?.error) {
-        setError(res.error)
-      }
-    } catch (err: any) {
-      console.error('Auth error:', err)
-      setError(err?.message || 'An error occurred during authentication. Please verify backend is running.')
-    } finally {
-      setLoading(false)
     }
+  }, [searchParams, router])
+
+  const handleGoogleLogin = () => {
+    setLoading(true)
+    setError(null)
+    // Redirect to the backend Google auth route
+    window.location.href = 'http://localhost:5000/api/auth/google'
   }
 
   return (
@@ -93,28 +88,16 @@ export function LoginView() {
           </div>
         </div>
 
-        {/* Tab Selection */}
-        <div className="flex bg-muted/40 border border-border/60 p-1 rounded-xl">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('signin')
-              setError(null)
-            }}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'signin' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('signup')
-              setError(null)
-            }}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === 'signup' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Create Account
-          </button>
+        {/* Info Box */}
+        <div className="text-center text-xs text-muted-foreground/90 px-2 leading-relaxed">
+          {loading && searchParams?.get('token') ? (
+            <div className="flex items-center justify-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+              <span>Completing secure login...</span>
+            </div>
+          ) : (
+            <p>Sign in using your Google account to access your workspace and manage test suites.</p>
+          )}
         </div>
 
         {/* Error Alert Box */}
@@ -125,85 +108,44 @@ export function LoginView() {
           </div>
         )}
 
-        {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-
-          {/* Username Input (Only for Sign Up) */}
-          {activeTab === 'signup' && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Username</label>
-              <div className="relative">
-                <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Choose a username"
-                  className="w-full pl-10 pr-3 py-2 bg-background/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-sm text-foreground placeholder:text-muted-foreground transition-all"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Email Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Email Address</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full pl-10 pr-3 py-2 bg-background/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-sm text-foreground placeholder:text-muted-foreground transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Password Input */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Password</label>
-            </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-3 py-2 bg-background/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-sm text-foreground placeholder:text-muted-foreground transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Submit Button */}
+        {/* Google Login Button */}
+        <div className="space-y-4">
           <button
-            type="submit"
+            type="button"
+            onClick={handleGoogleLogin}
             disabled={loading}
-            className="btn-primary w-full mt-2 h-10 text-sm flex items-center justify-center gap-1.5"
+            className="w-full h-12 flex items-center justify-center gap-3 bg-card border border-border hover:bg-muted/60 text-foreground font-semibold px-4 py-2 rounded-xl shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                {activeTab === 'signin' ? 'Signing In...' : 'Registering...'}
-              </>
+            {loading && !searchParams?.get('token') ? (
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
             ) : (
-              <>
-                {activeTab === 'signin' ? 'Sign In' : 'Create Account'}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </>
+              <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#EA4335"
+                  d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.09 14.974 0 12 0 7.354 0 3.307 2.673 1.347 6.57l3.919 3.195z"
+                />
+                <path
+                  fill="#4285F4"
+                  d="M23.49 12.275c0-.825-.074-1.62-.21-2.385H12v4.51h6.46c-.278 1.47-1.11 2.71-2.36 3.55l3.68 2.85c2.15-1.98 3.39-4.89 3.39-8.525z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.266 14.235L1.347 17.43A11.962 11.962 0 0 0 12 24c2.97 0 5.64-.98 7.52-2.65l-3.68-2.85c-1.03.69-2.35 1.1-3.84 1.1-2.91 0-5.38-1.96-6.26-4.6l-3.92 3.195z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M5.266 9.765c-.22.66-.345 1.37-.345 2.11 0 .74.125 1.45.345 2.11l3.92-3.195-3.92-2.11z"
+                />
+              </svg>
             )}
+            <span className="text-sm font-semibold">Sign in with Google</span>
           </button>
-        </form>
+        </div>
 
         {/* Footer info message */}
         <div className="text-center pt-2 text-[10px] text-muted-foreground flex justify-center items-center gap-1">
           <Sparkles className="w-3 h-3 text-primary animate-pulse" />
-          <span>Secure AES encryption enabled</span>
+          <span>Secure Google OAuth 2.0 authentication</span>
         </div>
       </div>
     </div>

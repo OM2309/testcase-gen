@@ -4,6 +4,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import env from './config/env.js'
 import authRoutes from './modules/auth/auth.route.js'
+import { googleCallback } from './modules/auth/auth.controller.js'
 import { authMiddleware } from './middleware/auth.js'
 import projectRoutes from './modules/project/project.route.js'
 import requirementRoutes from './modules/requirement/requirement.route.js'
@@ -29,6 +30,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
 // Static files
 app.use('/public', express.static(path.join(__dirname, '../public')))
+
+// Root/Callback routes
+app.get('/auth/google/callback', googleCallback)
 
 // Mount routes
 app.use('/api', authRoutes)
