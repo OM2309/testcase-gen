@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { User, Mail, Shield, Save, Loader2 } from 'lucide-react'
+import { User, Mail, Shield, Save, Loader2, Unplug, CheckCircle2, ExternalLink } from 'lucide-react'
 import { authService } from '../../../services/authService'
+import { slackService, SlackStatus } from '../../../services/slackService'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function ProfilePage() {
@@ -12,6 +14,13 @@ export default function ProfilePage() {
   const [username, setUsername] = useState('')
   const [role, setRole] = useState<'developer' | 'qa' | 'project_manager' | 'admin' | 'pending'>('pending')
   const [submitting, setSubmitting] = useState(false)
+  const searchParams = useSearchParams()
+
+  // Slack state
+  const [slackStatus, setSlackStatus] = useState<SlackStatus | null>(null)
+  const [slackLoading, setSlackLoading] = useState(true)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [connecting, setConnecting] = useState(false)
 
   useEffect(() => {
     if (session?.user) {
@@ -19,6 +28,51 @@ export default function ProfilePage() {
       setRole((session as any).user.role || 'pending')
     }
   }, [session])
+
+  // Fetch Slack connection status
+  useEffect(() => {
+    async function fetchSlackStatus() {
+      try {
+        const res = await slackService.getStatus()
+        if (res.success) {
+          setSlackStatus(res.data)
+        }
+      } catch {
+        // Not connected or error, leave as null
+      } finally {
+        setSlackLoading(false)
+      }
+    }
+    fetchSlackStatus()
+  }, [])
+
+  // Handle Slack OAuth redirect params
+  useEffect(() => {
+    const slackParam = searchParams.get('slack')
+    if (slackParam === 'success') {
+      toast.success('Slack connected successfully!')
+      // Re-fetch status
+      slackService.getStatus().then(res => {
+        if (res.success) setSlackStatus(res.data)
+      })
+    } else if (slackParam === 'error') {
+      const reason = searchParams.get('reason') || 'Unknown error'
+      toast.error(`Slack connection failed: ${reason}`)
+    }
+  }, [searchParams])
+
+  const handleSlackDisconnect = async () => {
+    setDisconnecting(true)
+    try {
+      await slackService.disconnect()
+      setSlackStatus({ connected: false, teamName: null, teamId: null, connectedAt: null })
+      toast.success('Slack disconnected.')
+    } catch {
+      toast.error('Failed to disconnect Slack.')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -152,6 +206,86 @@ export default function ProfilePage() {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Slack Integration Card */}
+      <div className="border border-border bg-card rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 border-b border-border/60 pb-4">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#4A154B' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.165 0a2.528 2.528 0 0 1 2.522 2.522v6.312zm-2.522 10.124a2.528 2.528 0 0 1 2.522 2.52A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.527 2.527 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.313A2.528 2.528 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.522h-6.313z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-foreground">Slack Integration</h3>
+            <p className="text-xs text-muted-foreground">Connect your Slack workspace to receive notifications</p>
+          </div>
+        </div>
+
+        {slackLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : slackStatus?.connected ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Connected to Slack</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Workspace: <span className="font-medium">{slackStatus.teamName || 'Unknown'}</span>
+                  {slackStatus.connectedAt && (
+                    <> · Since {new Date(slackStatus.connectedAt).toLocaleDateString()}</>
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSlackDisconnect}
+              disabled={disconnecting}
+              className="w-full h-9 flex items-center justify-center gap-2 border border-destructive/30 text-destructive hover:bg-destructive/10 rounded-lg text-xs font-medium cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {disconnecting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <>
+                  <Unplug className="w-3.5 h-3.5" /> Disconnect Slack
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              No Slack workspace connected. Connect to enable sending messages and notifications to your Slack channels.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                setConnecting(true)
+                try {
+                  const url = await slackService.getConnectUrl()
+                  window.location.href = url
+                } catch {
+                  toast.error('Failed to start Slack connection.')
+                  setConnecting(false)
+                }
+              }}
+              disabled={connecting}
+              className="w-full h-10 flex items-center justify-center gap-2 rounded-lg text-xs font-semibold text-white cursor-pointer transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#4A154B' }}
+            >
+              {connecting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <>
+                  <ExternalLink className="w-3.5 h-3.5" /> Connect Slack Workspace
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

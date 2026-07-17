@@ -22,6 +22,13 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'project_manager', 'qa', 'developer', 'pending'],
     default: 'pending'
   },
+  slack: {
+    accessToken: { type: String, default: null },
+    teamId: { type: String, default: null },
+    teamName: { type: String, default: null },
+    userId: { type: String, default: null },
+    connectedAt: { type: Date, default: null }
+  },
   isActive: {
     type: Boolean,
     default: true
