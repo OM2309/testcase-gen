@@ -40,6 +40,14 @@ export const agentService = {
     return response.data
   },
 
+  async aiUpdateTestCaseSteps(projectId: string, payload: { testCase: any; instructions: string; screenshot?: string | null }) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(
+      `/test-suites/ai-update-steps/${projectId}`,
+      payload
+    )
+    return response.data
+  },
+
   async generateGapFill(projectId: string, srsDocumentId?: string) {
     const url = srsDocumentId
       ? `/requirements/gap-fill/${projectId}/${srsDocumentId}`

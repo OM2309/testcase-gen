@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Sparkles, PenTool, Loader2, ArrowLeft } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -11,11 +11,76 @@ const fieldCls = 'px-3 py-2 bg-card border rounded-lg focus:outline-none focus:r
 interface AiGenerateDialogProps {
   open: boolean
   onOpenChange: (v: boolean) => void
-  onManualCreate: () => void
+  onManualCreate: (moduleName: string) => void
   onGenerated: (testCase: any) => void
   projectId: string
   generating: boolean
   setGenerating: (v: boolean) => void
+  modules: string[]
+}
+
+function ModuleSelector({
+  value,
+  onChange,
+  modules,
+  disabled
+}: {
+  value: string
+  onChange: (v: string) => void
+  modules: string[]
+  disabled?: boolean
+}) {
+  const [isCustom, setIsCustom] = useState(false)
+
+  return !isCustom && modules.length > 0 ? (
+    <div className="flex gap-2 w-full">
+      <select
+        value={value}
+        onChange={e => {
+          if (e.target.value === '__new__') {
+            setIsCustom(true)
+            onChange('')
+          } else {
+            onChange(e.target.value)
+          }
+        }}
+        disabled={disabled}
+        className={`${fieldCls} flex-grow h-9 text-xs cursor-pointer w-full`}
+      >
+        {modules.map(m => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+        <option value="__new__">+ Create New Module...</option>
+      </select>
+    </div>
+  ) : (
+    <div className="flex gap-2 w-full">
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Enter module name"
+        disabled={disabled}
+        className={`${fieldCls} flex-grow h-9 text-xs`}
+      />
+      {modules.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setIsCustom(false)
+            if (modules.length > 0) {
+              onChange(modules[0])
+            }
+          }}
+          disabled={disabled}
+          className="px-2.5 py-1.5 border border-border bg-muted/40 hover:bg-secondary rounded-lg font-semibold text-[10px] select-none cursor-pointer whitespace-nowrap"
+        >
+          Choose Existing
+        </button>
+      )}
+    </div>
+  )
 }
 
 export function AiGenerateDialog({
@@ -26,6 +91,7 @@ export function AiGenerateDialog({
   projectId,
   generating,
   setGenerating,
+  modules = [],
 }: AiGenerateDialogProps) {
   const [screen, setScreen] = useState<'choice' | 'ai'>('choice')
   const [requirement, setRequirement] = useState('')
@@ -33,10 +99,17 @@ export function AiGenerateDialog({
   const [priority, setPriority] = useState('Medium')
   const [error, setError] = useState<string | null>(null)
 
+  // Initialize selectedModule to first module if available
+  useEffect(() => {
+    if (modules.length > 0 && module === 'General') {
+      setModule(modules[0])
+    }
+  }, [modules])
+
   const reset = () => {
     setScreen('choice')
     setRequirement('')
-    setModule('General')
+    setModule(modules.length > 0 ? modules[0] : 'General')
     setPriority('Medium')
     setError(null)
   }
@@ -47,9 +120,10 @@ export function AiGenerateDialog({
   }
 
   const handleManual = () => {
+    const finalModule = module.trim() || 'General'
     reset()
     onOpenChange(false)
-    onManualCreate()
+    onManualCreate(finalModule)
   }
 
   const handleGenerate = async () => {
@@ -61,7 +135,7 @@ export function AiGenerateDialog({
     setGenerating(true)
     try {
       const { agentService } = await import('../../services/agentService')
-      const res = await agentService.aiGenerateTestCase(projectId, requirement.trim(), module, priority)
+      const res = await agentService.aiGenerateTestCase(projectId, requirement.trim(), module || 'General', priority)
       if (res.success && res.data) {
         onGenerated(res.data)
         handleClose(false)
@@ -84,33 +158,45 @@ export function AiGenerateDialog({
               <DialogTitle>New Test Case</DialogTitle>
               <DialogDescription>Choose how you'd like to create your test case.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-3 py-4">
-              {/* Manual */}
-              <button
-                onClick={handleManual}
-                className="group flex flex-col items-center gap-3 p-5 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer text-center"
-              >
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                  <PenTool className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <div>
-                  <span className="block text-sm font-semibold text-foreground">Create Manually</span>
-                  <span className="block text-[11px] text-muted-foreground mt-0.5">Define steps yourself</span>
-                </div>
-              </button>
-              {/* AI */}
-              <button
-                onClick={() => setScreen('ai')}
-                className="group flex flex-col items-center gap-3 p-5 rounded-xl border border-border hover:border-violet-500/50 hover:bg-violet-500/5 transition-all cursor-pointer text-center"
-              >
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-violet-500/10 transition-colors">
-                  <Sparkles className="w-5 h-5 text-muted-foreground group-hover:text-violet-500 transition-colors" />
-                </div>
-                <div>
-                  <span className="block text-sm font-semibold text-foreground">Generate with AI</span>
-                  <span className="block text-[11px] text-muted-foreground mt-0.5">Describe in plain English</span>
-                </div>
-              </button>
+            <div className="py-4 space-y-4 text-xs">
+              <div className="space-y-1.5 text-left">
+                <label className="font-semibold text-foreground">Select Module</label>
+                <ModuleSelector
+                  value={module}
+                  onChange={setModule}
+                  modules={modules}
+                  disabled={generating}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Manual */}
+                <button
+                  onClick={handleManual}
+                  className="group flex flex-col items-center gap-3 p-5 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer text-center"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                    <PenTool className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <div>
+                    <span className="block text-sm font-semibold text-foreground">Create Manually</span>
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">Define steps yourself</span>
+                  </div>
+                </button>
+                {/* AI */}
+                <button
+                  onClick={() => setScreen('ai')}
+                  className="group flex flex-col items-center gap-3 p-5 rounded-xl border border-border hover:border-violet-500/50 hover:bg-violet-500/5 transition-all cursor-pointer text-center"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-violet-500/10 transition-colors">
+                    <Sparkles className="w-5 h-5 text-muted-foreground group-hover:text-violet-500 transition-colors" />
+                  </div>
+                  <div>
+                    <span className="block text-sm font-semibold text-foreground">Generate with AI</span>
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">Describe in plain English</span>
+                  </div>
+                </button>
+              </div>
             </div>
           </>
         ) : (
@@ -140,14 +226,19 @@ export function AiGenerateDialog({
                   disabled={generating}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 items-end">
                 <div className="flex flex-col gap-1">
                   <label className="font-semibold">Module</label>
-                  <input value={module} onChange={e => setModule(e.target.value)} placeholder="General" className={fieldCls} disabled={generating} />
+                  <ModuleSelector
+                    value={module}
+                    onChange={setModule}
+                    modules={modules}
+                    disabled={generating}
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="font-semibold">Priority</label>
-                  <select value={priority} onChange={e => setPriority(e.target.value)} className={fieldCls} disabled={generating}>
+                  <select value={priority} onChange={e => setPriority(e.target.value)} className={`${fieldCls} h-9 cursor-pointer`} disabled={generating}>
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
                     <option value="Low">Low</option>

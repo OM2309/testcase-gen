@@ -151,3 +151,55 @@ export async function aiGenerateTestCase(req, res, next) {
     next(err)
   }
 }
+
+export const aiUpdateStepsSystemPrompt = `You are an expert QA automation engineer.
+You are given an existing automated test case with its steps and details.
+The user wants to update the steps and metadata (like expected results or preconditions) based on their instructions and optionally a screenshot showing the page layout.
+
+You must output a JSON object containing the updated fields:
+- expected_result: string
+- preconditions: array of strings
+- steps: array of updated step objects. Each step object must have:
+  - step_number: integer
+  - action: string
+  - target: string
+  - value: string
+  - description: string
+  - expected: string
+
+Format your output strictly as a JSON object with these keys. Do not include markdown code block formatting in your response. Return ONLY the raw JSON object.`
+
+export async function aiUpdateTestCaseSteps(req, res, next) {
+  const { projectId } = req.params
+  const { testCase, instructions, screenshot } = req.body
+
+  try {
+    if (!testCase || !instructions || !instructions.trim()) {
+      throw new ApiError('Test case and update instructions are required', 400)
+    }
+
+    const userPrompt = `Existing Test Case:
+Title: ${testCase.title}
+Expected Result: ${testCase.expected_result || ''}
+Preconditions: ${JSON.stringify(testCase.preconditions || [])}
+Current Steps:
+${JSON.stringify(testCase.steps || [], null, 2)}
+
+User Instructions: ${instructions.trim()}
+${screenshot ? "Please examine the attached screenshot of the UI state to align selectors and steps." : ""}
+
+Update the test case steps and expected outcome to match the user's instructions and visual layout.`
+
+    const updatedData = await callOpenAI({
+      systemPrompt: aiUpdateStepsSystemPrompt,
+      userPrompt,
+      temperature: 0.3,
+      jsonMode: true,
+      image: screenshot || null
+    })
+
+    return sendSuccess(res, 'Test case steps updated successfully.', updatedData)
+  } catch (err) {
+    next(err)
+  }
+}

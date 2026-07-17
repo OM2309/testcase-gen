@@ -6,7 +6,8 @@ import {
   updateRole,
   getUsers,
   updateUserRole,
-  updateProfile
+  updateProfile,
+  toggleUserStatus
 } from './auth.controller.js'
 import { authMiddleware } from '../../middleware/auth.js'
 
@@ -16,15 +17,16 @@ const router = express.Router()
 router.get('/auth/google', googleLogin)
 
 // Google NextAuth registration and login endpoint
-router.post('/auth/google-next', googleNext)
+router.post('/user/google-next', googleNext)
 
 // Authenticated user profile routes
-router.get('/auth/me', authMiddleware, me)
-router.put('/auth/role', authMiddleware, updateRole)
-router.put('/auth/profile', authMiddleware, updateProfile)
+router.get('/user/me', authMiddleware, me)
+router.put('/user/role', authMiddleware, updateRole)
+router.put('/user/profile', authMiddleware, updateProfile)
 
 // Admin user management routes
-router.get('/auth/users', authMiddleware, getUsers)
-router.put('/auth/users/:id/role', authMiddleware, updateUserRole)
+router.get('/user/users', authMiddleware, getUsers)
+router.put('/user/users/:id/role', authMiddleware, updateUserRole)
+router.put('/user/users/:id/status', authMiddleware, toggleUserStatus)
 
 export default router

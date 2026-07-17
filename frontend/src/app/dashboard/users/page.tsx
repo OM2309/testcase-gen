@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { authService, User } from '../../../services/authService'
-import { ShieldAlert, Loader2, Sparkles, UserCheck } from 'lucide-react'
+import { ShieldAlert, Loader2, Sparkles, UserCheck, ShieldX } from 'lucide-react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
@@ -52,12 +52,27 @@ export default function UsersManagementPage() {
       const res = await authService.updateUserRole(userId, newRole)
       if (res.success) {
         toast.success('User role updated successfully!')
-        // Update local state instead of re-fetching to make it instant
         setUsers(prev => prev.map(user => user._id === userId ? { ...user, role: newRole as any } : user))
       }
     } catch (err: any) {
       console.error(err)
       toast.error(err?.response?.data?.error || 'Failed to update user role.')
+    } finally {
+      setUpdatingUserId(null)
+    }
+  }
+
+  const handleToggleStatus = async (userId: string, newStatus: boolean) => {
+    setUpdatingUserId(userId)
+    try {
+      const res = await authService.updateUserStatus(userId, newStatus)
+      if (res.success) {
+        toast.success(newStatus ? 'User login access enabled! ✅' : 'User login access disabled! 🛑')
+        setUsers(prev => prev.map(user => user._id === userId ? { ...user, isActive: newStatus } : user))
+      }
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err?.response?.data?.error || 'Failed to update user status.')
     } finally {
       setUpdatingUserId(null)
     }
@@ -78,7 +93,7 @@ export default function UsersManagementPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold">User Management</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">View all system users and manage their access roles.</p>
+        <p className="text-xs text-muted-foreground mt-0.5">View all system users and manage their login access and roles.</p>
       </div>
 
       {loading ? (
@@ -103,13 +118,14 @@ export default function UsersManagementPage() {
                 {users.map((user) => {
                   const initials = user.username.substring(0, 2).toUpperCase()
                   const isSelf = user._id === (session as any)?.user?.id
+                  const isUserActive = user.isActive !== false
 
                   return (
-                    <tr key={user._id} className="hover:bg-muted/10 transition-colors">
+                    <tr key={user._id} className={`hover:bg-muted/10 transition-colors ${!isUserActive ? 'opacity-70 bg-rose-50/5 dark:bg-rose-950/5' : ''}`}>
                       {/* User Info */}
                       <td className="p-4 flex items-center gap-3">
                         <Avatar className="w-8 h-8">
-                          <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                          <AvatarFallback className={`${!isUserActive ? 'bg-rose-500/10 text-rose-500' : 'bg-primary/10 text-primary'} font-bold text-xs`}>
                             {initials}
                           </AvatarFallback>
                         </Avatar>
@@ -119,6 +135,11 @@ export default function UsersManagementPage() {
                             {isSelf && (
                               <span className="text-[9px] bg-primary/10 border border-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
                                 You
+                              </span>
+                            )}
+                            {!isUserActive && (
+                              <span className="inline-flex items-center gap-0.5 text-[9px] bg-rose-500/10 border border-rose-500/20 text-rose-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                                <ShieldX className="w-2.5 h-2.5" /> Banned
                               </span>
                             )}
                           </div>
@@ -159,17 +180,30 @@ export default function UsersManagementPage() {
                             {updatingUserId === user._id ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
                             ) : (
-                              <select
-                                value={user.role}
-                                onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                                className="h-8 border border-border bg-card px-2.5 rounded-lg text-xs outline-none focus:border-primary cursor-pointer transition-colors"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="developer">Developer</option>
-                                <option value="qa">QA Engineer</option>
-                                <option value="project_manager">Project Manager</option>
-                                <option value="admin">Administrator</option>
-                              </select>
+                              <>
+                                <select
+                                  value={user.role}
+                                  onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                                  disabled={!isUserActive}
+                                  className="h-8 border border-border bg-card px-2.5 rounded-lg text-xs outline-none focus:border-primary cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="developer">Developer</option>
+                                  <option value="qa">QA Engineer</option>
+                                  <option value="project_manager">Project Manager</option>
+                                  <option value="admin">Administrator</option>
+                                </select>
+                                <button
+                                  onClick={() => handleToggleStatus(user._id, !isUserActive)}
+                                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                                    !isUserActive
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/20'
+                                      : 'bg-rose-500/10 border-rose-500/30 text-rose-600 hover:bg-rose-500/20'
+                                  }`}
+                                >
+                                  {isUserActive ? 'Disable Login' : 'Enable Login'}
+                                </button>
+                              </>
                             )}
                           </div>
                         )}

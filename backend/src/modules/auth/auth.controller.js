@@ -52,6 +52,10 @@ export async function login(req, res, next) {
       throw new ApiError('Invalid email or password.', 401)
     }
 
+    if (user.isActive === false) {
+      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
+    }
+
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
       throw new ApiError('Invalid email or password.', 401)
@@ -73,6 +77,10 @@ export async function me(req, res, next) {
     const user = await User.findById(req.user.id).select('-password')
     if (!user) {
       throw new ApiError('User not found.', 404)
+    }
+
+    if (user.isActive === false) {
+      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
     }
 
     return sendSuccess(res, 'User fetched successfully.', {
@@ -152,6 +160,9 @@ export async function googleCallback(req, res, next) {
 
     // Check if user already exists
     let user = await User.findOne({ email: profile.email.toLowerCase() })
+    if (user && user.isActive === false) {
+      return res.redirect('http://localhost:3000/login?error=Account+disabled.+Please+contact+administrator.')
+    }
     if (!user) {
       const username = profile.name || profile.email.split('@')[0]
       user = new User({
@@ -181,6 +192,9 @@ export async function googleNext(req, res, next) {
     }
 
     let user = await User.findOne({ email: email.toLowerCase() })
+    if (user && user.isActive === false) {
+      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
+    }
 
     if (!user) {
       // Determine if they should be admin
@@ -223,6 +237,10 @@ export async function updateRole(req, res, next) {
     const user = await User.findById(req.user.id)
     if (!user) {
       throw new ApiError('User not found.', 404)
+    }
+
+    if (user.isActive === false) {
+      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
     }
 
     user.role = role
@@ -308,6 +326,44 @@ export async function updateProfile(req, res, next) {
       username: user.username,
       email: user.email,
       role: user.role
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function toggleUserStatus(req, res, next) {
+  try {
+    if (req.user.role !== 'admin') {
+      throw new ApiError('Access denied. Admin privileges required.', 403)
+    }
+
+    const { id } = req.params
+    const { isActive } = req.body
+
+    if (typeof isActive !== 'boolean') {
+      throw new ApiError('isActive status must be a boolean.', 400)
+    }
+
+    const user = await User.findById(id)
+    if (!user) {
+      throw new ApiError('User not found.', 404)
+    }
+
+    // Prevent admin from disabling themselves
+    if (user.email === 'admin@memorres.com' || user._id.toString() === req.user.id) {
+      throw new ApiError('Admin cannot disable their own account.', 400)
+    }
+
+    user.isActive = isActive
+    await user.save()
+
+    return sendSuccess(res, 'User status updated successfully.', {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive
     })
   } catch (err) {
     next(err)

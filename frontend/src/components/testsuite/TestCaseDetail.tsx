@@ -1,28 +1,38 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2, GripVertical, Pencil, Play } from 'lucide-react'
+import { ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2, GripVertical, Pencil, Play, Sparkles, Upload, X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getPriorityBadge } from '../../helpers/utils'
 import { Step, TestCase } from '../../types'
 import { StepEditor, StepRow } from './StepEditor'
+import { agentService } from '../../services/agentService'
 
 interface TestCaseDetailProps {
   testCase: TestCase | null
+  projectId: string
   onEditMeta: (tc: TestCase) => void
   onAddStep: () => void
   onDeleteStep: (idx: number) => void
   onUpdateStep: (idx: number, patch: Partial<Step>) => void
   onReorder: (from: number, to: number) => void
+  onUpdateTestCase: (patch: Partial<TestCase>) => void
 }
 
 /** Right-hand panel: test case header + its editable, reorderable step list. */
 export function TestCaseDetail({
-  testCase, onEditMeta, onAddStep, onDeleteStep, onUpdateStep, onReorder
+  testCase, projectId, onEditMeta, onAddStep, onDeleteStep, onUpdateStep, onReorder, onUpdateTestCase
 }: TestCaseDetailProps) {
   const [editingStepIdx, setEditingStepIdx] = useState<number | null>(null)
   const [draggedStepIdx, setDraggedStepIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  // AI Step Modifier States
+  const [showAiPanel, setShowAiPanel] = useState(false)
+  const [aiInstructions, setAiInstructions] = useState('')
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
+  const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null)
+  const [aiUpdating, setAiUpdating] = useState(false)
 
   if (!testCase) {
     return (
@@ -38,6 +48,67 @@ export function TestCaseDetail({
     if (draggedStepIdx !== null && draggedStepIdx !== dropIdx) onReorder(draggedStepIdx, dropIdx)
     setDraggedStepIdx(null)
     setDragOverIdx(null)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setScreenshotFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setScreenshotBase64(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleAiUpdate = async () => {
+    if (!aiInstructions.trim()) return
+    setAiUpdating(true)
+    try {
+      const payload = {
+        testCase: {
+          title: testCase.title,
+          expected_result: testCase.expected_result,
+          preconditions: testCase.preconditions,
+          steps: testCase.steps
+        },
+        instructions: aiInstructions,
+        screenshot: screenshotBase64
+      }
+
+      const res = await agentService.aiUpdateTestCaseSteps(projectId, payload)
+      if (res.success && res.data) {
+        const updated = res.data
+        
+        // Map backend response keys (snake_case/camelCase check)
+        const newSteps = (updated.steps || []).map((s: any, idx: number) => ({
+          step_number: s.step_number || s.stepNumber || idx + 1,
+          action: s.action || '',
+          target: s.target || s.selector || '',
+          value: s.value || '',
+          description: s.description || '',
+          expected: s.expected || ''
+        }))
+
+        onUpdateTestCase({
+          expected_result: updated.expected_result || testCase.expected_result,
+          preconditions: updated.preconditions || testCase.preconditions,
+          steps: newSteps
+        })
+
+        toast.success('Test case steps updated by AI successfully! ✨')
+        setAiInstructions('')
+        setScreenshotFile(null)
+        setScreenshotBase64(null)
+        setShowAiPanel(false)
+      }
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err?.response?.data?.error || 'AI failed to update test case steps.')
+    } finally {
+      setAiUpdating(false)
+    }
   }
 
   return (
@@ -75,13 +146,103 @@ export function TestCaseDetail({
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <FileSpreadsheet className="w-3.5 h-3.5 text-primary" /> Steps ({testCase.steps.length})
             </h3>
-            <button
-              onClick={onAddStep}
-              className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors font-semibold"
-            >
-              <Plus className="w-3 h-3" /> Add Step
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAiPanel(prev => !prev)}
+                className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg border transition-all font-semibold cursor-pointer ${
+                  showAiPanel 
+                    ? 'bg-primary text-primary-foreground border-primary' 
+                    : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                }`}
+              >
+                <Sparkles className="w-3 h-3" /> AI Update Steps
+              </button>
+              <button
+                onClick={onAddStep}
+                className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors font-semibold"
+              >
+                <Plus className="w-3 h-3" /> Add Step
+              </button>
+            </div>
           </div>
+
+          {showAiPanel && (
+            <div className="border border-primary/20 bg-primary/5 rounded-xl p-4 space-y-3.5 mb-4 text-xs">
+              <div className="flex items-center justify-between border-b border-primary/10 pb-1.5">
+                <span className="font-bold text-primary flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" /> Modify Steps with AI
+                </span>
+                <button onClick={() => setShowAiPanel(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-semibold text-muted-foreground">Describe your modifications</label>
+                <textarea
+                  value={aiInstructions}
+                  onChange={e => setAiInstructions(e.target.value)}
+                  placeholder="e.g. 'Update login password value to TestPassword123' or 'Insert step to click on Forgot Password'"
+                  rows={3}
+                  className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:outline-none focus:border-primary text-xs resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-muted-foreground block">UI Screenshot (optional)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="ai-screenshot-upload"
+                    />
+                    <label
+                      htmlFor="ai-screenshot-upload"
+                      className="flex items-center gap-1.5 px-3 py-2 border border-border bg-card rounded-lg hover:bg-muted/80 cursor-pointer text-[11px] font-semibold text-foreground select-none"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-muted-foreground" />
+                      {screenshotFile ? 'Change Image' : 'Upload Screenshot'}
+                    </label>
+                    {screenshotFile && (
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                        {screenshotFile.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {screenshotBase64 && (
+                  <div className="relative w-20 h-14 rounded border border-border/80 overflow-hidden bg-muted flex items-center justify-center self-end">
+                    <img src={screenshotBase64} alt="Preview" className="max-w-full max-h-full object-contain" />
+                    <button 
+                      onClick={() => { setScreenshotFile(null); setScreenshotBase64(null) }}
+                      className="absolute top-0.5 right-0.5 p-0.5 bg-black/60 text-white rounded-full hover:bg-black"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-primary/10">
+                <button
+                  type="button"
+                  onClick={() => setShowAiPanel(false)}
+                  className="btn-secondary h-8 text-[11px] font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAiUpdate}
+                  disabled={aiUpdating || !aiInstructions.trim()}
+                  className="btn-primary h-8 text-[11px] font-semibold flex items-center gap-1.5"
+                >
+                  {aiUpdating && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Update Steps
+                </button>
+              </div>
+            </div>
+          )}
 
           {testCase.steps.length === 0 && (
             <div className="text-center py-8 text-xs text-muted-foreground border border-dashed border-border rounded-xl">

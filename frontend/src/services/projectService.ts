@@ -2,8 +2,12 @@ import { apiClient } from './apiClient'
 import { Project, ProjectDetail } from '../types'
 
 export const projectService = {
-  async getAllProjects() {
-    const response = await apiClient.get<{ success: boolean; data: Project[] }>('/projects')
+  async getAllProjects(search: string = '', page?: number, limit?: number) {
+    const params = new URLSearchParams()
+    if (search.trim()) params.append('search', search.trim())
+    if (page) params.append('page', String(page))
+    if (limit) params.append('limit', String(limit))
+    const response = await apiClient.get<{ success: boolean; data: any }>(`/projects?${params.toString()}`)
     return response.data
   },
 
@@ -19,6 +23,11 @@ export const projectService = {
 
   async assignUsers(projectId: string, userIds: string[]) {
     const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/assign`, { userIds })
+    return response.data
+  },
+
+  async updateProject(projectId: string, payload: { projectName: string; projectDescription: string }) {
+    const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}`, payload)
     return response.data
   }
 }

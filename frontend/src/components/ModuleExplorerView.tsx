@@ -76,6 +76,9 @@ export function ModuleExplorerView() {
   const [expandedGaps, setExpandedGaps] = useState<Record<string, boolean>>({})
   const [selectedGapTestCases, setSelectedGapTestCases] = useState<Record<string, boolean>>({})
   const [addingGapCases, setAddingGapCases] = useState(false)
+  const [isAddModuleOpen, setIsAddModuleOpen] = useState(false)
+  const [targetModuleOption, setTargetModuleOption] = useState('')
+  const [customModuleName, setCustomModuleName] = useState('')
   const [runningActionDocId, setRunningActionDocId] = useState<string | null>(null)
 
   const handleLocalRunAgent1 = async (docId: string) => {
@@ -93,6 +96,73 @@ export function ModuleExplorerView() {
       await runAgent2(docId)
     } finally {
       setRunningActionDocId(null)
+    }
+  }
+
+  const handleAddSelectedClick = () => {
+    const selectedIds = Object.entries(selectedGapTestCases).filter(([, v]) => v).map(([k]) => k)
+    if (selectedIds.length === 0) {
+      toast.error('Please select at least one test case to add.')
+      return
+    }
+    if (selectedSrsModules && selectedSrsModules.length > 0) {
+      setTargetModuleOption(selectedSrsModules[0].name)
+    } else {
+      setTargetModuleOption('')
+    }
+    setCustomModuleName('')
+    setIsAddModuleOpen(true)
+  }
+
+  const handleConfirmAddSelected = async () => {
+    if (!selectedSuite || !project) return
+    const chosenModule = customModuleName.trim() || targetModuleOption
+    if (!chosenModule) {
+      toast.error('Please select or enter a module name.')
+      return
+    }
+
+    const selectedIds = Object.entries(selectedGapTestCases).filter(([, v]) => v).map(([k]) => k)
+
+    const newTestCases = filledGaps
+      .flatMap(g => g.suggested_test_cases)
+      .filter(tc => selectedIds.includes(tc.id))
+      .map(tc => ({
+        ...tc,
+        id: tc.id || `TC-GAP-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        module: chosenModule,
+        type: 'functional',
+        isRegressive: false,
+        severity: 'Major',
+        test_data: {},
+        cleanup_steps: [],
+        source_requirements: [],
+        tags: tc.tags || ['gap-fill', 'ai-suggested'],
+        preconditions: tc.preconditions || [],
+        steps: (tc.steps || []).map((s: any, idx: number) => ({
+          step_number: s.step_number || idx + 1,
+          action: s.action || '',
+          target: s.target || s.selector || '',
+          value: s.value || '',
+          description: s.description || '',
+          expected: s.expected || '',
+          expected_url: s.expected_url || '',
+          expected_text: s.expected_text || ''
+        }))
+      }))
+
+    setAddingGapCases(true)
+    try {
+      const mergedCases = [...selectedSuite.testCases, ...newTestCases]
+      await agentService.saveTestSuite(project._id, selectedSuite._id, mergedCases)
+      await refreshProject()
+      setSelectedGapTestCases({})
+      setIsAddModuleOpen(false)
+      toast.success(`${newTestCases.length} test case(s) added to module "${chosenModule}"! ✅`)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to add test cases.')
+    } finally {
+      setAddingGapCases(false)
     }
   }
 
@@ -323,6 +393,11 @@ export function ModuleExplorerView() {
     return requirementAnalyses.find(r => r.srsDocumentId === targetSrsId) || null
   }, [selectedSrs, requirementAnalyses])
 
+  const filledGaps = useMemo<any[]>(() => {
+    if (!selectedAnalysis) return []
+    return selectedAnalysis.gapFillData?.filled_gaps || []
+  }, [selectedAnalysis])
+
   const selectedSuite = useMemo(() => {
     if (!selectedSrs) return null
     const targetSrsId = selectedSrs._id === 'legacy' ? null : selectedSrs._id
@@ -470,6 +545,85 @@ export function ModuleExplorerView() {
                 <>
                   <Play className="w-3.5 h-3.5" /> Start Execution
                 </>
+              )}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Target Module Choice Modal */}
+      <Dialog open={isAddModuleOpen} onOpenChange={setIsAddModuleOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-bold text-base">
+              <Layers className="w-5 h-5 text-primary" />
+              Add to Module
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Select an existing module or enter a new one to insert the selected gap-fill test case(s).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 text-xs">
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground">Select Existing Module</label>
+              <select
+                value={targetModuleOption}
+                onChange={e => {
+                  setTargetModuleOption(e.target.value)
+                  setCustomModuleName('')
+                }}
+                className="w-full h-9 px-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs cursor-pointer"
+              >
+                {selectedSrsModules.map(m => (
+                  <option key={m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+                <option value="">-- Create a new module --</option>
+              </select>
+            </div>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-border/40" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground text-[10px]">Or</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground">Create New Module</label>
+              <input
+                type="text"
+                value={customModuleName}
+                onChange={e => setCustomModuleName(e.target.value)}
+                placeholder="e.g. Payments Integration"
+                className="w-full px-3 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs"
+              />
+              <span className="text-[10px] text-muted-foreground/60 italic block">If you enter a name here, it will override the selection above.</span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <button
+              onClick={() => setIsAddModuleOpen(false)}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmAddSelected}
+              disabled={addingGapCases}
+              className="btn-primary"
+            >
+              {addingGapCases ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Adding...
+                </>
+              ) : (
+                'Add Test Cases'
               )}
             </button>
           </DialogFooter>
@@ -691,58 +845,8 @@ export function ModuleExplorerView() {
             const hasGaps = structured && ((structured.missing_details?.length || 0) + (structured.ambiguities?.length || 0)) > 0
             const gapFillData = selectedAnalysis.gapFillData
             const gapFillStatus = selectedAnalysis.gapFillStatus
-            const filledGaps: GapFillItem[] = gapFillData?.filled_gaps || []
-
             const handleToggleGapCase = (tcId: string) => {
               setSelectedGapTestCases(prev => ({ ...prev, [tcId]: !prev[tcId] }))
-            }
-
-            const handleAddSelectedToSuite = async () => {
-              if (!selectedSuite || !project) return
-              const selectedIds = Object.entries(selectedGapTestCases).filter(([, v]) => v).map(([k]) => k)
-              if (selectedIds.length === 0) {
-                toast.error('Please select at least one test case to add.')
-                return
-              }
-
-              const newTestCases = filledGaps
-                .flatMap(g => g.suggested_test_cases)
-                .filter(tc => selectedIds.includes(tc.id))
-                .map(tc => ({
-                  ...tc,
-                  id: tc.id || `TC-GAP-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                  type: 'functional',
-                  isRegressive: false,
-                  severity: 'Major',
-                  test_data: {},
-                  cleanup_steps: [],
-                  source_requirements: [],
-                  tags: tc.tags || ['gap-fill', 'ai-suggested'],
-                  preconditions: tc.preconditions || [],
-                  steps: (tc.steps || []).map((s: any, idx: number) => ({
-                    step_number: s.step_number || idx + 1,
-                    action: s.action || '',
-                    target: s.target || '',
-                    value: s.value || '',
-                    description: s.description || '',
-                    expected: s.expected || '',
-                    expected_url: s.expected_url || '',
-                    expected_text: s.expected_text || ''
-                  }))
-                }))
-
-              setAddingGapCases(true)
-              try {
-                const mergedCases = [...selectedSuite.testCases, ...newTestCases]
-                await agentService.saveTestSuite(project._id, selectedSuite._id, mergedCases)
-                await refreshProject()
-                setSelectedGapTestCases({})
-                toast.success(`${newTestCases.length} test case(s) added to the suite! ✅`)
-              } catch (err: any) {
-                toast.error(err?.response?.data?.message || 'Failed to add test cases.')
-              } finally {
-                setAddingGapCases(false)
-              }
             }
 
             if (!hasGaps) return null
@@ -764,7 +868,7 @@ export function ModuleExplorerView() {
                   <div className="flex items-center gap-2">
                     {gapFillStatus === 'completed' && filledGaps.length > 0 && (
                       <button
-                        onClick={handleAddSelectedToSuite}
+                        onClick={handleAddSelectedClick}
                         disabled={addingGapCases || Object.values(selectedGapTestCases).filter(Boolean).length === 0 || !selectedSuite}
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer transition-colors"
                       >
@@ -791,7 +895,7 @@ export function ModuleExplorerView() {
                   <div className="space-y-3">
                     {filledGaps.map((gap) => {
                       const isExpanded = expandedGaps[gap.id] || false
-                      const confidenceColors = {
+                      const confidenceColors: Record<string, string> = {
                         high: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                         medium: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
                         low: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
@@ -837,7 +941,7 @@ export function ModuleExplorerView() {
                               {/* Suggested Test Cases */}
                               <div className="space-y-2">
                                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Suggested Test Cases</span>
-                                {gap.suggested_test_cases.map(tc => (
+                                {gap.suggested_test_cases.map((tc: any) => (
                                   <label
                                     key={tc.id}
                                     className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all hover:bg-muted/20 ${selectedGapTestCases[tc.id] ? 'border-primary/50 bg-primary/5' : 'border-border/40'}`}

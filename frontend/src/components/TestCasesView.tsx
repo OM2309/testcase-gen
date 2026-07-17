@@ -57,6 +57,12 @@ export function TestCasesView() {
   const [search, setSearch] = useState('')
   const [modulesList, setModulesList] = useState<Array<{ name: string; count: number }>>([])
 
+  const existingModules = useMemo(() => {
+    return modulesList
+      .map(m => m.name)
+      .filter(name => name !== 'All' && name !== 'Regressive')
+  }, [modulesList])
+
   // Keep state sync'd when initialTestCases change
   useEffect(() => {
     setTestCases(initialTestCases)
@@ -284,8 +290,8 @@ export function TestCasesView() {
     }
   }
 
-  const openCreateDialog = () => {
-    setFormState({ title: '', module: 'General', priority: 'Medium', scenarioType: 'positive', expectedResult: '' })
+  const openCreateDialog = (moduleName?: string) => {
+    setFormState({ title: '', module: moduleName || 'General', priority: 'Medium', scenarioType: 'positive', expectedResult: '' })
     setIsCreateOpen(true)
   }
 
@@ -424,6 +430,7 @@ export function TestCasesView() {
       <TestCaseDialogs
         form={form}
         setForm={setForm}
+        modules={existingModules}
         createOpen={isCreateOpen}
         setCreateOpen={setIsCreateOpen}
         onCreate={handleCreateTestCase}
@@ -516,11 +523,13 @@ export function TestCasesView() {
           {selectedTc && (
             <TestCaseDetail
               testCase={selectedTc}
+              projectId={project._id}
               onEditMeta={openEditDialog}
               onAddStep={() => { if (selectedTc) addStep(selectedTc.id) }}
               onDeleteStep={(idx) => { if (selectedTc) deleteStep(selectedTc.id, idx) }}
               onUpdateStep={(idx, patch) => { if (selectedTc) updateStep(selectedTc.id, idx, patch) }}
               onReorder={(from, to) => { if (selectedTc) reorderSteps(selectedTc.id, from, to) }}
+              onUpdateTestCase={(patch) => { if (selectedTc) updateTestCase(selectedTc.id, patch) }}
             />
           )}
         </DialogContent>
@@ -534,6 +543,7 @@ export function TestCasesView() {
         projectId={project?._id || ''}
         generating={aiGenerating}
         setGenerating={setAiGenerating}
+        modules={existingModules}
       />
     </div>
   )

@@ -21,6 +21,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['admin', 'project_manager', 'qa', 'developer', 'pending'],
     default: 'pending'
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true

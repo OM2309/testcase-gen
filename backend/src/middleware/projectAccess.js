@@ -1,8 +1,14 @@
 import Project from '../modules/project/project.model.js'
+import User from '../modules/auth/user.model.js'
 import { ApiError } from '../utils/apiError.js'
 
 export async function projectAccessMiddleware(req, res, next) {
   try {
+    const user = await User.findById(req.user.id)
+    if (!user || user.isActive === false) {
+      throw new ApiError('Access denied. Account is disabled or does not exist.', 403)
+    }
+
     const projectId = req.params.projectId || req.body.projectId || req.query.projectId
 
     if (!projectId) {

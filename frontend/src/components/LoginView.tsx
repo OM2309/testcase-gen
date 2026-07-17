@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Sparkles, Loader2, Quote } from 'lucide-react'
+import { Loader2, Quote } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
+import { Avatar, AvatarFallback } from './ui/avatar'
 
 export function LoginView() {
   const searchParams = useSearchParams()
@@ -39,20 +39,20 @@ export function LoginView() {
         <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
 
         {/* Top Header Logo */}
-        <div className="flex items-center z-10">
+        <div className="flex justify-center w-full z-10">
           <img
             src="/Memorres-logo-light theme.png"
             alt="Memorres Logo"
-            className="h-10 w-auto object-contain"
+            className="h-16 md:h-20 w-auto object-contain"
           />
         </div>
 
         {/* Main Content Area */}
         <div className="max-w-[420px] w-full mx-auto my-auto py-12 z-10 space-y-8">
           <div className="space-y-2.5">
-            <h2 className="text-3xl font-extrabold tracking-tight">Welcome Back!</h2>
-            <p className="text-sm text-muted-foreground">
-              Sign in to access your dashboard and continue optimizing your QA process.
+            <h2 className="text-3xl font-extrabold tracking-tight text-center md:text-left">Welcome Back!</h2>
+            <p className="text-sm text-muted-foreground text-center md:text-left">
+              Sign in with your Google account to access the dashboard.
             </p>
           </div>
 
@@ -96,27 +96,24 @@ export function LoginView() {
           </div>
         </div>
 
-        {/* Footer info message */}
-        <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1 z-10">
-          <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-          <span>Secure Google OAuth 2.0 authentication</span>
-        </div>
+        {/* Empty placeholder bottom footer */}
+        <div className="h-4 z-10" />
       </div>
 
-      {/* RIGHT PANEL: Highly Premium Gradient & Testimonial Section */}
-      <div className="hidden md:flex md:w-[50%] bg-gradient-to-br from-teal-950 via-teal-900 to-cyan-950 p-16 flex-col justify-between relative overflow-hidden">
-        {/* Abstract light effects */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+      {/* RIGHT PANEL: Highly Premium Indigo/Blue Gradient & Testimonial Section */}
+      <div className="hidden md:flex md:w-[50%] bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-950 p-16 flex-col justify-center relative overflow-hidden">
+        {/* Abstract light effects matching indigo/blue theme */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
 
         {/* Brand visual grid lines */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
-        <div className="my-auto max-w-[500px] space-y-10 z-10">
+        <div className="max-w-[500px] space-y-10 z-10">
           {/* Main Visual Title */}
           <h1 className="text-4xl font-bold tracking-tight text-white leading-tight">
             Revolutionize QA with <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-300">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-sky-300">
               Smarter Automation
             </span>
           </h1>
@@ -128,8 +125,8 @@ export function LoginView() {
               "TestGen AI has completely transformed our testing process. It's reliable, efficient, and ensures our releases are always top-notch."
             </p>
             <div className="flex items-center gap-3.5 pt-1">
-              <Avatar size="lg" className="border border-white/20 shadow-lg">
-                <AvatarFallback className="bg-gradient-to-tr from-emerald-400 to-cyan-400 text-teal-950 font-bold text-xs">
+              <Avatar className="w-9 h-9 border border-white/20 shadow-lg">
+                <AvatarFallback className="bg-gradient-to-tr from-indigo-400 to-sky-400 text-indigo-950 font-bold text-xs">
                   MC
                 </AvatarFallback>
               </Avatar>
@@ -138,28 +135,6 @@ export function LoginView() {
                 <p className="text-[11px] text-white/60">Software Engineer at DevCore</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Joined teams section */}
-        <div className="space-y-4 z-10">
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-[9px] font-bold text-white/40 tracking-wider uppercase">
-              JOIN 1K TEAMS USING SOFTQA
-            </span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <div className="grid grid-cols-4 gap-y-4 gap-x-8 opacity-60 grayscale filter brightness-200">
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Discord</div>
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Mailchimp</div>
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Grammarly</div>
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Attentive</div>
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Hellosign</div>
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Intercom</div>
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Square</div>
-            <div className="flex items-center justify-center text-[10px] font-semibold text-white">Dropbox</div>
           </div>
         </div>
       </div>

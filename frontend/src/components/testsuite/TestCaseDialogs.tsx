@@ -19,6 +19,7 @@ export interface TestCaseForm {
 interface TestCaseDialogsProps {
   form: TestCaseForm
   setForm: (patch: Partial<TestCaseForm>) => void
+  modules?: string[]
   // create
   createOpen: boolean
   setCreateOpen: (v: boolean) => void
@@ -46,7 +47,17 @@ interface TestCaseDialogsProps {
 }
 
 /** Small reusable metadata form used by both Create and Edit dialogs. */
-function TestCaseFields({ form, setForm }: { form: TestCaseForm; setForm: (p: Partial<TestCaseForm>) => void }) {
+function TestCaseFields({
+  form,
+  setForm,
+  modules = []
+}: {
+  form: TestCaseForm
+  setForm: (p: Partial<TestCaseForm>) => void
+  modules?: string[]
+}) {
+  const [isCustomModule, setIsCustomModule] = React.useState(false)
+
   return (
     <div className="grid gap-4 py-4 text-xs">
       <div className="flex flex-col gap-1">
@@ -55,7 +66,52 @@ function TestCaseFields({ form, setForm }: { form: TestCaseForm; setForm: (p: Pa
       </div>
       <div className="flex flex-col gap-1">
         <label className="font-semibold">Module</label>
-        <input value={form.module} onChange={e => setForm({ module: e.target.value })} placeholder="Module name" className={fieldCls} />
+        {!isCustomModule && modules.length > 0 ? (
+          <div className="flex gap-2">
+            <select
+              value={form.module}
+              onChange={e => {
+                if (e.target.value === '__new__') {
+                  setIsCustomModule(true)
+                  setForm({ module: '' })
+                } else {
+                  setForm({ module: e.target.value })
+                }
+              }}
+              className={`${fieldCls} flex-grow h-9`}
+            >
+              {modules.map(m => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+              <option value="__new__">+ Create New Module...</option>
+            </select>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={form.module}
+              onChange={e => setForm({ module: e.target.value })}
+              placeholder="Enter module name"
+              className={`${fieldCls} flex-grow h-9`}
+            />
+            {modules.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCustomModule(false)
+                  if (modules.length > 0) {
+                    setForm({ module: modules[0] })
+                  }
+                }}
+                className="px-2.5 py-1.5 border border-border bg-muted/40 hover:bg-secondary rounded-lg font-semibold text-[10px] select-none cursor-pointer"
+              >
+                Choose Existing
+              </button>
+            )}
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
@@ -92,7 +148,7 @@ export function TestCaseDialogs(p: TestCaseDialogsProps) {
             <DialogTitle>Create Test Case</DialogTitle>
             <DialogDescription>Add a new test case to this suite.</DialogDescription>
           </DialogHeader>
-          <TestCaseFields form={p.form} setForm={p.setForm} />
+          <TestCaseFields form={p.form} setForm={p.setForm} modules={p.modules} />
           <DialogFooter>
             <button onClick={() => p.setCreateOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold">Cancel</button>
             <button onClick={p.onCreate} className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90">Create</button>
@@ -107,7 +163,7 @@ export function TestCaseDialogs(p: TestCaseDialogsProps) {
             <DialogTitle>Edit Test Case Details</DialogTitle>
             <DialogDescription>Modify metadata and validation params.</DialogDescription>
           </DialogHeader>
-          <TestCaseFields form={p.form} setForm={p.setForm} />
+          <TestCaseFields form={p.form} setForm={p.setForm} modules={p.modules} />
           <DialogFooter>
             <button onClick={() => p.setEditOpen(false)} className="px-4 py-2 border rounded-xl hover:bg-muted text-xs font-semibold">Cancel</button>
             <button onClick={p.onSaveEdit} className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90">Save Changes</button>

@@ -59,8 +59,8 @@ export function AppSidebar({
   React.useEffect(() => {
     projectService.getAllProjects()
       .then(res => {
-        if (res.success && res.data) {
-          setAllProjects(res.data)
+        if (res.success && res.data?.projects) {
+          setAllProjects(res.data.projects)
         }
       })
       .catch(err => console.error("Failed to load projects list in sidebar", err))

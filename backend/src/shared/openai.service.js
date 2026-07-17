@@ -15,16 +15,29 @@ export async function callOpenAI({
   systemPrompt,
   userPrompt,
   temperature = 0.2,
-  jsonMode = true
+  jsonMode = true,
+  image = null
 }) {
   const model = env.openaiModel || 'gpt-4o'
+
+  const userMessageContent = image
+    ? [
+        { type: 'text', text: userPrompt },
+        {
+          type: 'image_url',
+          image_url: {
+            url: image
+          }
+        }
+      ]
+    : userPrompt
 
   const options = {
     model,
     temperature,
     messages: [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
+      { role: 'user', content: userMessageContent }
     ]
   }
 

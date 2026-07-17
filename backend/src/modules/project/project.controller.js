@@ -119,7 +119,11 @@ export async function createProject(req, res, next) {
 
 export async function getProjects(req, res, next) {
   try {
+    const { search = '', page, limit } = req.query
+
     let query = {}
+
+    // Base role constraints
     if (req.user.role !== 'admin') {
       query = {
         $or: [
@@ -130,8 +134,41 @@ export async function getProjects(req, res, next) {
       }
     }
 
+    // Append search constraints
+    if (search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i')
+      if (query.$or) {
+        query = {
+          $and: [
+            { $or: query.$or },
+            {
+              $or: [
+                { projectName: searchRegex },
+                { projectDescription: searchRegex }
+              ]
+            }
+          ]
+        }
+      } else {
+        query = {
+          $or: [
+            { projectName: searchRegex },
+            { projectDescription: searchRegex }
+          ]
+        }
+      }
+    }
+
+    const totalCount = await Project.countDocuments(query)
+    const limitNum = limit ? parseInt(limit, 10) : (page ? 6 : totalCount || 1)
+    const pageNum = parseInt(page, 10) || 1
+    const skip = (pageNum - 1) * limitNum
+    const totalPages = Math.ceil(totalCount / limitNum) || 1
+
     const projects = await Project.find(query)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
       .populate('assignedUsers', 'username email role')
       .lean()
 
@@ -144,7 +181,12 @@ export async function getProjects(req, res, next) {
       }
     }))
 
-    return sendSuccess(res, 'Projects fetched successfully.', projectsWithDetails)
+    return sendSuccess(res, 'Projects fetched successfully.', {
+      projects: projectsWithDetails,
+      totalPages,
+      currentPage: pageNum,
+      totalCount
+    })
   } catch (err) {
     next(err)
   }
@@ -232,6 +274,32 @@ export async function assignUsersToProject(req, res, next) {
     await project.save()
 
     return sendSuccess(res, 'Project members updated successfully.', project)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function updateProject(req, res, next) {
+  try {
+    const { projectName, projectDescription } = req.body
+    const project = req.project
+
+    // Only Admin or the project creator PM can update metadata
+    const isOwner = project.userId && project.userId.toString() === req.user.id
+    if (req.user.role !== 'admin' && !isOwner) {
+      throw new ApiError('Access denied. Only the project owner or an admin can update project details.', 403)
+    }
+
+    if (projectName && projectName.trim()) {
+      project.projectName = projectName.trim()
+    }
+    if (projectDescription !== undefined) {
+      project.projectDescription = projectDescription.trim()
+    }
+
+    await project.save()
+
+    return sendSuccess(res, 'Project updated successfully.', project)
   } catch (err) {
     next(err)
   }
