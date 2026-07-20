@@ -22,14 +22,14 @@ export async function callOpenAI({
 
   const userMessageContent = image
     ? [
-        { type: 'text', text: userPrompt },
-        {
-          type: 'image_url',
-          image_url: {
-            url: image
-          }
+      { type: 'text', text: userPrompt },
+      {
+        type: 'image_url',
+        image_url: {
+          url: image
         }
-      ]
+      }
+    ]
     : userPrompt
 
   const options = {
@@ -47,9 +47,8 @@ export async function callOpenAI({
 
   try {
     const response = await openai.chat.completions.create(options)
-    console.log("response", response);
+
     const content = response?.choices?.[0]?.message?.content
-    console.log("content", content);
 
 
     if (!content) {
@@ -58,11 +57,8 @@ export async function callOpenAI({
 
     if (jsonMode) {
       try {
-        console.log("Inside json function");
         return JSON.parse(content)
       } catch (parseError) {
-        console.error('[OPENAI SERVICE] Failed to parse JSON response')
-        console.error('[OPENAI SERVICE] Raw content:', content)
         throw new Error(`Invalid JSON returned from OpenAI: ${parseError.message}`)
       }
     }

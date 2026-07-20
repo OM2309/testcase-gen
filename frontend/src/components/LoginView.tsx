@@ -43,7 +43,7 @@ export function LoginView() {
           <img
             src="/Memorres-logo-light theme.png"
             alt="Memorres Logo"
-            className="h-16 md:h-20 w-auto object-contain"
+            className="h-16 md:h-34 w-auto object-contain"
           />
         </div>
 
