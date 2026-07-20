@@ -70,6 +70,18 @@ const projectSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  linearApiKey: {
+    type: String,
+    default: ''
+  },
+  linearTeamId: {
+    type: String,
+    default: ''
+  },
+  linearConnected: {
+    type: Boolean,
+    default: false
+  },
   status: {
     type: String,
     enum: ['created', 'uploaded', 'analyzing', 'analyzed', 'tests_generated', 'failed'],

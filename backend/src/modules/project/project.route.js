@@ -11,7 +11,10 @@ import {
   updateProject,
   connectJira,
   getJiraIssues,
-  importJiraStories
+  importJiraStories,
+  connectLinear,
+  getLinearIssues,
+  importLinearStories
 } from './project.controller.js'
 import { projectAccessMiddleware } from '../../middleware/projectAccess.js'
 
@@ -28,5 +31,8 @@ router.put('/projects/:projectId/assign', projectAccessMiddleware, assignUsersTo
 router.put('/projects/:projectId/jira-connect', projectAccessMiddleware, connectJira)
 router.get('/projects/:projectId/jira-issues', projectAccessMiddleware, getJiraIssues)
 router.post('/projects/:projectId/jira-import', projectAccessMiddleware, importJiraStories)
+router.put('/projects/:projectId/linear-connect', projectAccessMiddleware, connectLinear)
+router.get('/projects/:projectId/linear-issues', projectAccessMiddleware, getLinearIssues)
+router.post('/projects/:projectId/linear-import', projectAccessMiddleware, importLinearStories)
 
 export default router

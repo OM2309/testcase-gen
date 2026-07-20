@@ -507,3 +507,268 @@ export async function importJiraStories(req, res, next) {
     next(err)
   }
 }
+
+export async function connectLinear(req, res, next) {
+  try {
+    let { apiKey, teamId } = req.body
+    const project = req.project
+
+    let trimmedKey = (apiKey || '').trim()
+    let trimmedTeam = (teamId || '').trim()
+
+    // Fallback to environment variables if not provided
+    if (!trimmedKey) {
+      trimmedKey = (process.env.LINEAR_API_KEY || '').trim()
+    }
+    if (!trimmedTeam) {
+      trimmedTeam = (process.env.LINEAR_TEAM_ID || '').trim()
+    }
+
+    if (!trimmedKey || !trimmedTeam) {
+      throw new ApiError('Both Linear API Key and Team Key/ID are required.', 400)
+    }
+
+    // Test connection to Linear GraphQL API
+    const graphqlQuery = {
+      query: `
+        query VerifyLinear($teamKey: String!) {
+          viewer {
+            id
+            name
+          }
+          teams(filter: { key: { eqIgnoreCase: $teamKey } }) {
+            nodes {
+              id
+              key
+              name
+            }
+          }
+        }
+      `,
+      variables: { teamKey: trimmedTeam }
+    }
+
+    try {
+      const response = await fetch('https://api.linear.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': trimmedKey
+        },
+        body: JSON.stringify(graphqlQuery)
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Linear returned HTTP ${response.status}: ${errorText}`)
+      }
+
+      const result = await response.json()
+      if (result.errors && result.errors.length > 0) {
+        throw new Error(result.errors[0].message)
+      }
+
+      const matchedTeam = result.data?.teams?.nodes?.[0]
+      if (!matchedTeam) {
+        throw new Error(`Team with Key "${trimmedTeam}" was not found or is inaccessible.`)
+      }
+    } catch (connErr) {
+      throw new ApiError(`Failed to connect to Linear: ${connErr.message}`, 400)
+    }
+
+    // Save encrypted credentials
+    project.linearApiKey = encrypt(trimmedKey)
+    project.linearTeamId = trimmedTeam
+    project.linearConnected = true
+
+    await project.save()
+
+    return sendSuccess(res, 'Connected to Linear workspace successfully.', {
+      linearTeamId: project.linearTeamId,
+      linearConnected: project.linearConnected
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function getLinearIssues(req, res, next) {
+  try {
+    const project = req.project
+    const activeKey = (project.linearApiKey ? decrypt(project.linearApiKey) : '') || process.env.LINEAR_API_KEY || ''
+    const activeTeam = project.linearTeamId || process.env.LINEAR_TEAM_ID || 'NIO'
+
+    if (!activeKey) {
+      throw new ApiError('Linear is not connected to this project.', 400)
+    }
+
+    const { search = '' } = req.query
+
+    const graphqlQuery = {
+      query: `
+        query GetLinearIssues($teamKey: String!) {
+          teams(filter: { key: { eqIgnoreCase: $teamKey } }) {
+            nodes {
+              id
+              key
+              name
+              issues(first: 50, orderBy: updatedAt) {
+                nodes {
+                  id
+                  identifier
+                  title
+                  description
+                  priority
+                  state {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      `,
+      variables: { teamKey: activeTeam }
+    }
+
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': activeKey
+      },
+      body: JSON.stringify(graphqlQuery)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new ApiError(`Linear API error: ${response.status} - ${errorText}`, 400)
+    }
+
+    const result = await response.json()
+    if (result.errors && result.errors.length > 0) {
+      throw new ApiError(`Linear API error: ${result.errors[0].message}`, 400)
+    }
+
+    const matchedTeam = result.data?.teams?.nodes?.[0]
+    const rawIssues = matchedTeam?.issues?.nodes || []
+    
+    let filtered = rawIssues
+    if (search.trim()) {
+      const s = search.trim().toLowerCase()
+      filtered = rawIssues.filter(issue => 
+        issue.identifier.toLowerCase().includes(s) ||
+        issue.title.toLowerCase().includes(s) ||
+        (issue.description && issue.description.toLowerCase().includes(s))
+      )
+    }
+
+    const issues = filtered.map(issue => ({
+      key: issue.identifier,
+      id: issue.id,
+      title: issue.title || '',
+      description: issue.description || '',
+      state: issue.state?.name || 'Backlog',
+      priority: issue.priority
+    }))
+
+    return sendSuccess(res, 'Linear issues fetched successfully.', issues)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function importLinearStories(req, res, next) {
+  try {
+    const project = req.project
+    const { issueKeys } = req.body
+
+    if (!issueKeys || !Array.isArray(issueKeys) || issueKeys.length === 0) {
+      throw new ApiError('An array of issue keys is required to import.', 400)
+    }
+
+    const activeKey = (project.linearApiKey ? decrypt(project.linearApiKey) : '') || process.env.LINEAR_API_KEY || ''
+    const activeTeam = project.linearTeamId || process.env.LINEAR_TEAM_ID || 'NIO'
+
+    if (!activeKey) {
+      throw new ApiError('Linear is not connected to this project.', 400)
+    }
+
+    const graphqlQuery = {
+      query: `
+        query GetLinearIssuesForImport($teamKey: String!) {
+          teams(filter: { key: { eqIgnoreCase: $teamKey } }) {
+            nodes {
+              issues(first: 100) {
+                nodes {
+                  id
+                  identifier
+                  title
+                  description
+                }
+              }
+            }
+          }
+        }
+      `,
+      variables: { teamKey: activeTeam }
+    }
+
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': activeKey
+      },
+      body: JSON.stringify(graphqlQuery)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new ApiError(`Linear API error during import: ${response.status} - ${errorText}`, 400)
+    }
+
+    const result = await response.json()
+    if (result.errors && result.errors.length > 0) {
+      throw new ApiError(`Linear API error: ${result.errors[0].message}`, 400)
+    }
+
+    const matchedTeam = result.data?.teams?.nodes?.[0]
+    const allIssues = matchedTeam?.issues?.nodes || []
+    const selectedIssues = allIssues.filter(issue => 
+      issueKeys.includes(issue.identifier) || issueKeys.includes(issue.id)
+    )
+
+    if (selectedIssues.length === 0) {
+      throw new ApiError('No matching stories found in your Linear workspace.', 404)
+    }
+
+    let combinedText = `LINEAR IMPORTED STORIES\n`
+    combinedText += `======================\n\n`
+    combinedText += `Imported At: ${new Date().toLocaleString()}\n`
+    combinedText += `Team Key/ID: ${project.linearTeamId}\n\n`
+
+    for (const issue of selectedIssues) {
+      combinedText += `STORY: ${issue.identifier}\n`
+      combinedText += `TITLE: ${issue.title || 'Untitled Story'}\n`
+      combinedText += `DESCRIPTION:\n${issue.description || 'No description provided.'}\n`
+      combinedText += `--------------------------------------------------\n\n`
+    }
+
+    const newDoc = {
+      originalFileName: `Linear Import (${issueKeys.join(', ')})`,
+      filePath: 'virtual://linear',
+      parsedText: combinedText,
+      uploadedAt: new Date()
+    }
+
+    project.srsDocuments.push(newDoc)
+    project.status = 'uploaded'
+    await project.save()
+
+    return sendSuccess(res, 'Linear stories imported successfully.', project)
+  } catch (err) {
+    next(err)
+  }
+}
+

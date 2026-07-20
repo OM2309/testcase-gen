@@ -44,5 +44,20 @@ export const projectService = {
   async importJiraStories(projectId: string, issueKeys: string[]) {
     const response = await apiClient.post<{ success: boolean; data: any }>(`/projects/${projectId}/jira-import`, { issueKeys })
     return response.data
+  },
+
+  async connectLinear(projectId: string, payload: { apiKey: string; teamId: string }) {
+    const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/linear-connect`, payload)
+    return response.data
+  },
+
+  async getLinearIssues(projectId: string, search: string = '') {
+    const response = await apiClient.get<{ success: boolean; data: any[] }>(`/projects/${projectId}/linear-issues?search=${encodeURIComponent(search)}`)
+    return response.data
+  },
+
+  async importLinearStories(projectId: string, issueKeys: string[]) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(`/projects/${projectId}/linear-import`, { issueKeys })
+    return response.data
   }
 }
