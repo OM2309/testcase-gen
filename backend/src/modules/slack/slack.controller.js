@@ -12,6 +12,8 @@ import { ApiError } from '../../utils/apiError.js'
 export async function slackConnect(req, res) {
   const scopes = 'chat:write,channels:read,users:read'
   const state = req.user.id // pass our user ID so we can link in callback
+  console.log("env.slackClientId", env.slackClientId);
+  console.log("env.slackRedirectUri", env.slackRedirectUri);
 
   const slackAuthUrl = new URL('https://slack.com/oauth/v2/authorize')
   slackAuthUrl.searchParams.set('client_id', env.slackClientId)
