@@ -2,6 +2,7 @@ import User from '../auth/user.model.js'
 import env from '../../config/env.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 import { ApiError } from '../../utils/apiError.js'
+import { getChannelsAndUsers, sendMessageToChannel } from './slack.service.js'
 
 /**
  * GET /api/slack/connect
@@ -137,6 +138,67 @@ export async function slackDisconnect(req, res, next) {
     await user.save()
 
     return sendSuccess(res, 'Slack disconnected successfully.')
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * GET /api/slack/channels
+ * Returns public channels and workspace users for the connected Slack workspace.
+ */
+export async function slackChannels(req, res, next) {
+  try {
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      throw new ApiError('User not found.', 404)
+    }
+
+    if (!user.slack?.accessToken) {
+      throw new ApiError('Slack account is not connected.', 400)
+    }
+
+    const data = await getChannelsAndUsers(user.slack.accessToken)
+    return sendSuccess(res, 'Slack channels and users fetched.', data)
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * POST /api/slack/send
+ * Sends a message to one or more channels/users.
+ */
+export async function slackSendMessage(req, res, next) {
+  try {
+    const { channelIds, text } = req.body
+    if (!channelIds || !Array.isArray(channelIds) || channelIds.length === 0) {
+      throw new ApiError('channelIds must be a non-empty array.', 400)
+    }
+    if (!text) {
+      throw new ApiError('Message text is required.', 400)
+    }
+
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      throw new ApiError('User not found.', 404)
+    }
+
+    if (!user.slack?.accessToken) {
+      throw new ApiError('Slack account is not connected.', 400)
+    }
+
+    const results = []
+    for (const channelId of channelIds) {
+      try {
+        const resData = await sendMessageToChannel(user.slack.accessToken, channelId, text)
+        results.push({ channelId, success: true, ts: resData.ts })
+      } catch (err) {
+        results.push({ channelId, success: false, error: err.message })
+      }
+    }
+
+    return sendSuccess(res, 'Slack messages processed.', { results })
   } catch (err) {
     next(err)
   }

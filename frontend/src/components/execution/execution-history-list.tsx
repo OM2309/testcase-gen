@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   PlayCircle,
   Clock,
@@ -12,6 +13,8 @@ import {
   StopCircle,
   RefreshCw,
   Eye,
+  Send,
+  Loader2
 } from 'lucide-react'
 import { TestRun } from '../../types'
 import { getAssetUrl } from '../../services/executionService'
@@ -19,6 +22,9 @@ import { downloadPdfReport } from '../../utils/pdfGenerator'
 import { useExecutionHistoryQuery } from '../../queries/execution.query'
 import { useCancelExecutionMutation } from '../../mutations/execution.mutation'
 import { PageLoader, PageError } from '../shared'
+import { slackService } from '../../services/slackService'
+import { toast } from 'sonner'
+import { SlackShareModal } from './slack-share-modal'
 
 interface ExecutionHistoryListProps {
   projectId: string
@@ -45,11 +51,33 @@ function StopHistoryButton({ runId }: { runId: string }) {
  * List of past test execution runs and generated reports with filterable details.
  */
 export function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistoryListProps) {
+  const router = useRouter()
   const { data: runs = [], isLoading: loading, isError, refetch } = useExecutionHistoryQuery(projectId)
   const [expandedReportIds, setExpandedReportIds] = useState<Record<string, boolean>>({})
+  const [selectedRunForShare, setSelectedRunForShare] = useState<TestRun | null>(null)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [checkingSlack, setCheckingSlack] = useState<string | null>(null) // holds runId being checked
 
   const toggleReport = (runId: string) => {
     setExpandedReportIds((prev) => ({ ...prev, [runId]: !prev[runId] }))
+  }
+
+  const handleSlackShare = async (runItem: TestRun) => {
+    setCheckingSlack(runItem._id)
+    try {
+      const statusRes = await slackService.getStatus()
+      if (statusRes.success && statusRes.data.connected) {
+        setSelectedRunForShare(runItem)
+        setShareModalOpen(true)
+      } else {
+        toast.error('Slack is not connected. Redirecting to Profile page to connect Slack.')
+        router.push('/dashboard/profile')
+      }
+    } catch (err) {
+      toast.error('Failed to verify Slack status.')
+    } finally {
+      setCheckingSlack(null)
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -218,6 +246,23 @@ export function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistor
                     <FileDown className="w-4 h-4 text-primary" /> PDF Report
                   </button>
 
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSlackShare(runItem)
+                    }}
+                    disabled={checkingSlack === runItem._id || runItem.status === 'running' || runItem.status === 'queued'}
+                    className="btn-secondary"
+                    title="Share report on Slack"
+                  >
+                    {checkingSlack === runItem._id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 text-[#4A154B]" />
+                    )}
+                    Share
+                  </button>
+
                   <button onClick={() => onSelectRun(runItem._id)} className="btn-primary">
                     <Eye className="w-4 h-4" /> Full Logs
                   </button>
@@ -328,6 +373,14 @@ export function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistor
           )
         })}
       </div>
+
+      {selectedRunForShare && (
+        <SlackShareModal
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          run={selectedRunForShare}
+        />
+      )}
     </div>
   )
 }
