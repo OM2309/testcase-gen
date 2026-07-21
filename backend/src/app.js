@@ -1,5 +1,7 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import compression from 'compression'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import authRoutes from './modules/auth/auth.route.js'
@@ -20,11 +22,17 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 
-app.use(cors({
-  origin: "*",
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}))
+// Security & Performance Middleware
+app.use(helmet({ contentSecurityPolicy: false }))
+app.use(compression())
+
+app.use(
+  cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+)
 
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
@@ -54,7 +62,7 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'healthy',
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   })
 })
 
@@ -62,7 +70,9 @@ app.get('/health', (_req, res) => {
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500
   const message = err.message || 'Internal Server Error'
-  const details = process.env.NODE_ENV === 'development' ? { stack: err.stack } : null
+  const details =
+    err.errors ||
+    (process.env.NODE_ENV === 'development' ? { stack: err.stack } : null)
 
   return sendError(res, message, statusCode, details)
 })

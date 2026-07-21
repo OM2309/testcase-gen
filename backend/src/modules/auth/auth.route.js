@@ -7,26 +7,28 @@ import {
   getUsers,
   updateUserRole,
   updateProfile,
-  toggleUserStatus
+  toggleUserStatus,
 } from './auth.controller.js'
 import { authMiddleware } from '../../middleware/auth.js'
+import { validate } from '../../middlewares/validate.middleware.js'
+import {
+  googleNextSchema,
+  updateRoleSchema,
+  updateUserRoleSchema,
+  updateProfileSchema,
+  toggleUserStatusSchema,
+} from '../../schemas/auth.schema.js'
 
 const router = express.Router()
 
-// Login with Google (Redirects user to Google Consent Screen - Legacy)
 router.get('/auth/google', googleLogin)
-
-// Google NextAuth registration and login endpoint
-router.post('/user/google-next', googleNext)
-
-// Authenticated user profile routes
+router.post('/user/google-next', validate(googleNextSchema), googleNext)
 router.get('/user/me', authMiddleware, me)
-router.put('/user/role', authMiddleware, updateRole)
-router.put('/user/profile', authMiddleware, updateProfile)
+router.put('/user/role', authMiddleware, validate(updateRoleSchema), updateRole)
+router.put('/user/profile', authMiddleware, validate(updateProfileSchema), updateProfile)
 
-// Admin user management routes
 router.get('/user/users', authMiddleware, getUsers)
-router.put('/user/users/:id/role', authMiddleware, updateUserRole)
-router.put('/user/users/:id/status', authMiddleware, toggleUserStatus)
+router.put('/user/users/:id/role', authMiddleware, validate(updateUserRoleSchema), updateUserRole)
+router.put('/user/users/:id/status', authMiddleware, validate(toggleUserStatusSchema), toggleUserStatus)
 
 export default router

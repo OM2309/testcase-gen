@@ -14,24 +14,32 @@ import {
   importJiraStories,
   connectLinear,
   getLinearIssues,
-  importLinearStories
+  importLinearStories,
 } from './project.controller.js'
 import { projectAccessMiddleware } from '../../middleware/projectAccess.js'
+import { validate } from '../../middlewares/validate.middleware.js'
+import {
+  createProjectOnlySchema,
+  updateProjectSchema,
+  assignUsersSchema,
+  connectJiraSchema,
+  connectLinearSchema,
+} from '../../schemas/project.schema.js'
 
 const router = express.Router()
 
-router.post('/projects/create', createProjectOnly)
+router.post('/projects/create', validate(createProjectOnlySchema), createProjectOnly)
 router.post('/projects', upload.single('srs'), createProject)
 router.post('/projects/:projectId/srs', projectAccessMiddleware, upload.single('srs'), addSrsToProject)
 router.get('/projects', getProjects)
 router.get('/projects/:projectId', projectAccessMiddleware, getProjectById)
-router.put('/projects/:projectId', projectAccessMiddleware, updateProject)
+router.put('/projects/:projectId', projectAccessMiddleware, validate(updateProjectSchema), updateProject)
 router.delete('/projects/:projectId', projectAccessMiddleware, deleteProject)
-router.put('/projects/:projectId/assign', projectAccessMiddleware, assignUsersToProject)
-router.put('/projects/:projectId/jira-connect', projectAccessMiddleware, connectJira)
+router.put('/projects/:projectId/assign', projectAccessMiddleware, validate(assignUsersSchema), assignUsersToProject)
+router.put('/projects/:projectId/jira-connect', projectAccessMiddleware, validate(connectJiraSchema), connectJira)
 router.get('/projects/:projectId/jira-issues', projectAccessMiddleware, getJiraIssues)
 router.post('/projects/:projectId/jira-import', projectAccessMiddleware, importJiraStories)
-router.put('/projects/:projectId/linear-connect', projectAccessMiddleware, connectLinear)
+router.put('/projects/:projectId/linear-connect', projectAccessMiddleware, validate(connectLinearSchema), connectLinear)
 router.get('/projects/:projectId/linear-issues', projectAccessMiddleware, getLinearIssues)
 router.post('/projects/:projectId/linear-import', projectAccessMiddleware, importLinearStories)
 

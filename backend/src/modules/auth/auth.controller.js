@@ -1,39 +1,11 @@
-import jwt from 'jsonwebtoken'
-import User from './user.model.js'
 import env from '../../config/env.js'
-import { sendSuccess, sendError } from '../../utils/responseHelper.js'
-import { ApiError } from '../../utils/apiError.js'
-
-function generateToken(user) {
-  return jwt.sign(
-    { id: user._id, email: user.email, username: user.username, role: user.role },
-    env.jwtSecret || 'supersecretjwtkeyforauth',
-    { expiresIn: '7d' }
-  )
-}
+import { authService } from '../../services/auth.service.js'
+import { sendSuccess } from '../../utils/responseHelper.js'
 
 export async function register(req, res, next) {
   try {
-    const { username, email, password } = req.body
-
-    if (!username || !email || !password) {
-      throw new ApiError('Please provide username, email, and password.', 400)
-    }
-
-    const existingUser = await User.findOne({ email: email.toLowerCase() })
-    if (existingUser) {
-      throw new ApiError('An account with this email already exists.', 400)
-    }
-
-    const user = new User({ username, email, password })
-    await user.save()
-
-    const token = generateToken(user)
-
-    return sendSuccess(res, 'Account created successfully.', {
-      token,
-      user: { id: user._id, username: user.username, email: user.email }
-    }, 201)
+    const result = await authService.register(req.body)
+    return sendSuccess(res, 'Account created successfully.', result, 201)
   } catch (err) {
     next(err)
   }
@@ -41,32 +13,8 @@ export async function register(req, res, next) {
 
 export async function login(req, res, next) {
   try {
-    const { email, password } = req.body
-
-    if (!email || !password) {
-      throw new ApiError('Please provide email and password.', 400)
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase() })
-    if (!user) {
-      throw new ApiError('Invalid email or password.', 401)
-    }
-
-    if (user.isActive === false) {
-      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
-    }
-
-    const isMatch = await user.comparePassword(password)
-    if (!isMatch) {
-      throw new ApiError('Invalid email or password.', 401)
-    }
-
-    const token = generateToken(user)
-
-    return sendSuccess(res, 'Login successful.', {
-      token,
-      user: { id: user._id, username: user.username, email: user.email }
-    })
+    const result = await authService.login(req.body)
+    return sendSuccess(res, 'Login successful.', result)
   } catch (err) {
     next(err)
   }
@@ -74,20 +22,8 @@ export async function login(req, res, next) {
 
 export async function me(req, res, next) {
   try {
-    const user = await User.findById(req.user.id).select('-password')
-    if (!user) {
-      throw new ApiError('User not found.', 404)
-    }
-
-    if (user.isActive === false) {
-      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
-    }
-
-    return sendSuccess(res, 'User fetched successfully.', {
-      id: user._id,
-      username: user.username,
-      email: user.email
-    })
+    const user = await authService.getCurrentUser(req.user.id)
+    return sendSuccess(res, 'User fetched successfully.', user)
   } catch (err) {
     next(err)
   }
@@ -103,8 +39,8 @@ export function googleLogin(req, res) {
     prompt: 'consent',
     scope: [
       'https://www.googleapis.com/auth/userinfo.profile',
-      'https://www.googleapis.com/auth/userinfo.email'
-    ].join(' ')
+      'https://www.googleapis.com/auth/userinfo.email',
+    ].join(' '),
   }
   const qs = new URLSearchParams(options)
   return res.redirect(`${rootUrl}?${qs.toString()}`)
@@ -117,40 +53,30 @@ export async function googleCallback(req, res, next) {
       return res.redirect('http://localhost:3000/login?error=No+code+provided+from+Google')
     }
 
-    // Exchange authorization code for access token
     const tokenUrl = 'https://oauth2.googleapis.com/token'
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
         client_id: env.googleClientId,
         client_secret: env.googleClientSecret,
         redirect_uri: env.googleCallbackUrl,
-        grant_type: 'authorization_code'
-      })
+        grant_type: 'authorization_code',
+      }),
     })
 
     if (!tokenResponse.ok) {
-      const errText = await tokenResponse.text()
-      console.error('Failed to exchange code for token:', errText)
-      return res.redirect(`http://localhost:3000/login?error=Failed+to+authenticate+with+Google`)
+      return res.redirect('http://localhost:3000/login?error=Failed+to+authenticate+with+Google')
     }
 
     const { access_token } = await tokenResponse.json()
-
-    // Fetch user profile from Google using the access token
     const profileResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: {
-        Authorization: `Bearer ${access_token}`
-      }
+      headers: { Authorization: `Bearer ${access_token}` },
     })
 
     if (!profileResponse.ok) {
-      console.error('Failed to fetch Google user info')
-      return res.redirect(`http://localhost:3000/login?error=Failed+to+fetch+user+profile`)
+      return res.redirect('http://localhost:3000/login?error=Failed+to+fetch+user+profile')
     }
 
     const profile = await profileResponse.json()
@@ -158,69 +84,21 @@ export async function googleCallback(req, res, next) {
       return res.redirect('http://localhost:3000/login?error=Google+account+has+no+email')
     }
 
-    // Check if user already exists
-    let user = await User.findOne({ email: profile.email.toLowerCase() })
-    if (user && user.isActive === false) {
-      return res.redirect('http://localhost:3000/login?error=Account+disabled.+Please+contact+administrator.')
-    }
-    if (!user) {
-      const username = profile.name || profile.email.split('@')[0]
-      user = new User({
-        username,
-        email: profile.email.toLowerCase()
-      })
-      await user.save()
-    }
+    const result = await authService.handleGoogleNext({
+      email: profile.email,
+      username: profile.name || profile.email.split('@')[0],
+    })
 
-    // Generate JWT token for the user
-    const token = generateToken(user)
-
-    // Redirect user back to the frontend with the JWT token
-    return res.redirect(`http://localhost:3000/login?token=${token}`)
+    return res.redirect(`http://localhost:3000/login?token=${result.token}`)
   } catch (err) {
-    console.error('Error in googleCallback:', err)
     return res.redirect('http://localhost:3000/login?error=Internal+Server+Error+during+Google+Sign-In')
   }
 }
 
 export async function googleNext(req, res, next) {
   try {
-    const { email, username } = req.body
-
-    if (!email) {
-      throw new ApiError('Email is required.', 400)
-    }
-
-    let user = await User.findOne({ email: email.toLowerCase() })
-    if (user && user.isActive === false) {
-      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
-    }
-
-    if (!user) {
-      // Determine if they should be admin
-      const isConfiguredAdmin = email.toLowerCase() === 'admin@memorres.com'
-      const userCount = await User.countDocuments()
-      const role = (isConfiguredAdmin || userCount === 0) ? 'admin' : 'pending'
-
-      user = new User({
-        username: username || email.split('@')[0],
-        email: email.toLowerCase(),
-        role
-      })
-      await user.save()
-    }
-
-    const token = generateToken(user)
-
-    return sendSuccess(res, 'Google authenticated successfully.', {
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
-      }
-    })
+    const result = await authService.handleGoogleNext(req.body)
+    return sendSuccess(res, 'Google authenticated successfully.', result)
   } catch (err) {
     next(err)
   }
@@ -228,30 +106,8 @@ export async function googleNext(req, res, next) {
 
 export async function updateRole(req, res, next) {
   try {
-    const { role } = req.body
-
-    if (!['project_manager', 'qa', 'developer'].includes(role)) {
-      throw new ApiError('Invalid profession. Choose developer, qa, or project_manager.', 400)
-    }
-
-    const user = await User.findById(req.user.id)
-    if (!user) {
-      throw new ApiError('User not found.', 404)
-    }
-
-    if (user.isActive === false) {
-      throw new ApiError('Your account has been disabled. Please contact the administrator.', 403)
-    }
-
-    user.role = role
-    await user.save()
-
-    return sendSuccess(res, 'Profession selected successfully.', {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role
-    })
+    const user = await authService.updateRole(req.user.id, req.body.role)
+    return sendSuccess(res, 'Profession selected successfully.', user)
   } catch (err) {
     next(err)
   }
@@ -259,11 +115,7 @@ export async function updateRole(req, res, next) {
 
 export async function getUsers(req, res, next) {
   try {
-    if (req.user.role !== 'admin') {
-      throw new ApiError('Access denied. Admin privileges required.', 403)
-    }
-
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 })
+    const users = await authService.getAllUsers(req.user.role)
     return sendSuccess(res, 'Users fetched successfully.', users)
   } catch (err) {
     next(err)
@@ -272,31 +124,8 @@ export async function getUsers(req, res, next) {
 
 export async function updateUserRole(req, res, next) {
   try {
-    if (req.user.role !== 'admin') {
-      throw new ApiError('Access denied. Admin privileges required.', 403)
-    }
-
-    const { id } = req.params
-    const { role } = req.body
-
-    if (!['admin', 'project_manager', 'qa', 'developer', 'pending'].includes(role)) {
-      throw new ApiError('Invalid role.', 400)
-    }
-
-    const user = await User.findById(id)
-    if (!user) {
-      throw new ApiError('User not found.', 404)
-    }
-
-    user.role = role
-    await user.save()
-
-    return sendSuccess(res, 'User role updated successfully.', {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role
-    })
+    const user = await authService.updateUserRole(req.params.id, req.body.role, req.user.role)
+    return sendSuccess(res, 'User role updated successfully.', user)
   } catch (err) {
     next(err)
   }
@@ -304,29 +133,8 @@ export async function updateUserRole(req, res, next) {
 
 export async function updateProfile(req, res, next) {
   try {
-    const { username, role } = req.body
-
-    const user = await User.findById(req.user.id)
-    if (!user) {
-      throw new ApiError('User not found.', 404)
-    }
-
-    if (username && username.trim()) {
-      user.username = username.trim()
-    }
-
-    if (role && ['project_manager', 'qa', 'developer'].includes(role)) {
-      user.role = role
-    }
-
-    await user.save()
-
-    return sendSuccess(res, 'Profile updated successfully.', {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role
-    })
+    const user = await authService.updateProfile(req.user.id, req.body)
+    return sendSuccess(res, 'Profile updated successfully.', user)
   } catch (err) {
     next(err)
   }
@@ -334,37 +142,8 @@ export async function updateProfile(req, res, next) {
 
 export async function toggleUserStatus(req, res, next) {
   try {
-    if (req.user.role !== 'admin') {
-      throw new ApiError('Access denied. Admin privileges required.', 403)
-    }
-
-    const { id } = req.params
-    const { isActive } = req.body
-
-    if (typeof isActive !== 'boolean') {
-      throw new ApiError('isActive status must be a boolean.', 400)
-    }
-
-    const user = await User.findById(id)
-    if (!user) {
-      throw new ApiError('User not found.', 404)
-    }
-
-    // Prevent admin from disabling themselves
-    if (user.email === 'admin@memorres.com' || user._id.toString() === req.user.id) {
-      throw new ApiError('Admin cannot disable their own account.', 400)
-    }
-
-    user.isActive = isActive
-    await user.save()
-
-    return sendSuccess(res, 'User status updated successfully.', {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive
-    })
+    const user = await authService.toggleUserStatus(req.params.id, req.body.isActive, req.user)
+    return sendSuccess(res, 'User status updated successfully.', user)
   } catch (err) {
     next(err)
   }
