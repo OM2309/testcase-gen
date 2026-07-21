@@ -4,6 +4,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import authRoutes from './modules/auth/auth.route.js'
 import { googleCallback } from './modules/auth/auth.controller.js'
+import { slackCallback } from './modules/slack/slack.controller.js'
 import { authMiddleware } from './middleware/auth.js'
 import projectRoutes from './modules/project/project.route.js'
 import requirementRoutes from './modules/requirement/requirement.route.js'
@@ -11,6 +12,7 @@ import testsuiteRoutes from './modules/testsuite/testsuite.route.js'
 import executionRoutes from './modules/execution/execution.route.js'
 import inspectorRoutes from './modules/inspector/inspector.route.js'
 import testfileRoutes from './modules/execution/testfile.route.js'
+import slackRoutes from './modules/slack/slack.route.js'
 import { sendError } from './utils/responseHelper.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -32,6 +34,7 @@ app.use('/public', express.static(path.join(__dirname, '../public')))
 
 // Root/Callback routes
 app.get('/auth/google/callback', googleCallback)
+app.get('/auth/slack/callback', slackCallback)
 
 // Mount routes
 app.use('/api', authRoutes)
@@ -41,6 +44,7 @@ app.use('/api', authMiddleware, testsuiteRoutes)
 app.use('/api', authMiddleware, executionRoutes)
 app.use('/api', authMiddleware, inspectorRoutes)
 app.use('/api', authMiddleware, testfileRoutes)
+app.use('/api', slackRoutes)
 
 // Serve screenshots from uploads/test-runs
 app.use('/uploads/test-runs', express.static(path.join(__dirname, '../uploads/test-runs')))
