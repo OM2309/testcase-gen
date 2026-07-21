@@ -1,14 +1,7 @@
 import { apiClient } from './apiClient'
+import { User } from '../types'
 
-export interface User {
-  _id: string
-  username: string
-  email: string
-  role: 'admin' | 'project_manager' | 'qa' | 'developer' | 'pending'
-  isActive?: boolean
-  createdAt: string
-  updatedAt: string
-}
+export type { User }
 
 export const authService = {
   async updateRole(role: 'project_manager' | 'qa' | 'developer') {

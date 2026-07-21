@@ -15,7 +15,7 @@ import { FolderKanban, FileCheck, ShieldCheck, Sun, Moon, PlayCircle, Layers, Lo
 import { useSession, signOut } from "next-auth/react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useProject } from "../contexts/ProjectContext"
-import { projectService } from "../services/projectService"
+import { useAllProjectsQuery } from "../queries/project.query"
 import { Project } from "../types"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -42,12 +42,12 @@ export function AppSidebar({
   }
 
   const { project, selectedSrsId, requirementAnalyses, testSuites } = useProject()
-  const [allProjects, setAllProjects] = React.useState<Project[]>([])
+  const { data: allProjects = [] } = useAllProjectsQuery()
   const [projectQuery, setProjectQuery] = React.useState("")
 
   const filteredProjects = React.useMemo(() => {
     if (!projectQuery) return allProjects
-    return allProjects.filter(p =>
+    return allProjects.filter((p: Project) =>
       p.projectName.toLowerCase().includes(projectQuery.toLowerCase())
     )
   }, [allProjects, projectQuery])
@@ -55,16 +55,6 @@ export function AppSidebar({
   const isOnReportsPage = pathname.includes('/execution')
   const [isProjectMenuOpen, setIsProjectMenuOpen] = React.useState(!isOnReportsPage)
   const [isReportsMenuOpen, setIsReportsMenuOpen] = React.useState(isOnReportsPage)
-
-  React.useEffect(() => {
-    projectService.getAllProjects()
-      .then(res => {
-        if (res.success && res.data?.projects) {
-          setAllProjects(res.data.projects)
-        }
-      })
-      .catch(err => console.error("Failed to load projects list in sidebar", err))
-  }, [])
 
   // Auto-open menus depending on current page context
   React.useEffect(() => {
@@ -173,7 +163,7 @@ export function AppSidebar({
                         No projects found
                       </div>
                     ) : (
-                      filteredProjects.map((p) => {
+                      filteredProjects.map((p: Project) => {
                         const isCurrent = project && project._id === p._id
                         return (
                           <div
@@ -243,7 +233,7 @@ export function AppSidebar({
 
             {isReportsMenuOpen && allProjects.length > 0 && (
               <div className="pl-4 ml-5 border-l border-border/80 flex flex-col gap-1 mt-1">
-                {allProjects.map((p) => {
+                {allProjects.map((p: Project) => {
                   const isCurrentReportsActive = pathname.includes(`/dashboard/${p._id}/execution`)
                   return (
                     <SidebarMenuButton

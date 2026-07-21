@@ -1,36 +1,35 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { FileSpreadsheet, Plus, PlayCircle } from 'lucide-react'
+import { FileSpreadsheet, Plus, PlayCircle, ShieldCheck } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 
 import { Step, TestCase } from '../types'
-import { executionService } from '../services/executionService'
-import { agentService } from '../services/agentService'
 import { SuiteSummary } from './testsuite/SuiteSummary'
 import { TestCaseList } from './testsuite/TestCaseList'
 import { TestCaseDetail } from './testsuite/TestCaseDetail'
 import { TestCaseDialogs, TestCaseForm } from './testsuite/TestCaseDialogs'
 import { AiGenerateDialog } from './testsuite/AiGenerateDialog'
 import { useProject } from '../contexts/ProjectContext'
+import { useSaveTestSuiteMutation, useToggleRegressiveMutation } from '../mutations/agent.mutation'
+import { useStartExecutionMutation } from '../mutations/execution.mutation'
+import { EmptyState } from '@/components/shared'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 export function TestCasesView() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const caseIdParam = searchParams.get('caseId')
+  const srsIdParam = searchParams.get('srsId')
 
   const {
     project,
     selectedSrsId,
     setSelectedSrsId,
     testSuites,
-    refreshProject
   } = useProject()
-
-  const srsIdParam = searchParams.get('srsId')
 
   // Sync srsId from URL into the context so the correct SRS test suite is shown
   useEffect(() => {
@@ -50,12 +49,16 @@ export function TestCasesView() {
   }, [activeTestSuite])
 
   const [testCases, setTestCases] = useState<TestCase[]>(initialTestCases)
-  const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedModule, setSelectedModule] = useState('All')
   const [search, setSearch] = useState('')
   const [modulesList, setModulesList] = useState<Array<{ name: string; count: number }>>([])
+
+  // Mutations
+  const saveSuiteMutation = useSaveTestSuiteMutation(project?._id || '')
+  const toggleRegressiveMutation = useToggleRegressiveMutation(project?._id || '')
+  const startExecutionMutation = useStartExecutionMutation()
 
   const existingModules = useMemo(() => {
     return modulesList
@@ -67,7 +70,6 @@ export function TestCasesView() {
   useEffect(() => {
     setTestCases(initialTestCases)
     if (initialTestCases.length > 0 && !selectedId) {
-      // setSelectedId(initialTestCases[0].id)
       setSelectedId(null)
     }
   }, [initialTestCases])
@@ -86,7 +88,6 @@ export function TestCasesView() {
   const [isRunOpen, setIsRunOpen] = useState(false)
   const [runBaseUrl, setRunBaseUrl] = useState('http://localhost:3000')
   const [runHeadless, setRunHeadless] = useState(true)
-  const [starting, setStarting] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
   const [runTargetId, setRunTargetId] = useState<string | null>(null)
 
@@ -123,7 +124,6 @@ export function TestCasesView() {
       ...list,
       { name: 'Regressive', count: regressiveTotal },
     ])
-    // if (testCases.length > 0 && !selectedId) setSelectedId(testCases[0].id)
     if (testCases.length > 0 && !selectedId) setSelectedId(null)
   }, [testCases])
 
@@ -196,19 +196,15 @@ export function TestCasesView() {
   const handleSave = async (updatedCases?: TestCase[]) => {
     if (!project || !activeTestSuite) return
     const targetCases = updatedCases || testCases
-    try {
-      setSaving(true)
-      const res = await agentService.saveTestSuite(project._id, activeTestSuite._id, targetCases)
-      if (res.success) {
-        setSaveSuccess(true)
-        setTimeout(() => setSaveSuccess(false), 1500)
-        await refreshProject()
+    saveSuiteMutation.mutate(
+      { suiteId: activeTestSuite._id, testCases: targetCases },
+      {
+        onSuccess: () => {
+          setSaveSuccess(true)
+          setTimeout(() => setSaveSuccess(false), 1500)
+        },
       }
-    } catch (err) {
-      console.error('Failed to save test suite', err)
-    } finally {
-      setSaving(false)
-    }
+    )
   }
 
   const updateTestCase = useCallback((id: string, patch: Partial<TestCase>) => {
@@ -263,31 +259,34 @@ export function TestCasesView() {
       setRunError('Base URL must start with http:// or https://')
       return
     }
-    try {
-      setStarting(true)
-      let testCaseIds: string[] | undefined = undefined
-      if (runTargetId) {
-        testCaseIds = [runTargetId]
-      } else if (selectedModule !== 'All') {
-        testCaseIds = filteredTcs.map(tc => tc.id)
-      }
 
-      const res = await executionService.startExecution({
+    let testCaseIds: string[] | undefined = undefined
+    if (runTargetId) {
+      testCaseIds = [runTargetId]
+    } else if (selectedModule !== 'All') {
+      testCaseIds = filteredTcs.map(tc => tc.id)
+    }
+
+    startExecutionMutation.mutate(
+      {
         projectId: project._id,
         testSuiteId: activeTestSuite._id,
         baseUrl: runBaseUrl.trim(),
         headless: runHeadless,
-        testCaseIds
-      })
-      if (res.success) {
-        setIsRunOpen(false)
-        router.push(`/dashboard/${project._id}/execution?runId=${res.data.runId}`)
+        testCaseIds,
+      },
+      {
+        onSuccess: (res) => {
+          if (res.success) {
+            setIsRunOpen(false)
+            router.push(`/dashboard/${project._id}/execution?runId=${res.data.runId}`)
+          }
+        },
+        onError: (err: any) => {
+          setRunError(err?.response?.data?.error || err?.message || 'Failed to start execution')
+        },
       }
-    } catch (err: any) {
-      setRunError(err?.response?.data?.error || err?.message || 'Failed to start execution')
-    } finally {
-      setStarting(false)
-    }
+    )
   }
 
   const openCreateDialog = (moduleName?: string) => {
@@ -394,36 +393,18 @@ export function TestCasesView() {
     handleSave(next)
   }
 
-  const handleToggleRegressive = async (tcId: string) => {
+  const handleToggleRegressive = (tcId: string) => {
     if (!project || !activeTestSuite) return
-    try {
-      const res = await agentService.toggleTestCaseRegressive(project._id, activeTestSuite._id, tcId)
-      if (res.success) {
-        await refreshProject()
-      }
-    } catch (err) {
-      console.error('Failed to toggle regressive status', err)
-    }
+    toggleRegressiveMutation.mutate({ suiteId: activeTestSuite._id, testCaseId: tcId })
   }
 
   if (!project) {
-    return (
-      <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/20 text-xs text-muted-foreground">
-        Project details not found.
-      </div>
-    )
+    return <EmptyState icon={ShieldCheck} title="Project details not found." />
   }
 
   if (!activeTestSuite) {
-    return (
-      <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/20 text-xs text-muted-foreground">
-        Test suite not found. Run Agent 2 to generate one.
-      </div>
-    )
+    return <EmptyState icon={ShieldCheck} title="Test suite not found. Run Agent 2 to generate one." />
   }
-
-
-
 
   return (
     <div className="flex flex-col gap-6">
@@ -446,7 +427,7 @@ export function TestCasesView() {
         setRunBaseUrl={setRunBaseUrl}
         runHeadless={runHeadless}
         setRunHeadless={setRunHeadless}
-        starting={starting}
+        starting={startExecutionMutation.isPending}
         runError={runError}
         runTargetId={runTargetId}
         totalCount={testCases.length}
@@ -462,10 +443,10 @@ export function TestCasesView() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleSave()}
-            disabled={saving}
+            disabled={saveSuiteMutation.isPending}
             className={saveSuccess ? 'btn-secondary bg-primary/10 text-primary border-primary/20 hover:bg-primary/20' : 'btn-secondary'}
           >
-            {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
+            {saveSuiteMutation.isPending ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
           </button>
           <button
             onClick={handleExportExcel}

@@ -204,3 +204,74 @@ export interface StartExecutionParams {
   headless: boolean
   testCaseIds?: string[]
 }
+
+/* ----------------------------- API Response Wrappers ----------------------------- */
+
+export interface ApiResponse<T> {
+  success: boolean
+  data: T
+  message?: string
+}
+
+export interface PaginatedProjectsResponse {
+  projects: Project[]
+  totalPages: number
+  currentPage: number
+  totalCount: number
+}
+
+/* ----------------------------- Jira & Linear ----------------------------- */
+
+export interface JiraIssue {
+  key: string
+  title: string
+  description?: string
+  status?: string
+}
+
+export interface LinearIssue {
+  key: string
+  title: string
+  description?: string
+  state?: string
+}
+
+/* ----------------------------- Dashboard Types ----------------------------- */
+
+export type DashboardTab = 'srs' | 'jira' | 'linear'
+
+export interface RunTarget {
+  type: 'project' | 'module' | 'feature' | 'testcase' | 'srs'
+  name: string
+  ids: string[]
+  suiteId?: string
+}
+
+/* ----------------------------- User ----------------------------- */
+
+export type UserRole = 'admin' | 'project_manager' | 'qa' | 'developer' | 'pending'
+
+export interface User {
+  _id: string
+  username: string
+  email: string
+  role: UserRole
+  isActive?: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/* ----------------------------- Module Explorer ----------------------------- */
+
+export interface FeatureGroup {
+  name: string
+  description?: string
+  testCases: TestCase[]
+}
+
+export interface ModuleGroup {
+  name: string
+  description?: string
+  features: FeatureGroup[]
+  testCasesCount: number
+}

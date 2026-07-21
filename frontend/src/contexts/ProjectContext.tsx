@@ -1,12 +1,15 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Project, RequirementAnalysis, TestSuiteData } from '../types'
-import { projectService } from '../services/projectService'
-import { agentService } from '../services/agentService'
-import { toast } from 'sonner'
-import confetti from 'canvas-confetti'
+import { useProjectDetailQuery } from '../queries/project.query'
+import {
+  useRunAgent1Mutation,
+  useRunAgent2Mutation,
+  useRunGapFillMutation,
+} from '../mutations/agent.mutation'
+import { useProjectStore } from '../stores/useProjectStore'
 
 interface ProjectContextType {
   project: Project | null
@@ -22,55 +25,71 @@ interface ProjectContextType {
   runAgent2: (srsId?: string) => Promise<void>
   runGapFill: (srsId?: string) => Promise<void>
   refreshProject: () => Promise<void>
-  setProject: React.Dispatch<React.SetStateAction<Project | null>>
+  setProject: (project: Project | null | ((prev: Project | null) => Project | null)) => void
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
 
+/**
+ * Syncs TanStack Query project detail data into the Zustand store and provides agent execution methods.
+ */
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const { projectId } = useParams() as { projectId?: string }
-  const [project, setProject] = useState<Project | null>(null)
-  const [selectedSrsId, setSelectedSrsId] = useState<string | null>(null)
-  const [requirementAnalyses, setRequirementAnalyses] = useState<RequirementAnalysis[]>([])
-  const [testSuites, setTestSuites] = useState<TestSuiteData[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [agentRunning, setAgentRunning] = useState<'agent1' | 'agent2' | 'gapfill' | null>(null)
-  const [agentError, setAgentError] = useState<string | null>(null)
+  const { data, isLoading, isError, error: queryError, refetch } = useProjectDetailQuery(projectId)
 
-  const refreshProject = useCallback(async () => {
-    if (!projectId) return
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await projectService.getProjectById(projectId)
-      if (res.success) {
-        setProject(res.data.project)
-        setRequirementAnalyses(res.data.requirementAnalyses || [])
-        setTestSuites(res.data.testSuites || [])
+  const {
+    project,
+    selectedSrsId,
+    requirementAnalyses,
+    testSuites,
+    agentRunning,
+    agentError,
+    setProject,
+    setSelectedSrsId,
+    setRequirementAnalyses,
+    setTestSuites,
+    setLoading,
+    setError,
+    setAgentRunning,
+    setAgentError,
+  } = useProjectStore()
 
-        // Set default selected SRS ID if not set
-        const docs = res.data.project.srsDocuments || []
-        if (docs.length > 0) {
-          setSelectedSrsId(prev => {
-            if (prev && docs.some(d => d._id === prev)) return prev
-            return docs[0]._id
-          })
-        } else {
-          setSelectedSrsId(null)
-        }
-      }
-    } catch (err: any) {
-      console.error('Failed to load project details', err)
-      setError(err?.response?.data?.message || 'Failed to fetch project details')
-    } finally {
-      setLoading(false)
-    }
-  }, [projectId])
+  // Mutations
+  const agent1Mutation = useRunAgent1Mutation(projectId || '')
+  const agent2Mutation = useRunAgent2Mutation(projectId || '')
+  const gapFillMutation = useRunGapFillMutation(projectId || '')
 
   useEffect(() => {
-    refreshProject()
-  }, [refreshProject])
+    setLoading(isLoading)
+  }, [isLoading, setLoading])
+
+  useEffect(() => {
+    if (isError) {
+      setError((queryError as Error)?.message || 'Failed to fetch project details')
+    } else {
+      setError(null)
+    }
+  }, [isError, queryError, setError])
+
+  useEffect(() => {
+    if (data) {
+      setProject(data.project)
+      setRequirementAnalyses(data.requirementAnalyses || [])
+      setTestSuites(data.testSuites || [])
+
+      const docs = data.project.srsDocuments || []
+      if (docs.length > 0) {
+        useProjectStore.setState((state) => {
+          if (state.selectedSrsId && docs.some((d) => d._id === state.selectedSrsId)) {
+            return state
+          }
+          return { ...state, selectedSrsId: docs[0]._id }
+        })
+      } else {
+        setSelectedSrsId(null)
+      }
+    }
+  }, [data, setProject, setRequirementAnalyses, setTestSuites, setSelectedSrsId])
 
   const runAgent1 = async (srsId?: string) => {
     if (!projectId || agentRunning) return
@@ -78,20 +97,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setAgentError(null)
     setAgentRunning('agent1')
     try {
-      const res = await agentService.generateRequirements(projectId, targetSrsId)
-      if (res.success) {
-        await refreshProject()
-        toast.success("Agent 1 analysis completed successfully! ✨")
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        })
-      }
+      await agent1Mutation.mutateAsync(targetSrsId)
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Agent 1 analysis failed. Please try again.'
-      setAgentError(msg)
-      toast.error('Agent 1 analysis failed.')
+      setAgentError(err?.response?.data?.message || 'Agent 1 analysis failed. Please try again.')
     } finally {
       setAgentRunning(null)
     }
@@ -103,36 +111,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setAgentError(null)
     setAgentRunning('agent2')
     try {
-      const res = await agentService.generateTestSuite(projectId, targetSrsId)
-      if (res.success) {
-        await refreshProject()
-        toast.success("Agent 2 successfully generated the test suite! 🚀")
-        
-        // Celebratory side splashes
-        const end = Date.now() + (2 * 1000)
-        const frame = () => {
-          confetti({
-            particleCount: 5,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 }
-          })
-          confetti({
-            particleCount: 5,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 }
-          })
-          if (Date.now() < end) {
-            requestAnimationFrame(frame)
-          }
-        }
-        frame()
-      }
+      await agent2Mutation.mutateAsync(targetSrsId)
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Agent 2 test generation failed. Please try again.'
-      setAgentError(msg)
-      toast.error('Agent 2 test generation failed.')
+      setAgentError(err?.response?.data?.message || 'Agent 2 test generation failed. Please try again.')
     } finally {
       setAgentRunning(null)
     }
@@ -144,37 +125,37 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setAgentError(null)
     setAgentRunning('gapfill')
     try {
-      const res = await agentService.generateGapFill(projectId, targetSrsId)
-      if (res.success) {
-        await refreshProject()
-        toast.success('AI Gap Analysis completed! Review the suggested improvements. 🔍')
-      }
+      await gapFillMutation.mutateAsync(targetSrsId)
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Gap-fill analysis failed. Please try again.'
-      setAgentError(msg)
-      toast.error('Gap-fill analysis failed.')
+      setAgentError(err?.response?.data?.message || 'Gap-fill analysis failed. Please try again.')
     } finally {
       setAgentRunning(null)
     }
   }
 
+  const refreshProject = async () => {
+    await refetch()
+  }
+
   return (
-    <ProjectContext.Provider value={{
-      project,
-      selectedSrsId,
-      setSelectedSrsId,
-      requirementAnalyses,
-      testSuites,
-      loading,
-      error,
-      agentRunning,
-      agentError,
-      runAgent1,
-      runAgent2,
-      runGapFill,
-      refreshProject,
-      setProject
-    }}>
+    <ProjectContext.Provider
+      value={{
+        project,
+        selectedSrsId,
+        setSelectedSrsId,
+        requirementAnalyses,
+        testSuites,
+        loading: isLoading,
+        error: isError ? (queryError as Error)?.message || 'Failed to fetch project details' : null,
+        agentRunning,
+        agentError,
+        runAgent1,
+        runAgent2,
+        runGapFill,
+        refreshProject,
+        setProject,
+      }}
+    >
       {children}
     </ProjectContext.Provider>
   )
