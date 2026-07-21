@@ -62,7 +62,7 @@ export async function startExecutionHandler(req, res, next) {
 export async function getExecutionRunHandler(req, res, next) {
   try {
     const { runId } = req.params;
-    console.log("runId", runId);
+
 
     const run = await getExecutionRun(runId)
     if (!run) throw new ApiError('Execution run not found', 404)

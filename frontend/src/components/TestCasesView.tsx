@@ -422,7 +422,7 @@ export function TestCasesView() {
     )
   }
 
-  console.log("selected id ", selectedId)
+
 
 
   return (
