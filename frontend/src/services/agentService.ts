@@ -2,9 +2,9 @@ import { apiClient } from './apiClient'
 
 export const agentService = {
   async generateRequirements(projectId: string, srsDocumentId?: string) {
-    const url = srsDocumentId 
-      ? `/requirements/generate/${projectId}/${srsDocumentId}` 
-      : `/requirements/generate/${projectId}`
+    const url = srsDocumentId
+      ? `/requirements/${projectId}/generate/${srsDocumentId}`
+      : `/requirements/${projectId}/generate`
     const response = await apiClient.post<{ success: boolean; data: any }>(url)
     return response.data
   },

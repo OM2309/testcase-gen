@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { getSession } from 'next-auth/react'
 
-const API_BASE_URL = '/api'
+const API_BASE_URL = 'http://localhost:5000/api'
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
