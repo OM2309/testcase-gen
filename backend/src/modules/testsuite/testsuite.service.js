@@ -10,9 +10,7 @@ import { agent2SystemPrompt, buildAgent2UserPrompt } from './testsuite.prompt.js
  * @returns {Promise<object>} Generated test suite JSON.
  */
 export async function runAgent2({ requirementId, requirementJson }) {
-  console.log("Hello from run agent 2");
   const userPrompt = buildAgent2UserPrompt({ requirementId, requirementJson })
-  console.log("Hello from run agent 2 again");
 
   return await callOpenAI({
     systemPrompt: agent2SystemPrompt,

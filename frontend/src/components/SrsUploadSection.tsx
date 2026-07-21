@@ -16,11 +16,11 @@ interface SrsUploadSectionProps {
   srsDocuments: SrsDocument[]
   project?: any
   onSrsUploaded: (updatedProject: any) => void
-  mode?: 'upload' | 'jira'
+  mode?: 'upload' | 'jira' | 'linear'
 }
 
 export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUploaded, mode }: SrsUploadSectionProps) {
-  const [activeTab, setActiveTab] = useState<'upload' | 'jira'>(mode || 'upload')
+  const [activeTab, setActiveTab] = useState<'upload' | 'jira' | 'linear'>(mode || 'upload')
 
   useEffect(() => {
     if (mode) {
@@ -51,7 +51,20 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
   const [issueSearch, setIssueSearch] = useState('')
   const [importingIssues, setImportingIssues] = useState(false)
 
-  // Sync Jira state with active project config
+  // Linear Connection states
+  const [linearConnected, setLinearConnected] = useState(false)
+  const [linearApiKey, setLinearApiKey] = useState(process.env.NEXT_PUBLIC_LINEAR_API_KEY || '')
+  const [linearTeamId, setLinearTeamId] = useState(process.env.NEXT_PUBLIC_LINEAR_TEAM_ID || '')
+  const [connectingLinear, setConnectingLinear] = useState(false)
+
+  // Linear Issues Explorer states
+  const [linearIssues, setLinearIssues] = useState<any[]>([])
+  const [loadingLinearIssues, setLoadingLinearIssues] = useState(false)
+  const [selectedLinearIssues, setSelectedLinearIssues] = useState<string[]>([])
+  const [linearIssueSearch, setLinearIssueSearch] = useState('')
+  const [importingLinearIssues, setImportingLinearIssues] = useState(false)
+
+  // Sync Jira & Linear state with active project config
   useEffect(() => {
     if (project) {
       if (project.jiraConnected) {
@@ -62,6 +75,14 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
         fetchIssuesList()
       } else {
         setJiraConnected(false)
+      }
+
+      if (project.linearConnected) {
+        setLinearConnected(true)
+        setLinearTeamId(project.linearTeamId || process.env.NEXT_PUBLIC_LINEAR_TEAM_ID || '')
+        fetchLinearIssuesList()
+      } else {
+        setLinearConnected(false)
       }
     }
   }, [project])
@@ -74,9 +95,23 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
         setJiraIssues(res.data)
       }
     } catch (err) {
-      console.error('Failed to fetch issues list', err)
+      console.error('Failed to fetch Jira issues list', err)
     } finally {
       setLoadingIssues(false)
+    }
+  }
+
+  const fetchLinearIssuesList = async (searchQuery: string = '') => {
+    setLoadingLinearIssues(true)
+    try {
+      const res = await projectService.getLinearIssues(projectId, searchQuery)
+      if (res.success && res.data) {
+        setLinearIssues(res.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch Linear issues list', err)
+    } finally {
+      setLoadingLinearIssues(false)
     }
   }
 
@@ -89,6 +124,15 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
       return () => clearTimeout(timer)
     }
   }, [issueSearch, jiraConnected])
+
+  useEffect(() => {
+    if (linearConnected) {
+      const timer = setTimeout(() => {
+        fetchLinearIssuesList(linearIssueSearch)
+      }, 450)
+      return () => clearTimeout(timer)
+    }
+  }, [linearIssueSearch, linearConnected])
 
   const selectFile = (f: File) => {
     const ext = f.name.split('.').pop()?.toLowerCase()
@@ -218,6 +262,80 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
     }
   }
 
+  // Linear submit connect
+  const handleConnectLinear = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!linearApiKey.trim() || !linearTeamId.trim()) {
+      toast.error('Please fill in Linear API Key and Team Key/ID.')
+      return
+    }
+    setConnectingLinear(true)
+    try {
+      const res = await projectService.connectLinear(projectId, {
+        apiKey: linearApiKey.trim(),
+        teamId: linearTeamId.trim()
+      })
+      if (res.success) {
+        setLinearConnected(true)
+        toast.success(`Successfully connected to Linear Team "${linearTeamId.trim()}"! ⚡`)
+        onSrsUploaded(res.data)
+        fetchLinearIssuesList()
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Connection to Linear failed. Please verify credentials.'
+      toast.error(msg)
+    } finally {
+      setConnectingLinear(false)
+    }
+  }
+
+  // Linear disconnect project settings
+  const handleDisconnectLinear = async () => {
+    try {
+      const res = await projectService.connectLinear(projectId, {
+        apiKey: '',
+        teamId: ''
+      })
+      setLinearConnected(false)
+      setLinearIssues([])
+      setSelectedLinearIssues([])
+      onSrsUploaded(res.data)
+      toast.info('Disconnected Linear workspace successfully.')
+    } catch (err) {
+      toast.error('Failed to disconnect Linear.')
+    }
+  }
+
+  // Handle select Linear checklist toggles
+  const handleSelectLinearIssue = (key: string) => {
+    setSelectedLinearIssues(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
+
+  // Trigger Linear stories import
+  const handleImportLinearStories = async () => {
+    if (selectedLinearIssues.length === 0) return
+    setImportingLinearIssues(true)
+    try {
+      const res = await projectService.importLinearStories(projectId, selectedLinearIssues)
+      if (res.success) {
+        toast.success(`Imported ${selectedLinearIssues.length} Linear user stories. AI parsing initiated! 🚀`)
+        setSelectedLinearIssues([])
+        onSrsUploaded(res.data)
+        confetti({
+          particleCount: 100,
+          spread: 60,
+          origin: { y: 0.8 }
+        })
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Import failed.')
+    } finally {
+      setImportingLinearIssues(false)
+    }
+  }
+
   return (
     <div className="border border-border bg-card/20 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-center">
       {/* Top Tabs Selector Navigation */}
@@ -242,6 +360,16 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
             }`}
           >
             <Link2 className="w-3.5 h-3.5" /> Jira Cloud Import
+          </button>
+          <button
+            onClick={() => setActiveTab('linear')}
+            className={`pb-2 px-3 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'linear'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Link2 className="w-3.5 h-3.5" /> Linear Import
           </button>
         </div>
       )}
@@ -340,7 +468,7 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
             </div>
           )}
         </div>
-      ) : (
+      ) : activeTab === 'jira' ? (
         /* Jira Integration Screen */
         <div className="space-y-4">
           {!jiraConnected ? (
@@ -536,7 +664,184 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
             </div>
           )}
         </div>
-      )}
+      ) : activeTab === 'linear' ? (
+        /* Linear Integration Screen */
+        <div className="space-y-4">
+          {!linearConnected ? (
+            /* Configure Linear Form */
+            <form onSubmit={handleConnectLinear} className="space-y-3.5 text-xs">
+              <p className="text-[11px] text-muted-foreground">
+                Connect this project directly to your Linear workspace to fetch user stories.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="font-semibold text-foreground">Linear Personal API Key</label>
+                  <input
+                    type="password"
+                    value={linearApiKey}
+                    onChange={e => setLinearApiKey(e.target.value)}
+                    placeholder="lin_api_..."
+                    className="px-3 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-semibold text-foreground">Linear Team Key / ID</label>
+                  <input
+                    type="text"
+                    value={linearTeamId}
+                    onChange={e => setLinearTeamId(e.target.value)}
+                    placeholder="e.g. NIO"
+                    className="px-3 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 text-xs"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={connectingLinear}
+                className="btn-primary w-full flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+              >
+                {connectingLinear ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="w-3.5 h-3.5" />
+                    Verify & Connect Linear Workspace
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            /* Story Selection backlogs list view */
+            <div className="space-y-3.5">
+              <div className="border border-border bg-card rounded-xl p-3 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
+                    {linearTeamId}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Connected to Linear Team {linearTeamId}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      GraphQL API Active
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => fetchLinearIssuesList(linearIssueSearch)}
+                    disabled={loadingLinearIssues}
+                    className="p-1.5 border border-border rounded-lg bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                    title="Reload Backlog"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingLinearIssues ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button
+                    onClick={handleDisconnectLinear}
+                    className="px-2.5 py-1.5 border border-border rounded-lg bg-background hover:bg-red-50 text-red-600 font-semibold cursor-pointer select-none transition-colors"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+
+              {/* Stories Search Input */}
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={linearIssueSearch}
+                  onChange={e => setLinearIssueSearch(e.target.value)}
+                  placeholder="Filter Linear stories by ID or keywords..."
+                  className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                />
+              </div>
+
+              {/* Stories Checklist */}
+              {loadingLinearIssues ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : linearIssues.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6 italic border border-dashed border-border rounded-xl">
+                  No active Linear stories found matching your filter criteria.
+                </p>
+              ) : (
+                <div className="max-h-[220px] overflow-y-auto space-y-1.5 pr-1">
+                  {linearIssues.map(issue => {
+                    const isSelected = selectedLinearIssues.includes(issue.key)
+                    return (
+                      <div
+                        key={issue.key}
+                        onClick={() => handleSelectLinearIssue(issue.key)}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer hover:bg-muted/40 transition-colors ${
+                          isSelected ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}} // Controlled by outer container click
+                          className="mt-0.5 pointer-events-none"
+                        />
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-primary flex items-center gap-0.5">
+                              {issue.key}
+                              <a
+                                href={`https://linear.app/issue/${issue.key}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="inline-block hover:opacity-80"
+                              >
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            </span>
+                            <span className="font-semibold text-foreground">{issue.title}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+                              {issue.state}
+                            </span>
+                          </div>
+                          {issue.description && (
+                            <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+                              {issue.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {selectedLinearIssues.length > 0 && (
+                <button
+                  onClick={handleImportLinearStories}
+                  disabled={importingLinearIssues}
+                  className="btn-primary w-full flex items-center justify-center gap-1.5 cursor-pointer mt-1 font-bold text-xs"
+                >
+                  {importingLinearIssues ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Importing & Launching AI Agents...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      Import & Generate from {selectedLinearIssues.length} Linear Stories
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

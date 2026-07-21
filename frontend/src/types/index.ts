@@ -25,6 +25,9 @@ export interface Project {
   jiraEmail?: string
   jiraProjectKey?: string
   jiraConnected?: boolean
+  linearApiKey?: string
+  linearTeamId?: string
+  linearConnected?: boolean
 }
 
 export interface Agent0Feedback {

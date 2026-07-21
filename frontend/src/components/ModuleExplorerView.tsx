@@ -55,8 +55,8 @@ export function ModuleExplorerView() {
     refreshProject
   } = useProject()
 
-  // Dashboard tab: 'srs' or 'jira'
-  const [dashboardTab, setDashboardTab] = useState<'srs' | 'jira'>('srs')
+  // Dashboard tab: 'srs' | 'jira' | 'linear'
+  const [dashboardTab, setDashboardTab] = useState<'srs' | 'jira' | 'linear'>('srs')
 
   const [activeModuleName, setActiveModuleName] = useState<string | null>(null)
   const [isFeedbackExpanded, setIsFeedbackExpanded] = useState(false)
@@ -95,8 +95,9 @@ export function ModuleExplorerView() {
     return []
   }, [project])
 
-  const srsDocs = useMemo(() => srsDocumentsList.filter((d: any) => d.filePath !== 'virtual://jira'), [srsDocumentsList])
+  const srsDocs = useMemo(() => srsDocumentsList.filter((d: any) => d.filePath !== 'virtual://jira' && d.filePath !== 'virtual://linear'), [srsDocumentsList])
   const jiraDocs = useMemo(() => srsDocumentsList.filter((d: any) => d.filePath === 'virtual://jira'), [srsDocumentsList])
+  const linearDocs = useMemo(() => srsDocumentsList.filter((d: any) => d.filePath === 'virtual://linear'), [srsDocumentsList])
 
   const selectedSrs = useMemo(() => {
     return srsDocumentsList.find((d: any) => d._id === selectedSrsId)
@@ -550,6 +551,22 @@ export function ModuleExplorerView() {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setDashboardTab('linear')}
+                className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+                  dashboardTab === 'linear'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                }`}
+              >
+                <Link2 className="w-4 h-4" />
+                Linear Stories
+                {linearDocs.length > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${dashboardTab === 'linear' ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    {linearDocs.length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -565,7 +582,7 @@ export function ModuleExplorerView() {
               />
               {renderDocsTable(srsDocs, false)}
             </div>
-          ) : (
+          ) : dashboardTab === 'jira' ? (
             <div className="space-y-5 animate-fadeIn">
               <SrsUploadSection
                 projectId={project._id}
@@ -575,6 +592,17 @@ export function ModuleExplorerView() {
                 onSrsUploaded={() => refreshProject()}
               />
               {renderDocsTable(jiraDocs, true)}
+            </div>
+          ) : (
+            <div className="space-y-5 animate-fadeIn">
+              <SrsUploadSection
+                projectId={project._id}
+                srsDocuments={project.srsDocuments ?? []}
+                project={project}
+                mode="linear"
+                onSrsUploaded={() => refreshProject()}
+              />
+              {renderDocsTable(linearDocs, true)}
             </div>
           )}
 
