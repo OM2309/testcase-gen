@@ -1,4 +1,4 @@
-import RequirementAnalysis from '../modules/requirement/requirement.model.js'
+import RequirementAnalysis from './requirement.model.js'
 
 export class RequirementRepository {
   async findByProjectId(projectId) {

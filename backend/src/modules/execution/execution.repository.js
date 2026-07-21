@@ -1,4 +1,4 @@
-import ExecutionRun from '../modules/execution/execution.model.js'
+import ExecutionRun from './execution.model.js'
 
 export class ExecutionRepository {
   async findById(runId) {

@@ -1,6 +1,6 @@
-import { projectService } from '../../services/project.service.js'
-import { jiraService } from '../../services/jira.service.js'
-import { linearService } from '../../services/linear.service.js'
+import { projectService } from './project.service.js'
+import { jiraService } from './jira.service.js'
+import { linearService } from './linear.service.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
 export async function createProjectOnly(req, res, next) {

@@ -1,14 +1,14 @@
-import Project from '../modules/project/project.model.js'
-import { testSuiteRepository } from '../repositories/testsuite.repository.js'
-import { projectRepository } from '../repositories/project.repository.js'
-import { requirementRepository } from '../repositories/requirement.repository.js'
-import { runAgent2 } from '../modules/testsuite/testsuite.service.js'
-import { callOpenAI } from '../shared/openai.service.js'
+import Project from '../project/project.model.js'
+import { testSuiteRepository } from './testsuite.repository.js'
+import { projectRepository } from '../project/project.repository.js'
+import { requirementRepository } from '../requirement/requirement.repository.js'
+import { runAgent2 } from './testsuite.service.js'
+import { callOpenAI } from '../../shared/openai.service.js'
 import {
   aiGenerateSystemPrompt,
   buildAiGenerateUserPrompt,
-} from '../modules/testsuite/testsuite.aiGenerate.prompt.js'
-import { NotFoundError, ValidationError } from '../errors/index.js'
+} from './testsuite.aiGenerate.prompt.js'
+import { NotFoundError, ValidationError } from '../../errors/index.js'
 
 export const aiUpdateStepsSystemPrompt = `You are an expert QA automation engineer.
 You are given an existing automated test case with its steps and details.

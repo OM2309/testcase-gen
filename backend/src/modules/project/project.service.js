@@ -1,11 +1,11 @@
 import fs from 'fs'
 import mongoose from 'mongoose'
-import Project from '../modules/project/project.model.js'
-import RequirementAnalysis from '../modules/requirement/requirement.model.js'
-import TestSuite from '../modules/testsuite/testsuite.model.js'
-import { parseFile } from '../shared/fileParser.service.js'
-import { projectRepository } from '../repositories/project.repository.js'
-import { ForbiddenError, NotFoundError, ValidationError } from '../errors/index.js'
+import Project from './project.model.js'
+import RequirementAnalysis from '../requirement/requirement.model.js'
+import TestSuite from '../testsuite/testsuite.model.js'
+import { parseFile } from '../../shared/fileParser.service.js'
+import { projectRepository } from './project.repository.js'
+import { ForbiddenError, NotFoundError, ValidationError } from '../../errors/index.js'
 
 export class ProjectService {
   constructor(projectRepo = projectRepository) {

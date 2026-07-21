@@ -1,6 +1,6 @@
 import { ApiError } from '../../utils/apiError.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
-import { projectRepository } from '../../repositories/project.repository.js'
+import { projectRepository } from '../project/project.repository.js'
 import {
   startExecution,
   getExecutionRun,

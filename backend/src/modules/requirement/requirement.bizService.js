@@ -1,13 +1,13 @@
-import Project from '../modules/project/project.model.js'
-import { requirementRepository } from '../repositories/requirement.repository.js'
-import { projectRepository } from '../repositories/project.repository.js'
+import Project from '../project/project.model.js'
+import { requirementRepository } from './requirement.repository.js'
+import { projectRepository } from '../project/project.repository.js'
 import {
   runAgent1,
   runAgent0,
   runAgent3GapFill,
-} from '../modules/requirement/requirement.service.js'
-import { ApiError } from '../utils/apiError.js'
-import { NotFoundError, ValidationError } from '../errors/index.js'
+} from './requirement.service.js'
+import { ApiError } from '../../utils/apiError.js'
+import { NotFoundError, ValidationError } from '../../errors/index.js'
 
 export class RequirementService {
   constructor(reqRepo = requirementRepository, projRepo = projectRepository) {

@@ -1,5 +1,5 @@
 import env from '../../config/env.js'
-import { authService } from '../../services/auth.service.js'
+import { authService } from './auth.service.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
 export async function register(req, res, next) {

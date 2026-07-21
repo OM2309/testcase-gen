@@ -1,4 +1,4 @@
-import TestSuite from '../modules/testsuite/testsuite.model.js'
+import TestSuite from './testsuite.model.js'
 
 export class TestSuiteRepository {
   async findByProjectId(projectId) {

@@ -1,13 +1,13 @@
 import jwt from 'jsonwebtoken'
-import env from '../config/env.js'
-import { userRepository } from '../repositories/user.repository.js'
-import { ApiError } from '../utils/apiError.js'
+import env from '../../config/env.js'
+import { userRepository } from './user.repository.js'
+import { ApiError } from '../../utils/apiError.js'
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../errors/index.js'
+} from '../../errors/index.js'
 
 export class AuthService {
   constructor(userRepo = userRepository) {

@@ -1,4 +1,4 @@
-import { inspectorService } from '../../services/inspector.service.js'
+import { inspectorService } from './inspector.service.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
 export async function startInspector(req, res, next) {

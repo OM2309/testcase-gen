@@ -1,4 +1,4 @@
-import Project from '../modules/project/project.model.js'
+import Project from './project.model.js'
 
 export class ProjectRepository {
   async findById(id) {

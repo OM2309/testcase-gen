@@ -1,4 +1,4 @@
-import { requirementService } from '../../services/requirement.service.js'
+import { requirementService } from './requirement.bizService.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
 export async function generateRequirements(req, res, next) {

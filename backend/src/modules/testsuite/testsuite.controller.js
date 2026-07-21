@@ -1,4 +1,4 @@
-import { testSuiteService } from '../../services/testsuite.service.js'
+import { testSuiteService } from './testsuite.bizService.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
 export async function generateTestSuite(req, res, next) {
