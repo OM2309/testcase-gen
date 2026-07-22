@@ -31,11 +31,18 @@ export const connectJiraSchema = z.object({
     projectId: z.string().min(1, 'Project ID is required'),
   }),
   body: z.object({
-    jiraHost: z.string().min(1, 'Jira Host is required'),
-    jiraEmail: z.string().email('Valid Jira Email is required'),
-    jiraToken: z.string().min(1, 'Jira API Token is required'),
-    jiraProjectKey: z.string().min(1, 'Jira Project Key is required'),
-  }),
+    host: z.string().optional(),
+    jiraHost: z.string().optional(),
+    email: z.string().optional(),
+    jiraEmail: z.string().optional(),
+    token: z.string().optional(),
+    jiraToken: z.string().optional(),
+    projectKey: z.string().optional(),
+    jiraProjectKey: z.string().optional(),
+  }).refine(
+    (data) => (data.host || data.jiraHost) && (data.email || data.jiraEmail) && (data.token || data.jiraToken) && (data.projectKey || data.jiraProjectKey),
+    { message: 'All Jira fields (host, email, token, projectKey) are required.' }
+  ),
 })
 
 export const connectLinearSchema = z.object({
@@ -43,7 +50,9 @@ export const connectLinearSchema = z.object({
     projectId: z.string().min(1, 'Project ID is required'),
   }),
   body: z.object({
-    linearApiKey: z.string().min(1, 'Linear API Key is required'),
-    linearTeamId: z.string().min(1, 'Linear Team ID is required'),
+    apiKey: z.string().optional(),
+    linearApiKey: z.string().optional(),
+    teamId: z.string().optional(),
+    linearTeamId: z.string().optional(),
   }),
 })

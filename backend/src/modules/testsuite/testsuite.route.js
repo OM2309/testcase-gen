@@ -19,11 +19,29 @@ import {
 
 const router = express.Router()
 
+// Agent 2 - Test Suite Generation
 router.post('/testsuite/:projectId/generate', validate(generateTestSuiteSchema), generateTestSuite)
+router.post('/test-suites/generate/:projectId', validate(generateTestSuiteSchema), generateTestSuite)
+router.post('/testsuite/generate/:projectId', validate(generateTestSuiteSchema), generateTestSuite)
+
+// Get Test Suite
 router.get('/testsuite/:projectId', validate(getTestSuiteSchema), getTestSuiteByProjectId)
+router.get('/test-suites/:projectId', validate(getTestSuiteSchema), getTestSuiteByProjectId)
+
+// Update Test Suite
 router.put('/testsuite/:projectId/:suiteId', validate(updateTestSuiteSchema), updateTestSuite)
+router.put('/test-suites/:projectId/:suiteId', validate(updateTestSuiteSchema), updateTestSuite)
+
+// Toggle Regressive Status
 router.patch('/testsuite/:projectId/:suiteId/testcase/:testCaseId/toggle-regressive', validate(toggleTestCaseRegressiveSchema), toggleTestCaseRegressive)
+router.patch('/test-suites/:projectId/:suiteId/test-cases/:testCaseId/regressive', validate(toggleTestCaseRegressiveSchema), toggleTestCaseRegressive)
+
+// AI Single Test Case Generation
 router.post('/testsuite/:projectId/ai-generate', validate(aiGenerateTestCaseSchema), aiGenerateTestCase)
+router.post('/test-suites/ai-generate/:projectId', validate(aiGenerateTestCaseSchema), aiGenerateTestCase)
+
+// AI Update Test Case Steps
 router.post('/testsuite/:projectId/ai-update-steps', validate(aiUpdateTestCaseStepsSchema), aiUpdateTestCaseSteps)
+router.post('/test-suites/ai-update-steps/:projectId', validate(aiUpdateTestCaseStepsSchema), aiUpdateTestCaseSteps)
 
 export default router

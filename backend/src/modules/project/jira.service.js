@@ -22,7 +22,16 @@ export class JiraService {
     this.projectRepo = projectRepo
   }
 
-  async connectJira(project, { host, email, token, projectKey }) {
+  async connectJira(project, payload) {
+    const host = payload.host || payload.jiraHost
+    const email = payload.email || payload.jiraEmail
+    const token = payload.token || payload.jiraToken
+    const projectKey = payload.projectKey || payload.jiraProjectKey
+
+    if (!host || !email || !token || !projectKey) {
+      throw new ValidationError('All Jira fields (host, email, token, projectKey) are required.')
+    }
+
     let formattedHost = host.trim()
     if (!formattedHost.startsWith('http://') && !formattedHost.startsWith('https://')) {
       formattedHost = 'https://' + formattedHost

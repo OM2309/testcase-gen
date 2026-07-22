@@ -6,7 +6,7 @@ export const generateTestSuiteSchema = z.object({
   }),
   body: z.object({
     srsDocumentId: z.string().optional(),
-  }),
+  }).optional().default({}),
 })
 
 export const getTestSuiteSchema = z.object({

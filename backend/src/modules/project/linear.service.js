@@ -8,7 +8,10 @@ export class LinearService {
     this.projectRepo = projectRepo
   }
 
-  async connectLinear(project, { apiKey, teamId }) {
+  async connectLinear(project, payload) {
+    const apiKey = payload.apiKey || payload.linearApiKey
+    const teamId = payload.teamId || payload.linearTeamId
+
     let trimmedKey = (apiKey || '').trim() || (process.env.LINEAR_API_KEY || '').trim()
     let trimmedTeam = (teamId || '').trim() || (process.env.LINEAR_TEAM_ID || '').trim()
 
