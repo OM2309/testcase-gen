@@ -119,3 +119,52 @@ export async function sendMessageToChannel(accessToken, channelId, text) {
 
   return data
 }
+
+/**
+ * Resolves a user's Slack User ID by their email.
+ * Tries direct lookup first, falls back to listing workspace users.
+ * 
+ * @param {string} accessToken - Slack OAuth bot token
+ * @param {string} email - Email of the user to find
+ * @returns {Promise<string|null>} Slack User ID or null
+ */
+export async function findSlackUserIdByEmail(accessToken, email) {
+  if (!email) return null
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  }
+
+  // 1. Try users.lookupByEmail API
+  try {
+    const response = await fetch(`https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(email)}`, {
+      headers
+    })
+    const data = await response.json()
+    if (data.ok && data.user) {
+      return data.user.id
+    }
+  } catch (err) {
+    console.error('Error in users.lookupByEmail:', err)
+  }
+
+  // 2. Fallback to users.list API
+  try {
+    const response = await fetch('https://slack.com/api/users.list?limit=200', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    })
+    const data = await response.json()
+    if (data.ok && data.members) {
+      const match = data.members.find(
+        (m) => m.profile?.email && m.profile.email.toLowerCase() === email.toLowerCase()
+      )
+      if (match) return match.id
+    }
+  } catch (err) {
+    console.error('Error in users.list fallback:', err)
+  }
+
+  return null
+}

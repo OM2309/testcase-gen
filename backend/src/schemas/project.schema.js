@@ -22,7 +22,7 @@ export const assignUsersSchema = z.object({
     projectId: z.string().min(1, 'Project ID is required'),
   }),
   body: z.object({
-    assignedUsers: z.array(z.string()).default([]),
+    userIds: z.array(z.string()).default([]),
   }),
 })
 

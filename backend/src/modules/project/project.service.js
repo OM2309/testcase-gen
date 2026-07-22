@@ -200,9 +200,8 @@ export class ProjectService {
   }
 
   async assignUsers(project, user, userIds) {
-    const isOwnerPM = user.role === 'project_manager' && project.userId && project.userId.toString() === user.id
-    if (user.role !== 'admin' && !isOwnerPM) {
-      throw new ForbiddenError('Access denied. Only admins or the project manager who created the project can assign members.')
+    if (user.role !== 'admin' && user.role !== 'project_manager') {
+      throw new ForbiddenError('Access denied. Only admins or project managers can assign members.')
     }
 
     if (!Array.isArray(userIds)) {

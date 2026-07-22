@@ -130,8 +130,8 @@ export class AuthService {
   }
 
   async getAllUsers(requestingUserRole) {
-    if (requestingUserRole !== 'admin') {
-      throw new ForbiddenError('Access denied. Admin privileges required.')
+    if (requestingUserRole !== 'admin' && requestingUserRole !== 'project_manager') {
+      throw new ForbiddenError('Access denied. Admin or Project Manager privileges required.')
     }
     return this.userRepo.findAllUsers()
   }
