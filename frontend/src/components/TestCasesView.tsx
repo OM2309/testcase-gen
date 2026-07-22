@@ -122,7 +122,7 @@ export function TestCasesView() {
     setModulesList([
       { name: 'All', count: total },
       ...list,
-      { name: 'Regressive', count: regressiveTotal },
+      { name: 'Regression', count: regressiveTotal },
     ])
     if (testCases.length > 0 && !selectedId) setSelectedId(null)
   }, [testCases])
