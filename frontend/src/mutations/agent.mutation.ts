@@ -6,7 +6,25 @@ import { queryKeys } from '../lib/queryKeys'
 import { toast } from 'sonner'
 import confetti from 'canvas-confetti'
 
-/** Run Agent 1 — requirement analysis. */
+/** Run Agent 0 — accuracy score and document feedback. */
+export function useRunAgent0Mutation(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (srsDocumentId?: string) =>
+      agentService.analyzeScore(projectId, srsDocumentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
+      toast.success('Agent 0 document analysis completed! Score & feedback generated. 🎯')
+      confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as Record<string, Record<string, Record<string, string>>>)?.response?.data?.message || 'Agent 0 analysis failed. Please try again.'
+      toast.error(msg)
+    },
+  })
+}
+
+/** Run Agent 1 — module and feature extraction. */
 export function useRunAgent1Mutation(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -14,11 +32,11 @@ export function useRunAgent1Mutation(projectId: string) {
       agentService.generateRequirements(projectId, srsDocumentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
-      toast.success('Agent 1 analysis completed successfully! ✨')
+      toast.success('Agent 1 module extraction completed successfully! ✨')
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } })
     },
     onError: (err: unknown) => {
-      const msg = (err as Record<string, Record<string, Record<string, string>>>)?.response?.data?.message || 'Agent 1 analysis failed. Please try again.'
+      const msg = (err as Record<string, Record<string, Record<string, string>>>)?.response?.data?.message || 'Agent 1 module extraction failed. Please try again.'
       toast.error(msg)
     },
   })

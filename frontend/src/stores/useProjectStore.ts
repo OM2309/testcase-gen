@@ -8,7 +8,7 @@ export interface ProjectState {
   testSuites: TestSuiteData[]
   loading: boolean
   error: string | null
-  agentRunning: 'agent1' | 'agent2' | 'gapfill' | null
+  agentRunning: 'agent0' | 'agent1' | 'agent2' | 'gapfill' | null
   agentError: string | null
 
   // Actions
@@ -18,7 +18,7 @@ export interface ProjectState {
   setTestSuites: (suites: TestSuiteData[]) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-  setAgentRunning: (running: 'agent1' | 'agent2' | 'gapfill' | null) => void
+  setAgentRunning: (running: 'agent0' | 'agent1' | 'agent2' | 'gapfill' | null) => void
   setAgentError: (error: string | null) => void
   resetProjectState: () => void
 }

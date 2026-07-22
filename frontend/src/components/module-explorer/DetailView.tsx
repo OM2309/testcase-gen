@@ -23,7 +23,10 @@ interface DetailViewProps {
   projectId: string
   agentRunning: string | null
   runningActionDocId: string | null
+  onRunAgent0: (docId: string) => void
+  onRunAgent1: (docId: string) => void
   onRunAgent2: (docId: string) => void
+  onOpenGapFill?: () => void
   onExportExcel: (fileName: string, modules: ModuleGroup[]) => void
   onOpenRunDialog: (
     type: 'project' | 'module' | 'feature' | 'testcase' | 'srs',
@@ -46,12 +49,18 @@ export function DetailView({
   projectId,
   agentRunning,
   runningActionDocId,
+  onRunAgent0,
+  onRunAgent1,
   onRunAgent2,
+  onOpenGapFill,
   onExportExcel,
   onOpenRunDialog,
 }: DetailViewProps) {
   const router = useRouter()
   const activeMod = selectedSrsModules.find((m: ModuleGroup) => m.name === activeModuleName)
+
+  const isScored = selectedAnalysis && selectedAnalysis.agent0Status === 'completed' && selectedAnalysis.agent0Score != null
+  const isModulesExtracted = selectedSrsModules && selectedSrsModules.length > 0
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -77,6 +86,24 @@ export function DetailView({
 
         {selectedSuite && selectedSuite.testCases?.length > 0 ? (
           <div className="flex items-center gap-2 flex-wrap">
+            {onOpenGapFill && (
+              <button
+                onClick={onOpenGapFill}
+                disabled={agentRunning !== null}
+                className="btn-secondary h-9 px-3 text-xs font-bold cursor-pointer inline-flex items-center gap-1.5"
+              >
+                {agentRunning === 'gapfill' && runningActionDocId === selectedSrs._id ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing Gaps...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    {selectedAnalysis?.gapFillData ? 'Missing Test Cases' : 'Generate Missing Test Cases'}
+                  </>
+                )}
+              </button>
+            )}
             <button
               onClick={() =>
                 onExportExcel(selectedSrs.originalFileName, selectedSrsModules)
@@ -107,22 +134,74 @@ export function DetailView({
               )
             </button>
           </div>
-        ) : (
+        ) : !isScored ? (
           <button
             disabled={agentRunning !== null}
-            onClick={() => onRunAgent2(selectedSrs._id)}
+            onClick={() => onRunAgent0(selectedSrs._id)}
             className="btn-primary h-9 px-4 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
           >
-            {agentRunning === 'agent2' && runningActionDocId === selectedSrs._id ? (
+            {agentRunning === 'agent0' && runningActionDocId === selectedSrs._id ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating test cases...
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Scoring document...
               </>
             ) : (
               <>
-                <Sparkles className="w-3.5 h-3.5" /> Generate Test Suite
+                <Sparkles className="w-3.5 h-3.5" /> Analyze Document
               </>
             )}
           </button>
+        ) : !isModulesExtracted ? (
+          <button
+            disabled={agentRunning !== null}
+            onClick={() => onRunAgent1(selectedSrs._id)}
+            className="btn-primary h-9 px-4 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            {agentRunning === 'agent1' && runningActionDocId === selectedSrs._id ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Extracting modules...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5" /> Generate Modules
+              </>
+            )}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            {onOpenGapFill && (
+              <button
+                onClick={onOpenGapFill}
+                disabled={agentRunning !== null}
+                className="btn-secondary h-9 px-3 text-xs font-bold cursor-pointer inline-flex items-center gap-1.5"
+              >
+                {agentRunning === 'gapfill' && runningActionDocId === selectedSrs._id ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing Gaps...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    {selectedAnalysis?.gapFillData ? 'Missing Test Cases' : 'Generate Missing Test Cases'}
+                  </>
+                )}
+              </button>
+            )}
+            <button
+              disabled={agentRunning !== null}
+              onClick={() => onRunAgent2(selectedSrs._id)}
+              className="btn-primary h-9 px-4 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              {agentRunning === 'agent2' && runningActionDocId === selectedSrs._id ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating test cases...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" /> Generate Test Suite
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
@@ -140,9 +219,8 @@ export function DetailView({
 
       {/* Accuracy Score Card */}
       {selectedAnalysis &&
-        selectedAnalysis.status === 'completed' &&
         selectedAnalysis.agent0Score != null && (
-          <AccuracyScoreCard analysis={selectedAnalysis} />
+          <AccuracyScoreCard analysis={selectedAnalysis} onOpenGapFill={onOpenGapFill} />
         )}
 
       {/* Modules Explorer */}

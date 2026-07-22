@@ -15,6 +15,75 @@ export class RequirementService {
     this.projRepo = projRepo
   }
 
+  async analyzeScore(projectId, srsDocumentId) {
+    const project = await this.projRepo.findById(projectId)
+    if (!project) {
+      throw new NotFoundError('Project not found')
+    }
+
+    let documentText = null
+    let documentName = null
+
+    if (srsDocumentId) {
+      const srsDoc = project.srsDocuments.find((d) => d._id.toString() === srsDocumentId)
+      if (!srsDoc) {
+        throw new NotFoundError('SRS document not found in project')
+      }
+      documentText = srsDoc.parsedText
+      documentName = srsDoc.originalFileName
+    } else {
+      if (!project.parsedText) {
+        throw new ValidationError('No parsed text available in the project to analyze')
+      }
+      documentText = project.parsedText
+      documentName = project.documentName || project.originalFileName
+    }
+
+    const targetSrsDocumentId = srsDocumentId || null
+
+    await Project.findByIdAndUpdate(projectId, {
+      status: 'scoring',
+      processingStartedAt: new Date(),
+    })
+
+    try {
+      const agent0Data = await runAgent0({ documentName, documentText })
+      const agent0Score = typeof agent0Data?.score === 'number' ? agent0Data.score : 0
+
+      const analysis = await this.reqRepo.findOneAndUpdate(
+        { projectId, srsDocumentId: targetSrsDocumentId },
+        {
+          agent0Score,
+          agent0Feedback: agent0Data || null,
+          agent0Status: 'completed',
+          errorMessage: null,
+        },
+        { upsert: true, new: true }
+      )
+
+      await Project.findByIdAndUpdate(projectId, {
+        status: 'scored',
+        processingCompletedAt: new Date(),
+      })
+
+      return analysis
+    } catch (err) {
+      await Project.findByIdAndUpdate(projectId, {
+        status: 'failed',
+        errorMessage: err.message,
+        processingCompletedAt: new Date(),
+      })
+
+      await this.reqRepo.findOneAndUpdate(
+        { projectId, srsDocumentId: targetSrsDocumentId },
+        { agent0Status: 'failed', errorMessage: err.message },
+        { upsert: true }
+      )
+
+      throw err
+    }
+  }
+
   async generateRequirements(projectId, srsDocumentId) {
     const project = await this.projRepo.findById(projectId)
     if (!project) {
@@ -47,34 +116,7 @@ export class RequirementService {
     })
 
     try {
-      const [agent1Result, agent0Result] = await Promise.allSettled([
-        runAgent1({ documentName, documentText }),
-        runAgent0({ documentName, documentText }),
-      ])
-
-      if (agent1Result.status === 'rejected') {
-        throw agent1Result.reason
-      }
-
-      const requirementsJson = agent1Result.value
-      let agent0Score = null
-      let agent0Feedback = null
-      let agent0Status = 'failed'
-
-      if (agent0Result.status === 'fulfilled') {
-        const agent0Data = agent0Result.value
-        agent0Score = typeof agent0Data?.score === 'number' ? agent0Data.score : 0
-        agent0Feedback = agent0Data || null
-        agent0Status = 'completed'
-      } else {
-        agent0Feedback = {
-          summary: `Failed to score the SRS document: ${agent0Result.reason?.message || agent0Result.reason}`,
-          strengths: [],
-          missing_details: [],
-          ambiguities: [],
-          recommendations: [],
-        }
-      }
+      const requirementsJson = await runAgent1({ documentName, documentText })
 
       const analysis = await this.reqRepo.findOneAndUpdate(
         { projectId, srsDocumentId: targetSrsDocumentId },
@@ -82,9 +124,6 @@ export class RequirementService {
           analyzedData: requirementsJson,
           status: 'completed',
           errorMessage: null,
-          agent0Score,
-          agent0Feedback,
-          agent0Status,
         },
         { upsert: true, new: true }
       )

@@ -13,6 +13,7 @@ interface DocumentsTableProps {
   testSuites: TestSuiteData[]
   agentRunning: string | null
   runningActionDocId: string | null
+  onRunAgent0: (docId: string) => void
   onRunAgent1: (docId: string) => void
   onRunAgent2: (docId: string) => void
 }
@@ -27,6 +28,7 @@ export function DocumentsTable({
   testSuites,
   agentRunning,
   runningActionDocId,
+  onRunAgent0,
   onRunAgent1,
   onRunAgent2,
 }: DocumentsTableProps) {
@@ -61,10 +63,11 @@ export function DocumentsTable({
               requirementAnalyses.find((r: any) => r.srsDocumentId === targetSrsId) || null
             const suite =
               testSuites.find((t: any) => t.srsDocumentId === targetSrsId) || null
-            const isAnalyzed = analysis && analysis.status === 'completed'
-            const isAnalyzing = analysis && analysis.status === 'analyzing'
+            
+            const isScored = analysis && analysis.agent0Status === 'completed' && analysis.agent0Score != null
+            const isModulesGenerated = analysis && analysis.status === 'completed' && analysis.analyzedData != null
             const isSuiteGenerated = suite && suite.testCases?.length > 0
-            const isThisRunning = agentRunning === 'agent1' && runningActionDocId === doc._id
+            const isThisRunning = runningActionDocId === doc._id && agentRunning !== null
 
             return (
               <tr key={doc._id} className="hover:bg-muted/20 transition-colors">
@@ -80,8 +83,19 @@ export function DocumentsTable({
                   {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'N/A'}
                 </td>
                 <td className="p-3.5 text-center">
-                  {isAnalyzed && analysis && analysis.agent0Score != null ? (
-                    <Badge variant="default" className="font-mono bg-primary/20 text-primary border border-primary/30">
+                  {analysis && analysis.agent0Score != null ? (
+                    <Badge
+                      variant="default"
+                      className={`font-mono border ${
+                        analysis.agent0Score >= 80
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : analysis.agent0Score >= 60
+                          ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
+                          : analysis.agent0Score >= 40
+                          ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30'
+                          : 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30'
+                      }`}
+                    >
                       {analysis.agent0Score}%
                     </Badge>
                   ) : (
@@ -89,17 +103,25 @@ export function DocumentsTable({
                   )}
                 </td>
                 <td className="p-3.5 text-center">
-                  {isAnalyzing || isThisRunning ? (
+                  {isThisRunning ? (
                     <Badge variant="secondary" className="animate-pulse bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                      Analyzing
+                      {agentRunning === 'agent0'
+                        ? 'Scoring...'
+                        : agentRunning === 'agent1'
+                        ? 'Extracting Modules...'
+                        : 'Generating Suite...'}
                     </Badge>
                   ) : isSuiteGenerated ? (
                     <Badge variant="default" className="bg-green-500/10 text-green-600 dark:text-green-400">
                       Suite Generated
                     </Badge>
-                  ) : isAnalyzed ? (
+                  ) : isModulesGenerated ? (
                     <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                      Analyzed
+                      Modules Generated
+                    </Badge>
+                  ) : isScored ? (
+                    <Badge variant="secondary" className="bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                      Scored
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-muted-foreground">
@@ -108,18 +130,36 @@ export function DocumentsTable({
                   )}
                 </td>
                 <td className="p-3.5 text-right space-x-2">
-                  {!isAnalyzed ? (
+                  {!isScored ? (
                     <button
-                      onClick={() => onRunAgent1(doc._id)}
+                      onClick={() => onRunAgent0(doc._id)}
                       disabled={agentRunning !== null}
-                      className="btn-primary h-7 px-3 text-[10px] font-bold cursor-pointer"
+                      className="btn-primary h-7 px-3 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                     >
-                      {agentRunning === 'agent1' && runningActionDocId === doc._id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                      {agentRunning === 'agent0' && runningActionDocId === doc._id ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" /> Scoring...
+                        </>
                       ) : isJira ? (
                         'Analyze Stories'
                       ) : (
-                        'Analyze PRD'
+                        'Analyze Document'
+                      )}
+                    </button>
+                  ) : !isModulesGenerated ? (
+                    <button
+                      onClick={() => onRunAgent1(doc._id)}
+                      disabled={agentRunning !== null}
+                      className="btn-primary h-7 px-3 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                    >
+                      {agentRunning === 'agent1' && runningActionDocId === doc._id ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" /> Extracting...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3" /> Generate Modules
+                        </>
                       )}
                     </button>
                   ) : !isSuiteGenerated ? (
@@ -129,7 +169,9 @@ export function DocumentsTable({
                       className="btn-primary h-7 px-3 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
                     >
                       {agentRunning === 'agent2' && runningActionDocId === doc._id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" /> Generating...
+                        </>
                       ) : (
                         <>
                           <Sparkles className="w-3 h-3" /> Generate Suite

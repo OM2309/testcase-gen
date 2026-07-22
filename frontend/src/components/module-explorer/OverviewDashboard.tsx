@@ -18,6 +18,7 @@ interface OverviewDashboardProps {
   agentError: string | null
   agentRunning: string | null
   runningActionDocId: string | null
+  onRunAgent0: (docId: string) => void
   onRunAgent1: (docId: string) => void
   onRunAgent2: (docId: string) => void
   onRefreshProject: () => void
@@ -38,6 +39,7 @@ export function OverviewDashboard({
   agentError,
   agentRunning,
   runningActionDocId,
+  onRunAgent0,
   onRunAgent1,
   onRunAgent2,
   onRefreshProject,
@@ -153,6 +155,7 @@ export function OverviewDashboard({
             testSuites={testSuites}
             agentRunning={agentRunning}
             runningActionDocId={runningActionDocId}
+            onRunAgent0={onRunAgent0}
             onRunAgent1={onRunAgent1}
             onRunAgent2={onRunAgent2}
           />
@@ -173,6 +176,7 @@ export function OverviewDashboard({
             testSuites={testSuites}
             agentRunning={agentRunning}
             runningActionDocId={runningActionDocId}
+            onRunAgent0={onRunAgent0}
             onRunAgent1={onRunAgent1}
             onRunAgent2={onRunAgent2}
           />
@@ -193,6 +197,7 @@ export function OverviewDashboard({
             testSuites={testSuites}
             agentRunning={agentRunning}
             runningActionDocId={runningActionDocId}
+            onRunAgent0={onRunAgent0}
             onRunAgent1={onRunAgent1}
             onRunAgent2={onRunAgent2}
           />

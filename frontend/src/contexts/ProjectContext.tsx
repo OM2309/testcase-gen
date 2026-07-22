@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Project, RequirementAnalysis, TestSuiteData } from '../types'
 import { useProjectDetailQuery } from '../queries/project.query'
 import {
+  useRunAgent0Mutation,
   useRunAgent1Mutation,
   useRunAgent2Mutation,
   useRunGapFillMutation,
@@ -19,8 +20,9 @@ interface ProjectContextType {
   testSuites: TestSuiteData[]
   loading: boolean
   error: string | null
-  agentRunning: 'agent1' | 'agent2' | 'gapfill' | null
+  agentRunning: 'agent0' | 'agent1' | 'agent2' | 'gapfill' | null
   agentError: string | null
+  runAgent0: (srsId?: string) => Promise<void>
   runAgent1: (srsId?: string) => Promise<void>
   runAgent2: (srsId?: string) => Promise<void>
   runGapFill: (srsId?: string) => Promise<void>
@@ -55,6 +57,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   } = useProjectStore()
 
   // Mutations
+  const agent0Mutation = useRunAgent0Mutation(projectId || '')
   const agent1Mutation = useRunAgent1Mutation(projectId || '')
   const agent2Mutation = useRunAgent2Mutation(projectId || '')
   const gapFillMutation = useRunGapFillMutation(projectId || '')
@@ -91,6 +94,20 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data, setProject, setRequirementAnalyses, setTestSuites, setSelectedSrsId])
 
+  const runAgent0 = async (srsId?: string) => {
+    if (!projectId || agentRunning) return
+    const targetSrsId = srsId || selectedSrsId || undefined
+    setAgentError(null)
+    setAgentRunning('agent0')
+    try {
+      await agent0Mutation.mutateAsync(targetSrsId)
+    } catch (err: any) {
+      setAgentError(err?.response?.data?.message || 'Agent 0 analysis failed. Please try again.')
+    } finally {
+      setAgentRunning(null)
+    }
+  }
+
   const runAgent1 = async (srsId?: string) => {
     if (!projectId || agentRunning) return
     const targetSrsId = srsId || selectedSrsId || undefined
@@ -99,7 +116,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     try {
       await agent1Mutation.mutateAsync(targetSrsId)
     } catch (err: any) {
-      setAgentError(err?.response?.data?.message || 'Agent 1 analysis failed. Please try again.')
+      setAgentError(err?.response?.data?.message || 'Agent 1 module extraction failed. Please try again.')
     } finally {
       setAgentRunning(null)
     }
@@ -149,6 +166,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         error: isError ? (queryError as Error)?.message || 'Failed to fetch project details' : null,
         agentRunning,
         agentError,
+        runAgent0,
         runAgent1,
         runAgent2,
         runGapFill,

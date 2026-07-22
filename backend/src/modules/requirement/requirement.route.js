@@ -1,5 +1,6 @@
 import express from 'express'
 import {
+  analyzeScore,
   generateRequirements,
   getRequirementsByProjectId,
   generateGapFill,
@@ -13,7 +14,13 @@ import {
 
 const router = express.Router()
 
-// Agent 1 - Requirement Generation
+// Agent 0 - Accuracy Score & Rating
+router.post('/requirements/:projectId/analyze-score', validate(generateRequirementsSchema), analyzeScore)
+router.post('/requirements/:projectId/analyze-score/:srsDocumentId', validate(generateRequirementsSchema), analyzeScore)
+router.post('/requirements/analyze-score/:projectId', validate(generateRequirementsSchema), analyzeScore)
+router.post('/requirements/analyze-score/:projectId/:srsDocumentId', validate(generateRequirementsSchema), analyzeScore)
+
+// Agent 1 - Requirement Generation (Module Extraction)
 router.post('/requirements/:projectId/generate', validate(generateRequirementsSchema), generateRequirements)
 router.post('/requirements/:projectId/generate/:srsDocumentId', validate(generateRequirementsSchema), generateRequirements)
 router.post('/requirements/generate/:projectId', validate(generateRequirementsSchema), generateRequirements)

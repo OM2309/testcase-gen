@@ -1,6 +1,16 @@
 import { requirementService } from './requirement.bizService.js'
 import { sendSuccess } from '../../utils/responseHelper.js'
 
+export async function analyzeScore(req, res, next) {
+  try {
+    const { projectId, srsDocumentId } = req.params
+    const analysis = await requirementService.analyzeScore(projectId, srsDocumentId)
+    return sendSuccess(res, 'Document accuracy score generated successfully.', analysis)
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function generateRequirements(req, res, next) {
   try {
     const { projectId, srsDocumentId } = req.params

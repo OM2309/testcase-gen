@@ -2,13 +2,14 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { TestCase, FeatureGroup, ModuleGroup, RunTarget } from '../types'
+import { TestCase, FeatureGroup, ModuleGroup, RunTarget, SuggestedTestCase } from '../types'
 import { executionService } from '../services/executionService'
+import { agentService } from '../services/agentService'
 import { useProject } from '../contexts/ProjectContext'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 import { RunConfigDialog, PageLoader, EmptyState } from '@/components/shared'
-import { OverviewDashboard, DetailView } from '@/components/module-explorer'
+import { OverviewDashboard, DetailView, MissingTestCasesModal } from '@/components/module-explorer'
 import { Layers } from 'lucide-react'
 
 export function ModuleExplorerView() {
@@ -22,8 +23,10 @@ export function ModuleExplorerView() {
     loading,
     agentRunning,
     agentError,
+    runAgent0,
     runAgent1,
     runAgent2,
+    runGapFill,
     refreshProject,
   } = useProject()
 
@@ -31,6 +34,7 @@ export function ModuleExplorerView() {
   const [dashboardTab, setDashboardTab] = useState<'srs' | 'jira' | 'linear'>('srs')
   const [activeModuleName, setActiveModuleName] = useState<string | null>(null)
   const [runningActionDocId, setRunningActionDocId] = useState<string | null>(null)
+  const [isGapFillOpen, setIsGapFillOpen] = useState(false)
 
   // Execution config modal
   const [isRunOpen, setIsRunOpen] = useState(false)
@@ -138,6 +142,15 @@ export function ModuleExplorerView() {
 
   /* ─── Handlers ─── */
 
+  const handleLocalRunAgent0 = async (docId: string) => {
+    setRunningActionDocId(docId)
+    try {
+      await runAgent0(docId)
+    } finally {
+      setRunningActionDocId(null)
+    }
+  }
+
   const handleLocalRunAgent1 = async (docId: string) => {
     setRunningActionDocId(docId)
     try {
@@ -154,6 +167,76 @@ export function ModuleExplorerView() {
     } finally {
       setRunningActionDocId(null)
     }
+  }
+
+  const handleOpenGapFill = async (docId?: string) => {
+    const targetDocId = docId || (selectedSrs ? selectedSrs._id : undefined)
+    const analysis = requirementAnalyses.find(
+      (r: any) => r.srsDocumentId === (targetDocId === 'legacy' ? null : targetDocId)
+    )
+
+    if (!analysis?.gapFillData) {
+      if (targetDocId) setRunningActionDocId(targetDocId)
+      try {
+        await runGapFill(targetDocId)
+      } finally {
+        setRunningActionDocId(null)
+      }
+    }
+    setIsGapFillOpen(true)
+  }
+
+  const handleReRunGapFill = async () => {
+    const targetDocId = selectedSrs ? selectedSrs._id : undefined
+    if (targetDocId) setRunningActionDocId(targetDocId)
+    try {
+      await runGapFill(targetDocId)
+    } finally {
+      setRunningActionDocId(null)
+    }
+  }
+
+  const handleAddSelectedMissingCases = async (selectedCases: SuggestedTestCase[]) => {
+    if (!project || selectedCases.length === 0) return
+
+    const newCases: TestCase[] = selectedCases.map((stc) => ({
+      id: stc.id || `TC-GAP-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      title: stc.title,
+      description: stc.description || '',
+      module: stc.module || 'General',
+      feature: stc.feature || 'Gap Fill',
+      priority: stc.priority || 'Medium',
+      type: stc.scenario_type === 'edge_case' ? 'Edge Case' : stc.scenario_type === 'negative' ? 'Negative' : 'Functional',
+      scenario_type: stc.scenario_type || 'positive',
+      tags: Array.isArray(stc.tags) ? stc.tags : ['gap-fill', 'ai-suggested'],
+      preconditions: Array.isArray(stc.preconditions) ? stc.preconditions : [],
+      test_data: {},
+      steps: Array.isArray(stc.steps) ? stc.steps : [],
+      expected_result: stc.expected_result || '',
+      cleanup_steps: [],
+      source_requirements: [],
+    }))
+
+    const targetSuite = selectedSuite || testSuites[0]
+    if (!targetSuite) {
+      toast.error('No active test suite found. Please generate test suite first.')
+      return
+    }
+
+    const existingCases = targetSuite.testCases || []
+    const mergedCases = [...existingCases]
+
+    let addedCount = 0
+    newCases.forEach((nc) => {
+      if (!mergedCases.some((c) => c.id === nc.id || c.title.toLowerCase() === nc.title.toLowerCase())) {
+        mergedCases.push(nc)
+        addedCount++
+      }
+    })
+
+    await agentService.saveTestSuite(project._id, targetSuite._id, mergedCases)
+    toast.success(`Successfully added ${addedCount} missing test case(s) to the suite! 🚀`)
+    await refreshProject()
   }
 
   const handleDownloadExcel = (fileName: string, modules: ModuleGroup[]) => {
@@ -248,6 +331,15 @@ export function ModuleExplorerView() {
         onStartRun={handleStartRun}
       />
 
+      <MissingTestCasesModal
+        open={isGapFillOpen}
+        onOpenChange={setIsGapFillOpen}
+        gapFillData={selectedAnalysis?.gapFillData || null}
+        isLoading={agentRunning === 'gapfill'}
+        onAddSelectedTestCases={handleAddSelectedMissingCases}
+        onReRunGapFill={handleReRunGapFill}
+      />
+
       {selectedSrs ? (
         <DetailView
           selectedSrs={selectedSrs}
@@ -259,7 +351,10 @@ export function ModuleExplorerView() {
           projectId={project._id}
           agentRunning={agentRunning}
           runningActionDocId={runningActionDocId}
+          onRunAgent0={handleLocalRunAgent0}
+          onRunAgent1={handleLocalRunAgent1}
           onRunAgent2={handleLocalRunAgent2}
+          onOpenGapFill={() => handleOpenGapFill(selectedSrs._id)}
           onExportExcel={handleDownloadExcel}
           onOpenRunDialog={handleOpenRunDialog}
         />
@@ -276,6 +371,7 @@ export function ModuleExplorerView() {
           agentError={agentError}
           agentRunning={agentRunning}
           runningActionDocId={runningActionDocId}
+          onRunAgent0={handleLocalRunAgent0}
           onRunAgent1={handleLocalRunAgent1}
           onRunAgent2={handleLocalRunAgent2}
           onRefreshProject={refreshProject}
