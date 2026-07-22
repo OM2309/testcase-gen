@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { FileSpreadsheet, Plus, PlayCircle, ShieldCheck } from 'lucide-react'
+import { FileSpreadsheet, Plus, PlayCircle, ShieldCheck, MessageSquare, Send, Clock, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 
@@ -13,7 +14,12 @@ import { TestCaseDetail } from './testsuite/TestCaseDetail'
 import { TestCaseDialogs, TestCaseForm } from './testsuite/TestCaseDialogs'
 import { AiGenerateDialog } from './testsuite/AiGenerateDialog'
 import { useProject } from '../contexts/ProjectContext'
-import { useSaveTestSuiteMutation, useToggleRegressiveMutation } from '../mutations/agent.mutation'
+import {
+  useSaveTestSuiteMutation,
+  useToggleRegressiveMutation,
+  useRequestApprovalMutation,
+  useReviewTestSuiteMutation,
+} from '../mutations/agent.mutation'
 import { useStartExecutionMutation } from '../mutations/execution.mutation'
 import { EmptyState } from '@/components/shared'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -55,10 +61,23 @@ export function TestCasesView() {
   const [search, setSearch] = useState('')
   const [modulesList, setModulesList] = useState<Array<{ name: string; count: number }>>([])
 
+  // Session & Roles
+  const { data: session } = useSession()
+  const userRole = (session as any)?.user?.role
+  const isQA = userRole === 'qa' || userRole === 'developer'
+  const isPM = userRole === 'project_manager' || userRole === 'admin'
+
+  // Review dialog states
+  const [isReviewOpen, setIsReviewOpen] = useState(false)
+  const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved')
+  const [reviewComment, setReviewComment] = useState('')
+
   // Mutations
   const saveSuiteMutation = useSaveTestSuiteMutation(project?._id || '')
   const toggleRegressiveMutation = useToggleRegressiveMutation(project?._id || '')
   const startExecutionMutation = useStartExecutionMutation()
+  const requestApprovalMutation = useRequestApprovalMutation(project?._id || '')
+  const reviewTestSuiteMutation = useReviewTestSuiteMutation(project?._id || '')
 
   const existingModules = useMemo(() => {
     return modulesList
@@ -289,6 +308,28 @@ export function TestCasesView() {
     )
   }
 
+  const handleRequestApproval = () => {
+    if (!activeTestSuite) return
+    requestApprovalMutation.mutate(activeTestSuite._id)
+  }
+
+  const handleReviewSubmit = () => {
+    if (!activeTestSuite || !reviewComment.trim()) return
+    reviewTestSuiteMutation.mutate(
+      {
+        suiteId: activeTestSuite._id,
+        status: reviewStatus,
+        comment: reviewComment.trim(),
+      },
+      {
+        onSuccess: () => {
+          setIsReviewOpen(false)
+          setReviewComment('')
+        },
+      }
+    )
+  }
+
   const openCreateDialog = (moduleName?: string) => {
     setFormState({ title: '', module: moduleName || 'General', priority: 'Medium', scenarioType: 'positive', expectedResult: '' })
     setIsCreateOpen(true)
@@ -406,6 +447,36 @@ export function TestCasesView() {
     return <EmptyState icon={ShieldCheck} title="Test suite not found. Run Agent 2 to generate one." />
   }
 
+  const getApprovalBadge = () => {
+    const status = activeTestSuite?.approvalStatus || 'draft'
+    switch (status) {
+      case 'pending_approval':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse">
+            <Clock className="w-3.5 h-3.5" /> Pending Review
+          </span>
+        )
+      case 'approved':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            <ShieldCheck className="w-3.5 h-3.5" /> Approved
+          </span>
+        )
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20">
+            <Clock className="w-3.5 h-3.5" /> Changes Requested
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-muted text-muted-foreground border border-border">
+            Draft
+          </span>
+        )
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <TestCaseDialogs
@@ -434,13 +505,109 @@ export function TestCasesView() {
         onStartRun={handleStartRun}
       />
 
+      {/* Review Dialog */}
+      <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
+        <DialogContent className="sm:max-w-md p-6">
+          <DialogHeader className="pb-4 border-b border-border mb-4">
+            <DialogTitle className="text-lg font-bold text-foreground">
+              Review Test Suite
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Approve or request changes for this test suite. Your feedback comment will be sent to the QA engineer.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setReviewStatus('approved')}
+                className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl font-semibold transition-all cursor-pointer ${
+                  reviewStatus === 'approved'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 shadow-sm'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                <ThumbsUp className="w-4 h-4" /> Approve
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewStatus('rejected')}
+                className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl font-semibold transition-all cursor-pointer ${
+                  reviewStatus === 'rejected'
+                    ? 'border-rose-500 bg-rose-500/10 text-rose-500 shadow-sm'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                <ThumbsDown className="w-4 h-4" /> Request Changes
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="review-comment" className="text-xs font-semibold text-foreground">
+                Comments / Feedback <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                id="review-comment"
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Provide details about your review decision..."
+                className="w-full min-h-[100px] p-3 text-xs bg-card border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all animate-fadeIn"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border mt-4">
+            <button
+              onClick={() => setIsReviewOpen(false)}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReviewSubmit}
+              disabled={!reviewComment.trim() || reviewTestSuiteMutation.isPending}
+              className="btn-primary"
+            >
+              {reviewTestSuiteMutation.isPending ? 'Submitting...' : 'Submit Review'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Test Suite Builder</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">Test Suite Builder</h1>
+            {getApprovalBadge()}
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">{testCases.length} test cases — edit steps, drag to reorder, create new cases</p>
         </div>
         <div className="flex items-center gap-2">
+          {isQA && activeTestSuite?.approvalStatus !== 'pending_approval' && (
+            <button
+              onClick={handleRequestApproval}
+              disabled={requestApprovalMutation.isPending}
+              className="btn-secondary text-primary border-primary/20 bg-primary/5 hover:bg-primary/10"
+              title="Request project manager's review and approval"
+            >
+              <Send className="w-4 h-4" /> {requestApprovalMutation.isPending ? 'Sending...' : 'Send for Approval'}
+            </button>
+          )}
+          {isPM && activeTestSuite?.approvalStatus === 'pending_approval' && (
+            <button
+              onClick={() => {
+                setReviewStatus('approved')
+                setReviewComment('')
+                setIsReviewOpen(true)
+              }}
+              className="btn-primary bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              <ShieldCheck className="w-4 h-4" /> Review Test Suite
+            </button>
+          )}
+
           <button
             onClick={() => handleSave()}
             disabled={saveSuiteMutation.isPending}
@@ -471,6 +638,38 @@ export function TestCasesView() {
           </button>
         </div>
       </div>
+
+      {/* Review Comments / Feedback History Section */}
+      {activeTestSuite?.comments && activeTestSuite.comments.length > 0 && (
+        <div className="border border-border/80 bg-card/45 rounded-xl p-4 space-y-3 shadow-sm">
+          <h3 className="text-xs font-bold text-foreground flex items-center gap-2">
+            <MessageSquare className="w-3.5 h-3.5 text-primary" /> Review History & Feedback
+          </h3>
+          <div className="space-y-3 divide-y divide-border/40">
+            {activeTestSuite.comments.map((c, idx) => (
+              <div key={idx} className="pt-3 first:pt-0 flex gap-3 text-[11px] leading-relaxed">
+                <div className="w-7 h-7 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0">
+                  {c.userName.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-grow">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">
+                      {c.userName}{' '}
+                      <span className="text-[9px] font-normal text-muted-foreground uppercase bg-muted px-1.5 py-0.5 rounded ml-1">
+                        {c.role === 'project_manager' ? 'PM' : c.role}
+                      </span>
+                    </span>
+                    <span className="text-[9px] text-muted-foreground">
+                      {new Date(c.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{c.commentText}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <SuiteSummary testCases={testCases} />
 

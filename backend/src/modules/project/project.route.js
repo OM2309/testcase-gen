@@ -17,6 +17,7 @@ import {
   importLinearStories,
 } from './project.controller.js'
 import { projectAccessMiddleware } from '../../middleware/projectAccess.js'
+import { authorizeRoles } from '../../middleware/auth.js'
 import { validate } from '../../middlewares/validate.middleware.js'
 import {
   createProjectOnlySchema,
@@ -28,9 +29,10 @@ import {
 
 const router = express.Router()
 
-router.post('/projects/create', validate(createProjectOnlySchema), createProjectOnly)
-router.post('/projects', upload.single('srs'), createProject)
+router.post('/projects/create', authorizeRoles('admin', 'project_manager'), validate(createProjectOnlySchema), createProjectOnly)
+router.post('/projects', authorizeRoles('admin', 'project_manager'), upload.single('srs'), createProject)
 router.post('/projects/:projectId/srs', projectAccessMiddleware, upload.single('srs'), addSrsToProject)
+
 router.get('/projects', getProjects)
 router.get('/projects/:projectId', projectAccessMiddleware, getProjectById)
 router.put('/projects/:projectId', projectAccessMiddleware, validate(updateProjectSchema), updateProject)

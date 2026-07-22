@@ -152,3 +152,39 @@ export function useUploadSrsMutation(projectId: string) {
     },
   })
 }
+
+/** Request test suite approval. */
+export function useRequestApprovalMutation(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (suiteId: string) =>
+      agentService.requestTestSuiteApproval(projectId, suiteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
+      toast.success('Approval request submitted successfully! 📬')
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error || 'Failed to request approval. Please try again.'
+      toast.error(msg)
+    }
+  })
+}
+
+/** Submit test suite review comment and status. */
+export function useReviewTestSuiteMutation(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ suiteId, status, comment }: { suiteId: string; status: 'approved' | 'rejected'; comment: string }) =>
+      agentService.reviewTestSuite(projectId, suiteId, status, comment),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
+      const statusLabel = res.data?.approvalStatus === 'approved' ? 'Approved' : 'Rejected'
+      toast.success(`Test suite review submitted: ${statusLabel} 📝`)
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error || 'Failed to submit review. Please try again.'
+      toast.error(msg)
+    }
+  })
+}
+

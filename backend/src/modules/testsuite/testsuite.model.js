@@ -50,7 +50,29 @@ const testSuiteSchema = new mongoose.Schema({
     ref: 'RequirementAnalysis',
     required: true
   },
-  testCases: { type: [testCaseSchema], default: [] }
+  testCases: { type: [testCaseSchema], default: [] },
+  approvalStatus: {
+    type: String,
+    enum: ['draft', 'pending_approval', 'approved', 'rejected'],
+    default: 'draft',
+    index: true
+  },
+  approvalRequestedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  approvalRequestedAt: {
+    type: Date,
+    default: null
+  },
+  comments: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userName: { type: String },
+    role: { type: String },
+    commentText: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, {
   timestamps: true
 })

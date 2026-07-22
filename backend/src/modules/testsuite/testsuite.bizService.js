@@ -1,7 +1,9 @@
 import Project from '../project/project.model.js'
+import User from '../auth/user.model.js'
 import { testSuiteRepository } from './testsuite.repository.js'
 import { projectRepository } from '../project/project.repository.js'
 import { requirementRepository } from '../requirement/requirement.repository.js'
+import { notificationService } from '../notification/notification.service.js'
 import { runAgent2 } from './testsuite.service.js'
 import { callOpenAI } from '../../shared/openai.service.js'
 import {
@@ -161,6 +163,113 @@ Update the test case steps and expected outcome to match the user's instructions
       jsonMode: true,
       image: screenshot || null,
     })
+  }
+
+  async requestApproval(projectId, suiteId, userId) {
+    const suite = await this.testSuiteRepo.findOne({ _id: suiteId, projectId })
+    if (!suite) {
+      throw new NotFoundError('Test suite not found for this project')
+    }
+
+    const project = await this.projRepo.findById(projectId)
+    if (!project) {
+      throw new NotFoundError('Project not found')
+    }
+
+    const user = await User.findById(userId)
+    if (!user) {
+      throw new NotFoundError('User not found')
+    }
+
+    suite.approvalStatus = 'pending_approval'
+    suite.approvalRequestedBy = userId
+    suite.approvalRequestedAt = new Date()
+
+    await this.testSuiteRepo.save(suite)
+
+    // Notify project managers
+    const pmRecipients = []
+    
+    // Add owner if they are project manager or admin
+    if (project.userId) {
+      const owner = await User.findById(project.userId)
+      if (owner && (owner.role === 'project_manager' || owner.role === 'admin')) {
+        pmRecipients.push(owner._id.toString())
+      }
+    }
+
+    // Add any assigned PMs or admins
+    if (project.assignedUsers && project.assignedUsers.length > 0) {
+      const assignedPMs = await User.find({
+        _id: { $in: project.assignedUsers },
+        role: { $in: ['project_manager', 'admin'] }
+      })
+      for (const pm of assignedPMs) {
+        if (!pmRecipients.includes(pm._id.toString())) {
+          pmRecipients.push(pm._id.toString())
+        }
+      }
+    }
+
+    // Send notification
+    for (const recipientId of pmRecipients) {
+      await notificationService.createNotification({
+        recipientId,
+        senderId: userId,
+        projectId,
+        testSuiteId: suiteId,
+        type: 'approval_request',
+        message: `User ${user.username} has requested approval for the test suite "${suite.suiteName}" in project "${project.projectName}".`
+      })
+    }
+
+    return suite
+  }
+
+  async submitReview(projectId, suiteId, reviewerId, approvalStatus, commentText) {
+    const suite = await this.testSuiteRepo.findOne({ _id: suiteId, projectId })
+    if (!suite) {
+      throw new NotFoundError('Test suite not found for this project')
+    }
+
+    const project = await this.projRepo.findById(projectId)
+    if (!project) {
+      throw new NotFoundError('Project not found')
+    }
+
+    const reviewer = await User.findById(reviewerId)
+    if (!reviewer) {
+      throw new NotFoundError('Reviewer not found')
+    }
+
+    // Add comment to comments array
+    suite.comments.push({
+      userId: reviewerId,
+      userName: reviewer.username,
+      role: reviewer.role,
+      commentText: commentText.trim(),
+      createdAt: new Date()
+    })
+
+    // Update approval status
+    suite.approvalStatus = approvalStatus
+    await this.testSuiteRepo.save(suite)
+
+    // Notify the QA who requested approval
+    const qaId = suite.approvalRequestedBy
+    if (qaId) {
+      const statusLabel = approvalStatus === 'approved' ? 'Approved' : 'Rejected / Request Changes'
+      await notificationService.createNotification({
+        recipientId: qaId,
+        senderId: reviewerId,
+        projectId,
+        testSuiteId: suiteId,
+        type: 'approval_response',
+        message: `Project Manager ${reviewer.username} reviewed test suite "${suite.suiteName}" (Status: ${statusLabel}). Feedback: "${commentText}"`
+      })
+    }
+
+    return suite
   }
 }
 

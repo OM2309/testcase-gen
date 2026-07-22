@@ -54,3 +54,22 @@ export const aiUpdateTestCaseStepsSchema = z.object({
     screenshot: z.string().nullable().optional(),
   }),
 })
+
+export const requestApprovalSchema = z.object({
+  params: z.object({
+    projectId: z.string().min(1, 'Project ID is required'),
+    suiteId: z.string().min(1, 'Suite ID is required'),
+  }),
+})
+
+export const submitReviewSchema = z.object({
+  params: z.object({
+    projectId: z.string().min(1, 'Project ID is required'),
+    suiteId: z.string().min(1, 'Suite ID is required'),
+  }),
+  body: z.object({
+    status: z.enum(['approved', 'rejected']),
+    comment: z.string().min(1, 'Review comment is required'),
+  }),
+})
+

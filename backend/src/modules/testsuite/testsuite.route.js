@@ -6,6 +6,8 @@ import {
   toggleTestCaseRegressive,
   aiGenerateTestCase,
   aiUpdateTestCaseSteps,
+  requestApproval,
+  submitReview,
 } from './testsuite.controller.js'
 import { validate } from '../../middlewares/validate.middleware.js'
 import {
@@ -15,6 +17,8 @@ import {
   toggleTestCaseRegressiveSchema,
   aiGenerateTestCaseSchema,
   aiUpdateTestCaseStepsSchema,
+  requestApprovalSchema,
+  submitReviewSchema,
 } from '../../schemas/testsuite.schema.js'
 
 const router = express.Router()
@@ -43,5 +47,11 @@ router.post('/test-suites/ai-generate/:projectId', validate(aiGenerateTestCaseSc
 // AI Update Test Case Steps
 router.post('/testsuite/:projectId/ai-update-steps', validate(aiUpdateTestCaseStepsSchema), aiUpdateTestCaseSteps)
 router.post('/test-suites/ai-update-steps/:projectId', validate(aiUpdateTestCaseStepsSchema), aiUpdateTestCaseSteps)
+
+// Approvals & Reviews
+router.post('/testsuite/:projectId/:suiteId/request-approval', validate(requestApprovalSchema), requestApproval)
+router.post('/test-suites/:projectId/:suiteId/request-approval', validate(requestApprovalSchema), requestApproval)
+router.post('/testsuite/:projectId/:suiteId/review', validate(submitReviewSchema), submitReview)
+router.post('/test-suites/:projectId/:suiteId/review', validate(submitReviewSchema), submitReview)
 
 export default router

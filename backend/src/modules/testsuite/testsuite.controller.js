@@ -62,3 +62,25 @@ export async function aiUpdateTestCaseSteps(req, res, next) {
     next(err)
   }
 }
+
+export async function requestApproval(req, res, next) {
+  try {
+    const { projectId, suiteId } = req.params
+    const suite = await testSuiteService.requestApproval(projectId, suiteId, req.user.id)
+    return sendSuccess(res, 'Approval request sent successfully.', suite)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function submitReview(req, res, next) {
+  try {
+    const { projectId, suiteId } = req.params
+    const { status, comment } = req.body
+    const suite = await testSuiteService.submitReview(projectId, suiteId, req.user.id, status, comment)
+    return sendSuccess(res, 'Review submitted successfully.', suite)
+  } catch (err) {
+    next(err)
+  }
+}
+

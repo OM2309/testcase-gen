@@ -51,6 +51,7 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
 
   const userRole = (session as any)?.user?.role
   const canAssign = userRole === 'admin' || userRole === 'project_manager'
+  const canCreate = userRole === 'admin' || userRole === 'project_manager'
 
   // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -220,9 +221,11 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
             </button>
           </div>
 
-          <button onClick={() => setIsCreateOpen(true)} className="btn-primary">
-            <Plus className="w-3.5 h-3.5" /> New Project
-          </button>
+          {canCreate && (
+            <button onClick={() => setIsCreateOpen(true)} className="btn-primary">
+              <Plus className="w-3.5 h-3.5" /> New Project
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,9 +279,11 @@ export function ProjectsListView({ onSelectProject }: ProjectsListViewProps) {
           title="No projects yet"
           description="Create a project to upload requirement documents and generate test cases."
           action={
-            <button onClick={() => setIsCreateOpen(true)} className="btn-primary">
-              <Plus className="w-3.5 h-3.5" /> Create Project
-            </button>
+            canCreate ? (
+              <button onClick={() => setIsCreateOpen(true)} className="btn-primary">
+                <Plus className="w-3.5 h-3.5" /> Create Project
+              </button>
+            ) : null
           }
         />
       ) : viewMode === 'list' ? (

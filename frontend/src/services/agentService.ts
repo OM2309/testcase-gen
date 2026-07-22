@@ -62,5 +62,20 @@ export const agentService = {
       : `/requirements/gap-fill/${projectId}`
     const response = await apiClient.post<{ success: boolean; data: any }>(url)
     return response.data
+  },
+
+  async requestTestSuiteApproval(projectId: string, suiteId: string) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(
+      `/test-suites/${projectId}/${suiteId}/request-approval`
+    )
+    return response.data
+  },
+
+  async reviewTestSuite(projectId: string, suiteId: string, status: 'approved' | 'rejected', comment: string) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(
+      `/test-suites/${projectId}/${suiteId}/review`,
+      { status, comment }
+    )
+    return response.data
   }
 }

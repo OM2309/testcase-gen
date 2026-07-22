@@ -79,6 +79,14 @@ export interface RequirementAnalysis {
   gapFillStatus?: 'pending' | 'completed' | 'failed' | null
 }
 
+export interface TestSuiteComment {
+  userId: string
+  userName: string
+  role: string
+  commentText: string
+  createdAt: string
+}
+
 export interface TestSuiteData {
   _id: string
   projectId: string
@@ -86,6 +94,10 @@ export interface TestSuiteData {
   suiteName: string
   projectName: string
   testCases: TestCase[]
+  approvalStatus?: 'draft' | 'pending_approval' | 'approved' | 'rejected'
+  approvalRequestedBy?: string
+  approvalRequestedAt?: string
+  comments?: TestSuiteComment[]
 }
 
 export interface ProjectDetail {
@@ -274,4 +286,30 @@ export interface ModuleGroup {
   description?: string
   features: FeatureGroup[]
   testCasesCount: number
+}
+
+/* ----------------------------- Notifications ----------------------------- */
+
+export interface Notification {
+  _id: string
+  recipientId: string
+  senderId: {
+    _id: string
+    username: string
+    email: string
+    role: string
+  }
+  projectId: {
+    _id: string
+    projectName: string
+  }
+  testSuiteId: {
+    _id: string
+    suiteName: string
+  }
+  type: 'approval_request' | 'comment' | 'approval_response'
+  message: string
+  isRead: boolean
+  createdAt: string
+  updatedAt: string
 }

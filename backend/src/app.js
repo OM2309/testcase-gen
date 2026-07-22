@@ -15,6 +15,7 @@ import executionRoutes from './modules/execution/execution.route.js'
 import inspectorRoutes from './modules/inspector/inspector.route.js'
 import testfileRoutes from './modules/execution/testfile.route.js'
 import slackRoutes from './modules/slack/slack.route.js'
+import notificationRoutes from './modules/notification/notification.route.js'
 import { sendError } from './utils/responseHelper.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -52,7 +53,9 @@ app.use('/api', authMiddleware, testsuiteRoutes)
 app.use('/api', authMiddleware, executionRoutes)
 app.use('/api', authMiddleware, inspectorRoutes)
 app.use('/api', authMiddleware, testfileRoutes)
+app.use('/api', authMiddleware, notificationRoutes)
 app.use('/api', slackRoutes)
+
 
 // Serve screenshots from uploads/test-runs
 app.use('/uploads/test-runs', express.static(path.join(__dirname, '../uploads/test-runs')))
