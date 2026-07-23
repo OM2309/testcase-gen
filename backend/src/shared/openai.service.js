@@ -20,17 +20,21 @@ export async function callOpenAI({
 }) {
   const model = env.openaiModel || 'gpt-4o'
 
-  const userMessageContent = image
-    ? [
-      { type: 'text', text: userPrompt },
-      {
-        type: 'image_url',
-        image_url: {
-          url: image
-        }
+  let userMessageContent = userPrompt
+  if (image) {
+    userMessageContent = [{ type: 'text', text: userPrompt }]
+    const images = Array.isArray(image) ? image : [image]
+    for (const imgUrl of images) {
+      if (imgUrl) {
+        userMessageContent.push({
+          type: 'image_url',
+          image_url: {
+            url: imgUrl
+          }
+        })
       }
-    ]
-    : userPrompt
+    }
+  }
 
   const options = {
     model,

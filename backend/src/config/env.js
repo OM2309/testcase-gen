@@ -14,7 +14,8 @@ const env = {
   slackClientId: process.env.slackClientId,
   slackClientSecret: process.env.slackClientSecret,
   slackSigningSecret: process.env.slackSigningSecret,
-  slackRedirectUri: process.env.slackRedirectUri
+  slackRedirectUri: process.env.slackRedirectUri,
+  figmaAccessToken: process.env.FIGMA_ACCESS_TOKEN || ''
 }
 
 // Simple validation

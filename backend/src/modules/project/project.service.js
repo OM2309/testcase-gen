@@ -4,6 +4,7 @@ import Project from './project.model.js'
 import RequirementAnalysis from '../requirement/requirement.model.js'
 import TestSuite from '../testsuite/testsuite.model.js'
 import { parseFile } from '../../shared/fileParser.service.js'
+import { parseFigmaUrl, fetchFigmaFile, fetchFigmaImages, extractScreens } from '../../shared/figma.service.js'
 import { projectRepository } from './project.repository.js'
 import { ForbiddenError, NotFoundError, ValidationError } from '../../errors/index.js'
 
@@ -215,6 +216,71 @@ export class ProjectService {
 
     project.assignedUsers = userIds.map((id) => new mongoose.Types.ObjectId(id))
     return this.projectRepo.save(project)
+  }
+
+  async connectFigma(project, user, { figmaFileUrl, figmaAccessToken }) {
+    const isOwner = project.userId && project.userId.toString() === user.id
+    if (user.role !== 'admin' && !isOwner) {
+      throw new ForbiddenError('Access denied. Only the project owner or an admin can update Figma connection.')
+    }
+
+    if (!figmaFileUrl || !figmaFileUrl.trim()) {
+      throw new ValidationError('Figma URL is required.')
+    }
+
+    const fileKey = parseFigmaUrl(figmaFileUrl.trim())
+
+    project.figmaFileUrl = figmaFileUrl.trim()
+    project.figmaAccessToken = (figmaAccessToken || '').trim()
+    project.figmaFileKey = fileKey
+
+    return this.projectRepo.save(project)
+  }
+
+  async syncFigma(project, user) {
+    const isOwner = project.userId && project.userId.toString() === user.id
+    if (user.role !== 'admin' && !isOwner) {
+      throw new ForbiddenError('Access denied. Only the project owner or an admin can sync Figma.')
+    }
+
+    const token = (project.figmaAccessToken || '').trim() || process.env.FIGMA_ACCESS_TOKEN
+
+    if (!project.figmaFileKey) {
+      throw new ValidationError('Figma URL missing. Please connect to Figma first.')
+    }
+    if (!token) {
+      throw new ValidationError('Figma Access Token missing. Please provide an access token or configure FIGMA_ACCESS_TOKEN in the server environment.')
+    }
+
+    try {
+      const figmaFile = await fetchFigmaFile(project.figmaFileKey, token)
+      const parsedScreens = extractScreens(figmaFile)
+
+      if (parsedScreens.length === 0) {
+        throw new ValidationError('No active design frames found in the specified Figma file. Ensure screens are in Top-level Frames.')
+      }
+
+      const nodeIds = parsedScreens.map((s) => s.id)
+      const imagesMap = await fetchFigmaImages(project.figmaFileKey, nodeIds, token)
+
+      const syncedFrames = parsedScreens.map((s) => ({
+        id: s.id,
+        name: s.name,
+        imageUrl: imagesMap[s.id] || '',
+      }))
+
+      project.figmaSyncedFrames = syncedFrames
+      project.figmaParsedData = parsedScreens
+      
+      if (project.status === 'created' || project.status === 'failed') {
+        project.status = 'uploaded'
+      }
+
+      return this.projectRepo.save(project)
+    } catch (err) {
+      console.error('Figma Sync Error:', err)
+      throw err
+    }
   }
 }
 

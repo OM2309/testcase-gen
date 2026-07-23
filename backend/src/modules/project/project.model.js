@@ -82,6 +82,27 @@ const projectSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  figmaFileUrl: {
+    type: String,
+    default: ''
+  },
+  figmaAccessToken: {
+    type: String,
+    default: ''
+  },
+  figmaFileKey: {
+    type: String,
+    default: ''
+  },
+  figmaSyncedFrames: [{
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    imageUrl: { type: String, default: '' }
+  }],
+  figmaParsedData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
   status: {
     type: String,
     enum: ['created', 'uploaded', 'analyzing', 'analyzed', 'tests_generated', 'failed'],

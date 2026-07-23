@@ -9,6 +9,14 @@ export class LinearService {
   }
 
   async connectLinear(project, payload) {
+    if (payload.disconnect === true || (payload.apiKey === '' && payload.teamId === '')) {
+      project.linearApiKey = ''
+      project.linearTeamId = ''
+      project.linearConnected = false
+      await this.projectRepo.save(project)
+      return { linearTeamId: '', linearConnected: false }
+    }
+
     const apiKey = payload.apiKey || payload.linearApiKey
     const teamId = payload.teamId || payload.linearTeamId
 

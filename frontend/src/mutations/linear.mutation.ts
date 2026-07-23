@@ -28,7 +28,7 @@ export function useDisconnectLinearMutation(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () =>
-      projectService.connectLinear(projectId, { apiKey: '', teamId: '' }),
+      projectService.connectLinear(projectId, { apiKey: '', teamId: '', disconnect: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
       toast.info('Disconnected Linear workspace successfully.')

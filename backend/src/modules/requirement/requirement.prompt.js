@@ -331,3 +331,172 @@ Important:
 - Use unique IDs for each test case.
 `;
 }
+
+export const agent1FigmaSystemPrompt = `
+You are an expert QA requirement analyst specializing in Visual and UI-driven requirements gathering.
+
+Your job is to analyze the UI structure (JSON node tree of screens) and screenshots (provided as images) of a Figma design file to extract a structured machine-readable requirement model.
+
+You must NOT generate test cases.
+You must ONLY analyze the design elements and transitions to extract requirements.
+
+Your responsibilities:
+1. Identify screen names and map them to modules and features.
+2. Identify UI elements (input fields, buttons, labels, dropdowns, checkboxes).
+3. Identify page navigation and user journeys based on the prototyping connections (transitions) and layouts.
+4. Extract validation rules based on visual cues (e.g. asterisks * for required, text instructions like "min. 8 characters").
+5. Format the output to strictly match the requested JSON schema.
+
+Do not invent functionality, but do capture all UI elements and flows present in the designs.
+Use the actual visible text labels of fields and buttons in the output.
+
+Output MUST be valid JSON only. Do not include markdown code block wrappers or other text in your raw output.
+`;
+
+export function buildAgent1FigmaUserPrompt({ projectName, figmaParsedData }) {
+  return `
+Analyze the following Figma parsed screen nodes (and the attached screen screenshots) to generate a structured requirement JSON.
+
+Output schema:
+{
+  "document_name": "Figma Design File",
+  "project_name": "${projectName}",
+  "summary": "UI-extracted requirements from Figma design",
+  "modules": [
+    {
+      "module_name": "<Inferred Module from Page/Screen Name, e.g., Authentication>",
+      "description": "",
+      "features": [
+        {
+          "feature_name": "<Feature name, e.g. User Login>",
+          "description": "Visual layout and user flows from screen: <Screen Name>",
+          "actors": ["user"],
+          "functional_requirements": [
+            "User can view the <Screen Name> screen",
+            "User can interact with the form fields and trigger actions"
+          ],
+          "business_rules": [],
+          "validation_rules": [],
+          "input_fields": [
+            {
+              "name": "<field technical name, e.g. email>",
+              "label": "<exact visible label text on the design, e.g. Email Address>",
+              "type": "text | password | checkbox | select",
+              "required": false,
+              "allowed_values": [],
+              "format": "",
+              "default_value": ""
+            }
+          ],
+          "expected_outputs": [
+            "UI updates or triggers transition to another screen on action click"
+          ],
+          "error_conditions": [],
+          "state_changes": [],
+          "preconditions": [],
+          "postconditions": [],
+          "dependencies": [],
+          "navigation_flow": [
+            "User starts on <Screen Name>",
+            "Clicking <Button Name> triggers navigation"
+          ],
+          "non_functional_requirements": [],
+          "assumptions": [],
+          "ambiguities": [],
+          "clarifications_needed": []
+        }
+      ]
+    }
+  ],
+  "global_roles": [],
+  "global_business_rules": [],
+  "global_validations": [],
+  "cross_module_dependencies": [],
+  "document_level_ambiguities": [],
+  "document_level_clarifications_needed": []
+}
+
+Figma Parsed Screen Data:
+${JSON.stringify(figmaParsedData, null, 2)}
+`;
+}
+
+export const agent1HybridSystemPrompt = `
+You are an expert QA requirement analyst.
+Your job is to read a business requirement document (SRS/PRD text) alongside the UI structure (JSON node tree of screens) and screenshots (images) of a Figma design file to construct a unified, structured requirement model.
+
+You must:
+1. Merge the logical business rules and validations from the SRS with the actual visual UI screens, input fields, buttons, and layouts from the Figma design.
+2. Map the correct visual labels from Figma (e.g. "Email Address") to the business parameters in the SRS (e.g. "email").
+3. Enrich requirements with the exact user flows, screen transitions, and page locators found in the designs.
+4. Detect contradictions (e.g. a field exists in Figma but isn't mentioned in the SRS, or a business rule is specified in the SRS but the input field is missing in Figma). Record these contradictions under ambiguities/document_level_ambiguities.
+
+Output MUST be valid JSON only. Do not include markdown code block wrappers or other text in your raw output.
+`;
+
+export function buildAgent1HybridUserPrompt({ documentName, documentText, figmaParsedData }) {
+  return `
+Analyze the following SRS text document alongside the parsed Figma design structure to produce a single, unified requirement JSON.
+
+Ensure all input fields, buttons, and flows use the visual names and structures found in the Figma data, but adhere to the validation limits and business constraints from the SRS.
+
+Output schema:
+{
+  "document_name": "${documentName} + Figma Design",
+  "project_name": "",
+  "summary": "Hybrid requirement model combining SRS business rules and Figma UI layout",
+  "modules": [
+    {
+      "module_name": "",
+      "description": "",
+      "features": [
+        {
+          "feature_name": "",
+          "description": "",
+          "actors": [],
+          "functional_requirements": [],
+          "business_rules": [],
+          "validation_rules": [],
+          "input_fields": [
+            {
+              "name": "",
+              "label": "<exact visible label text on figma screen, e.g. Password>",
+              "type": "",
+              "required": false,
+              "allowed_values": [],
+              "format": "",
+              "default_value": ""
+            }
+          ],
+          "expected_outputs": [],
+          "error_conditions": [],
+          "state_changes": [],
+          "preconditions": [],
+          "postconditions": [],
+          "dependencies": [],
+          "navigation_flow": [],
+          "non_functional_requirements": [],
+          "assumptions": [],
+          "ambiguities": [],
+          "clarifications_needed": []
+        }
+      ]
+    }
+  ],
+  "global_roles": [],
+  "global_business_rules": [],
+  "global_validations": [],
+  "cross_module_dependencies": [],
+  "document_level_ambiguities": [],
+  "document_level_clarifications_needed": []
+}
+
+SRS Document Text:
+${documentText}
+
+---
+
+Figma Design Screen Data:
+${JSON.stringify(figmaParsedData, null, 2)}
+`;
+}

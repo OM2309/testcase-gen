@@ -23,7 +23,7 @@ interface ProjectContextType {
   agentRunning: 'agent0' | 'agent1' | 'agent2' | 'gapfill' | null
   agentError: string | null
   runAgent0: (srsId?: string) => Promise<void>
-  runAgent1: (srsId?: string) => Promise<void>
+  runAgent1: (srsId?: string, mode?: string) => Promise<void>
   runAgent2: (srsId?: string) => Promise<void>
   runGapFill: (srsId?: string) => Promise<void>
   refreshProject: () => Promise<void>
@@ -108,13 +108,13 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const runAgent1 = async (srsId?: string) => {
+  const runAgent1 = async (srsId?: string, mode?: string) => {
     if (!projectId || agentRunning) return
     const targetSrsId = srsId || selectedSrsId || undefined
     setAgentError(null)
     setAgentRunning('agent1')
     try {
-      await agent1Mutation.mutateAsync(targetSrsId)
+      await agent1Mutation.mutateAsync({ srsDocumentId: targetSrsId, mode })
     } catch (err: any) {
       setAgentError(err?.response?.data?.message || 'Agent 1 module extraction failed. Please try again.')
     } finally {

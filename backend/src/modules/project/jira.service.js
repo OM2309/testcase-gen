@@ -23,6 +23,21 @@ export class JiraService {
   }
 
   async connectJira(project, payload) {
+    if (payload.disconnect === true || (!payload.host && !payload.jiraHost && !payload.email && !payload.jiraEmail && !payload.token && !payload.jiraToken && !payload.projectKey && !payload.jiraProjectKey)) {
+      project.jiraHost = ''
+      project.jiraEmail = ''
+      project.jiraToken = ''
+      project.jiraProjectKey = ''
+      project.jiraConnected = false
+      await this.projectRepo.save(project)
+      return {
+        jiraHost: '',
+        jiraEmail: '',
+        jiraProjectKey: '',
+        jiraConnected: false,
+      }
+    }
+
     const host = payload.host || payload.jiraHost
     const email = payload.email || payload.jiraEmail
     const token = payload.token || payload.jiraToken

@@ -15,6 +15,8 @@ import {
   connectLinear,
   getLinearIssues,
   importLinearStories,
+  connectFigma,
+  syncFigma,
 } from './project.controller.js'
 import { projectAccessMiddleware } from '../../middleware/projectAccess.js'
 import { authorizeRoles } from '../../middleware/auth.js'
@@ -25,6 +27,7 @@ import {
   assignUsersSchema,
   connectJiraSchema,
   connectLinearSchema,
+  connectFigmaSchema,
 } from '../../schemas/project.schema.js'
 
 const router = express.Router()
@@ -44,5 +47,7 @@ router.post('/projects/:projectId/jira-import', projectAccessMiddleware, importJ
 router.put('/projects/:projectId/linear-connect', projectAccessMiddleware, validate(connectLinearSchema), connectLinear)
 router.get('/projects/:projectId/linear-issues', projectAccessMiddleware, getLinearIssues)
 router.post('/projects/:projectId/linear-import', projectAccessMiddleware, importLinearStories)
+router.put('/projects/:projectId/figma-connect', projectAccessMiddleware, validate(connectFigmaSchema), connectFigma)
+router.post('/projects/:projectId/figma-sync', projectAccessMiddleware, syncFigma)
 
 export default router

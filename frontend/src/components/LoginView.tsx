@@ -132,7 +132,7 @@ export function LoginView() {
               </Avatar>
               <div>
                 <h4 className="font-bold text-white text-sm">Anurag Sharma</h4>
-                <p className="text-[11px] text-white/60">Software Engineer at DevCore</p>
+                <p className="text-[11px] text-white/60">Software Engineer</p>
               </div>
             </div>
           </div>
