@@ -71,6 +71,6 @@ export const connectFigmaSchema = z.object({
   }),
   body: z.object({
     figmaFileUrl: z.string().min(1, 'Figma URL is required').trim(),
-    figmaAccessToken: z.string().min(1, 'Figma Access Token is required').trim(),
+    figmaAccessToken: z.string().trim().optional(),
   }),
 })

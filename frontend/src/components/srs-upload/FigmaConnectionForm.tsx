@@ -5,6 +5,7 @@ import { Link2, Loader2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-rea
 import { projectService } from '../../services/projectService'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { FigmaScreensCarouselModal } from '../shared'
 
 interface FigmaConnectionFormProps {
   projectId: string
@@ -17,6 +18,7 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
   const [url, setUrl] = useState(initialUrl)
   const [connecting, setConnecting] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +33,7 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
         figmaFileUrl: url.trim()
       })
       if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] })
         toast.success('Figma URL saved! Starting sync...')
         // Auto sync after successful connection
         await handleSync()
@@ -134,10 +137,11 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[190px] overflow-y-auto pr-1">
-              {syncedFrames.map((frame) => (
+              {syncedFrames.map((frame, index) => (
                 <div 
                   key={frame.id} 
-                  className="bg-background border border-border/60 hover:border-primary/30 rounded-xl p-2 flex flex-col gap-1.5 transition shadow-sm group"
+                  onClick={() => setPreviewIndex(index)}
+                  className="bg-background border border-border/60 hover:border-primary/50 rounded-xl p-2 flex flex-col gap-1.5 transition shadow-sm group cursor-pointer"
                 >
                   <div className="aspect-video bg-muted border border-border/40 rounded-lg overflow-hidden relative flex items-center justify-center">
                     {frame.imageUrl ? (
@@ -160,6 +164,14 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
           )}
         </div>
       )}
+
+      {/* Carousel Preview Modal */}
+      <FigmaScreensCarouselModal
+        isOpen={previewIndex !== null}
+        onClose={() => setPreviewIndex(null)}
+        frames={syncedFrames}
+        initialIndex={previewIndex ?? 0}
+      />
     </div>
   )
 }

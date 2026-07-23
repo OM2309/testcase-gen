@@ -90,9 +90,28 @@ export async function fetchFigmaImages(fileKey, nodeIds, token) {
  * @param {object} figmaDocument The document root node returned by Figma API
  * @returns {object[]} Array of extracted screens/frames
  */
-export function extractScreens(figmaDocument) {
+export function extractScreens(figmaDocument, figmaFileUrl = '') {
   if (!figmaDocument || !figmaDocument.document) {
     return []
+  }
+
+  let targetPageId = null
+  let targetNodeId = null
+
+  if (figmaFileUrl) {
+    try {
+      const urlObj = new URL(figmaFileUrl)
+      const pageIdParam = urlObj.searchParams.get('page-id')
+      if (pageIdParam) {
+        targetPageId = decodeURIComponent(pageIdParam).replace(/-/g, ':')
+      }
+      const nodeIdParam = urlObj.searchParams.get('node-id') || urlObj.searchParams.get('starting-point-node-id')
+      if (nodeIdParam) {
+        targetNodeId = decodeURIComponent(nodeIdParam).replace(/-/g, ':')
+      }
+    } catch (e) {
+      // Ignore URL parsing errors
+    }
   }
 
   const screens = []
@@ -100,14 +119,46 @@ export function extractScreens(figmaDocument) {
   // Document -> Canvases (Pages)
   const canvases = figmaDocument.document.children || []
 
+  // Resolve targetPageId from targetNodeId if page-id is missing
+  if (targetNodeId && !targetPageId) {
+    for (const canvas of canvases) {
+      if (canvas.type !== 'CANVAS') continue
+      
+      const checkNode = (node) => {
+        if (!node) return false
+        if (node.id === targetNodeId) return true
+        if (node.children) {
+          for (const child of node.children) {
+            if (checkNode(child)) return true
+          }
+        }
+        return false
+      }
+
+      if (checkNode(canvas)) {
+        targetPageId = canvas.id
+        break
+      }
+    }
+  }
+
   for (const canvas of canvases) {
     if (canvas.type !== 'CANVAS') continue
+
+    // Filter by targetPageId if available
+    if (targetPageId && canvas.id !== targetPageId) {
+      continue
+    }
 
     // Recursively find top-level screens in canvas (traversing SECTIONS and GROUPs)
     const findScreens = (node) => {
       if (!node) return
 
       if (node.type === 'FRAME') {
+        // Exclude very small frames that are components or decorative elements (not actual screens)
+        if (node.absoluteBoundingBox && (node.absoluteBoundingBox.width < 150 || node.absoluteBoundingBox.height < 150)) {
+          return
+        }
         const screenElements = []
         const transitions = []
 

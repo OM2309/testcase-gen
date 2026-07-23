@@ -3,6 +3,8 @@ import mongoose from 'mongoose'
 import Project from './project.model.js'
 import RequirementAnalysis from '../requirement/requirement.model.js'
 import TestSuite from '../testsuite/testsuite.model.js'
+import TestRun from '../execution/execution.model.js'
+import Notification from '../notification/notification.model.js'
 import { parseFile } from '../../shared/fileParser.service.js'
 import { parseFigmaUrl, fetchFigmaFile, fetchFigmaImages, extractScreens } from '../../shared/figma.service.js'
 import { projectRepository } from './project.repository.js'
@@ -197,6 +199,8 @@ export class ProjectService {
       this.projectRepo.findByIdAndDelete(projectId),
       RequirementAnalysis.deleteMany({ projectId }),
       TestSuite.deleteMany({ projectId }),
+      TestRun.deleteMany({ projectId }),
+      Notification.deleteMany({ projectId }),
     ])
   }
 
@@ -254,7 +258,7 @@ export class ProjectService {
 
     try {
       const figmaFile = await fetchFigmaFile(project.figmaFileKey, token)
-      const parsedScreens = extractScreens(figmaFile)
+      const parsedScreens = extractScreens(figmaFile, project.figmaFileUrl)
 
       if (parsedScreens.length === 0) {
         throw new ValidationError('No active design frames found in the specified Figma file. Ensure screens are in Top-level Frames.')
@@ -269,14 +273,19 @@ export class ProjectService {
         imageUrl: imagesMap[s.id] || '',
       }))
 
-      project.figmaSyncedFrames = syncedFrames
-      project.figmaParsedData = parsedScreens
-      
-      if (project.status === 'created' || project.status === 'failed') {
-        project.status = 'uploaded'
+      const freshProject = await Project.findById(project._id)
+      if (!freshProject) {
+        throw new ValidationError('Project not found during sync.')
       }
 
-      return this.projectRepo.save(project)
+      freshProject.figmaSyncedFrames = syncedFrames
+      freshProject.figmaParsedData = parsedScreens
+      
+      if (freshProject.status === 'created' || freshProject.status === 'failed') {
+        freshProject.status = 'uploaded'
+      }
+
+      return this.projectRepo.save(freshProject)
     } catch (err) {
       console.error('Figma Sync Error:', err)
       throw err

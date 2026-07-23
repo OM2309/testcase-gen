@@ -38,11 +38,11 @@ export function useProjectDetailQuery(projectId: string | undefined) {
 /**
  * All projects list (no pagination) — used by sidebar.
  */
-export function useAllProjectsQuery() {
+export function useAllProjectsQuery(search: string = '') {
   return useQuery({
-    queryKey: queryKeys.projects.all,
+    queryKey: [...queryKeys.projects.all, { search }] as const,
     queryFn: async () => {
-      const res = await projectService.getAllProjects()
+      const res = await projectService.getAllProjects(search)
       return res.data?.projects || []
     },
   })

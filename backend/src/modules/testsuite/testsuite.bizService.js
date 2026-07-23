@@ -47,8 +47,7 @@ export class TestSuiteService {
       throw new NotFoundError('Project not found')
     }
 
-    const query = { projectId }
-    if (srsDocumentId) query.srsDocumentId = srsDocumentId
+    const query = { projectId, srsDocumentId: srsDocumentId || null }
 
     const requirementAnalysis = await this.reqRepo.findOne(query)
     if (!requirementAnalysis || !requirementAnalysis.analyzedData) {

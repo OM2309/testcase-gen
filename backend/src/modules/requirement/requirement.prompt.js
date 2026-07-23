@@ -346,6 +346,7 @@ Your responsibilities:
 3. Identify page navigation and user journeys based on the prototyping connections (transitions) and layouts.
 4. Extract validation rules based on visual cues (e.g. asterisks * for required, text instructions like "min. 8 characters").
 5. Format the output to strictly match the requested JSON schema.
+6. Detect design level gaps, ambiguities, missing user flows, or incomplete UI layouts (e.g. buttons with no prototyping transition, forms without submit buttons, fields without visible labels, or missing back/cancel buttons in modals/forms) and populate these under "document_level_ambiguities" and "document_level_clarifications_needed".
 
 Do not invent functionality, but do capture all UI elements and flows present in the designs.
 Use the actual visible text labels of fields and buttons in the output.

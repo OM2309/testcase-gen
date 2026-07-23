@@ -42,14 +42,23 @@ export function AppSidebar({
   }
 
   const { project, selectedSrsId, requirementAnalyses, testSuites } = useProject()
-  const { data: allProjects = [] } = useAllProjectsQuery()
   const [projectQuery, setProjectQuery] = React.useState("")
+  const [debouncedQuery, setDebouncedQuery] = React.useState("")
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(projectQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [projectQuery])
+
+  const { data: allProjects = [] } = useAllProjectsQuery(debouncedQuery)
 
   const filteredProjects = React.useMemo(() => {
-    if (!projectQuery) return allProjects
-    return allProjects.filter((p: Project) =>
-      p.projectName.toLowerCase().includes(projectQuery.toLowerCase())
-    )
+    if (!projectQuery.trim()) {
+      return allProjects.slice(0, 5)
+    }
+    return allProjects
   }, [allProjects, projectQuery])
   
   const isOnReportsPage = pathname.includes('/execution')

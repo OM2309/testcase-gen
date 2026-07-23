@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useProject } from '../contexts/ProjectContext'
 import { Badge } from "@/components/ui/badge"
+import { FigmaScreensCarouselModal } from './shared'
 
 export function RequirementsView() {
   const {
@@ -24,6 +25,7 @@ export function RequirementsView() {
   const [activeModuleIdx, setActiveModuleIdx] = useState(0)
   const [showParsedText, setShowParsedText] = useState(false)
   const [showFigmaPreview, setShowFigmaPreview] = useState(false)
+  const [figmaPreviewIndex, setFigmaPreviewIndex] = useState<number | null>(null)
 
   const hasSrs = !!((project?.srsDocuments && project.srsDocuments.length > 0) || project?.parsedText)
   const hasFigma = !!(project?.figmaSyncedFrames && project.figmaSyncedFrames.length > 0)
@@ -147,8 +149,12 @@ export function RequirementsView() {
             {showFigmaPreview && (
               <div className="border-t border-border px-5 py-4 bg-muted/20">
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                  {project.figmaSyncedFrames?.map((frame: any) => (
-                    <div key={frame.id} className="border border-border/80 bg-background p-2 rounded-xl flex flex-col gap-1.5 shadow-sm">
+                  {project.figmaSyncedFrames?.map((frame: any, index: number) => (
+                    <div 
+                      key={frame.id} 
+                      onClick={() => setFigmaPreviewIndex(index)}
+                      className="border border-border/80 bg-background p-2 rounded-xl flex flex-col gap-1.5 shadow-sm cursor-pointer hover:border-primary/50 transition"
+                    >
                       <div className="aspect-video bg-muted border border-border/40 rounded-lg overflow-hidden relative flex items-center justify-center">
                         {frame.imageUrl ? (
                           <img src={frame.imageUrl} alt={frame.name} className="object-contain w-full h-full" />
@@ -429,6 +435,14 @@ export function RequirementsView() {
           )}
         </div>
       </div>
+
+      {/* Figma Carousel Preview Modal */}
+      <FigmaScreensCarouselModal
+        isOpen={figmaPreviewIndex !== null}
+        onClose={() => setFigmaPreviewIndex(null)}
+        frames={project?.figmaSyncedFrames || []}
+        initialIndex={figmaPreviewIndex ?? 0}
+      />
     </div>
   )
 }
