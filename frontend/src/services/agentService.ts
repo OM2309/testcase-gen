@@ -9,11 +9,11 @@ export const agentService = {
     return response.data
   },
 
-  async generateRequirements(projectId: string, srsDocumentId?: string) {
+  async generateRequirements(projectId: string, srsDocumentId?: string, mode: string = 'srs_only') {
     const url = srsDocumentId
       ? `/requirements/${projectId}/generate/${srsDocumentId}`
       : `/requirements/${projectId}/generate`
-    const response = await apiClient.post<{ success: boolean; data: any }>(url)
+    const response = await apiClient.post<{ success: boolean; data: any }>(url, { mode })
     return response.data
   },
 

@@ -39,8 +39,16 @@ export const connectJiraSchema = z.object({
     jiraToken: z.string().optional(),
     projectKey: z.string().optional(),
     jiraProjectKey: z.string().optional(),
+    disconnect: z.boolean().optional(),
   }).refine(
-    (data) => (data.host || data.jiraHost) && (data.email || data.jiraEmail) && (data.token || data.jiraToken) && (data.projectKey || data.jiraProjectKey),
+    (data) => data.disconnect || (
+      (data.host || data.jiraHost) &&
+      (data.email || data.jiraEmail) &&
+      (data.token || data.jiraToken) &&
+      (data.projectKey || data.jiraProjectKey)
+    ) || (
+      data.host === '' && data.email === '' && data.token === '' && data.projectKey === ''
+    ),
     { message: 'All Jira fields (host, email, token, projectKey) are required.' }
   ),
 })
@@ -54,5 +62,15 @@ export const connectLinearSchema = z.object({
     linearApiKey: z.string().optional(),
     teamId: z.string().optional(),
     linearTeamId: z.string().optional(),
+  }),
+})
+
+export const connectFigmaSchema = z.object({
+  params: z.object({
+    projectId: z.string().min(1, 'Project ID is required'),
+  }),
+  body: z.object({
+    figmaFileUrl: z.string().min(1, 'Figma URL is required').trim(),
+    figmaAccessToken: z.string().trim().optional(),
   }),
 })

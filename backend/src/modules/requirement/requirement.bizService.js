@@ -5,6 +5,8 @@ import {
   runAgent1,
   runAgent0,
   runAgent3GapFill,
+  runAgent1Figma,
+  runAgent1Hybrid,
 } from './requirement.service.js'
 import { ApiError } from '../../utils/apiError.js'
 import { NotFoundError, ValidationError } from '../../errors/index.js'
@@ -84,7 +86,7 @@ export class RequirementService {
     }
   }
 
-  async generateRequirements(projectId, srsDocumentId) {
+  async generateRequirements(projectId, srsDocumentId, mode = 'srs_only') {
     const project = await this.projRepo.findById(projectId)
     if (!project) {
       throw new NotFoundError('Project not found')
@@ -93,19 +95,29 @@ export class RequirementService {
     let documentText = null
     let documentName = null
 
-    if (srsDocumentId) {
-      const srsDoc = project.srsDocuments.find((d) => d._id.toString() === srsDocumentId)
-      if (!srsDoc) {
-        throw new NotFoundError('SRS document not found in project')
+    // Determine target documents for text-based analysis
+    if (mode === 'srs_only' || mode === 'srs_and_figma') {
+      if (srsDocumentId) {
+        const srsDoc = project.srsDocuments.find((d) => d._id.toString() === srsDocumentId)
+        if (!srsDoc) {
+          throw new NotFoundError('SRS document not found in project')
+        }
+        documentText = srsDoc.parsedText
+        documentName = srsDoc.originalFileName
+      } else {
+        if (!project.parsedText) {
+          throw new ValidationError('No parsed text available in the project to analyze')
+        }
+        documentText = project.parsedText
+        documentName = project.documentName || project.originalFileName
       }
-      documentText = srsDoc.parsedText
-      documentName = srsDoc.originalFileName
-    } else {
-      if (!project.parsedText) {
-        throw new ValidationError('No parsed text available in the project to analyze')
+    }
+
+    // Verify Figma connection details if figma is needed
+    if (mode === 'figma_only' || mode === 'srs_and_figma') {
+      if (!project.figmaParsedData || project.figmaParsedData.length === 0) {
+        throw new ValidationError('Figma designs not synchronized. Please connect and sync Figma first.')
       }
-      documentText = project.parsedText
-      documentName = project.documentName || project.originalFileName
     }
 
     const targetSrsDocumentId = srsDocumentId || null
@@ -116,12 +128,34 @@ export class RequirementService {
     })
 
     try {
-      const requirementsJson = await runAgent1({ documentName, documentText })
+      let requirementsJson
+      const figmaImages = project.figmaSyncedFrames
+        ? project.figmaSyncedFrames.map(f => f.imageUrl).filter(Boolean).slice(0, 10)
+        : []
+
+      if (mode === 'figma_only') {
+        requirementsJson = await runAgent1Figma({
+          projectName: project.projectName,
+          figmaParsedData: project.figmaParsedData,
+          figmaImages
+        })
+      } else if (mode === 'srs_and_figma') {
+        requirementsJson = await runAgent1Hybrid({
+          projectName: project.projectName,
+          documentName,
+          documentText,
+          figmaParsedData: project.figmaParsedData,
+          figmaImages
+        })
+      } else {
+        requirementsJson = await runAgent1({ documentName, documentText })
+      }
 
       const analysis = await this.reqRepo.findOneAndUpdate(
         { projectId, srsDocumentId: targetSrsDocumentId },
         {
           analyzedData: requirementsJson,
+          generationMode: mode,
           status: 'completed',
           errorMessage: null,
         },

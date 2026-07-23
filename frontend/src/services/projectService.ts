@@ -31,7 +31,7 @@ export const projectService = {
     return response.data
   },
 
-  async connectJira(projectId: string, payload: { host: string; email: string; token: string; projectKey: string }) {
+  async connectJira(projectId: string, payload: { host: string; email: string; token: string; projectKey: string; disconnect?: boolean }) {
     const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/jira-connect`, payload)
     return response.data
   },
@@ -46,7 +46,7 @@ export const projectService = {
     return response.data
   },
 
-  async connectLinear(projectId: string, payload: { apiKey: string; teamId: string }) {
+  async connectLinear(projectId: string, payload: { apiKey: string; teamId: string; disconnect?: boolean }) {
     const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/linear-connect`, payload)
     return response.data
   },
@@ -58,6 +58,16 @@ export const projectService = {
 
   async importLinearStories(projectId: string, issueKeys: string[]) {
     const response = await apiClient.post<{ success: boolean; data: any }>(`/projects/${projectId}/linear-import`, { issueKeys })
+    return response.data
+  },
+
+  async connectFigma(projectId: string, payload: { figmaFileUrl: string; figmaAccessToken?: string }) {
+    const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/figma-connect`, payload)
+    return response.data
+  },
+
+  async syncFigma(projectId: string) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(`/projects/${projectId}/figma-sync`)
     return response.data
   }
 }

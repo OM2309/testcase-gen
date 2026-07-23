@@ -16,6 +16,11 @@ const requirementAnalysisSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null
   },
+  generationMode: {
+    type: String,
+    enum: ['srs_only', 'figma_only', 'srs_and_figma'],
+    default: 'srs_only'
+  },
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed'],

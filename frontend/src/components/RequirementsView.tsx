@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useProject } from '../contexts/ProjectContext'
 import { Badge } from "@/components/ui/badge"
+import { FigmaScreensCarouselModal } from './shared'
 
 export function RequirementsView() {
   const {
@@ -23,6 +24,17 @@ export function RequirementsView() {
 
   const [activeModuleIdx, setActiveModuleIdx] = useState(0)
   const [showParsedText, setShowParsedText] = useState(false)
+  const [showFigmaPreview, setShowFigmaPreview] = useState(false)
+  const [figmaPreviewIndex, setFigmaPreviewIndex] = useState<number | null>(null)
+
+  const hasSrs = !!((project?.srsDocuments && project.srsDocuments.length > 0) || project?.parsedText)
+  const hasFigma = !!(project?.figmaSyncedFrames && project.figmaSyncedFrames.length > 0)
+
+  const [generationMode, setGenerationMode] = useState<'srs_only' | 'figma_only' | 'srs_and_figma'>(() => {
+    if (hasSrs && hasFigma) return 'srs_and_figma'
+    if (hasFigma) return 'figma_only'
+    return 'srs_only'
+  })
 
   // Find active requirement analysis for the selected SRS document
   const activeRequirement = useMemo(() => {
@@ -94,7 +106,7 @@ export function RequirementsView() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Requirements Analysis</h1>
-          <p className="text-sm text-muted-foreground mt-1">Run Agent 1 to analyze your PRD/SRS and extract structured requirements.</p>
+          <p className="text-sm text-muted-foreground mt-1">Run Agent 1 to analyze your PRD/SRS design resources to extract structured requirements.</p>
         </div>
 
         {error && (
@@ -123,16 +135,97 @@ export function RequirementsView() {
           </div>
         )}
 
-        <div className="border border-dashed border-border rounded-2xl bg-card/20 flex flex-col items-center justify-center p-16 text-center gap-6">
+        {hasFigma && (
+          <div className="border border-border bg-card rounded-xl overflow-hidden">
+            <button
+              onClick={() => setShowFigmaPreview(v => !v)}
+              className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <BrainCircuit className="w-4 h-4 text-purple-500" /> Synced Figma Designs ({project.figmaSyncedFrames?.length || 0} Screens)
+              </div>
+              {showFigmaPreview ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+            </button>
+            {showFigmaPreview && (
+              <div className="border-t border-border px-5 py-4 bg-muted/20">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {project.figmaSyncedFrames?.map((frame: any, index: number) => (
+                    <div 
+                      key={frame.id} 
+                      onClick={() => setFigmaPreviewIndex(index)}
+                      className="border border-border/80 bg-background p-2 rounded-xl flex flex-col gap-1.5 shadow-sm cursor-pointer hover:border-primary/50 transition"
+                    >
+                      <div className="aspect-video bg-muted border border-border/40 rounded-lg overflow-hidden relative flex items-center justify-center">
+                        {frame.imageUrl ? (
+                          <img src={frame.imageUrl} alt={frame.name} className="object-contain w-full h-full" />
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground">No Preview</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] font-semibold truncate text-center text-foreground/80" title={frame.name}>
+                        {frame.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="border border-dashed border-border rounded-2xl bg-card/20 flex flex-col items-center justify-center p-14 text-center gap-6">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <BrainCircuit className="w-8 h-8 text-primary" />
           </div>
           <div className="space-y-1 max-w-sm">
             <h3 className="font-semibold text-lg">Run Agent 1</h3>
-            <p className="text-sm text-muted-foreground">Analyze your PRD/SRS to extract modules, features, business rules, and validation requirements.</p>
+            <p className="text-sm text-muted-foreground">Analyze your requirements and design to extract modules, features, business rules, and validation specs.</p>
           </div>
+
+          {/* Mode Selector */}
+          {(hasSrs || hasFigma) && (
+            <div className="w-full max-w-md bg-muted/75 border border-border/80 p-1.5 rounded-2xl flex gap-1 text-xs">
+              {hasSrs && (
+                <button
+                  onClick={() => setGenerationMode('srs_only')}
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold transition cursor-pointer ${
+                    generationMode === 'srs_only'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  SRS Document
+                </button>
+              )}
+              {hasFigma && (
+                <button
+                  onClick={() => setGenerationMode('figma_only')}
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold transition cursor-pointer ${
+                    generationMode === 'figma_only'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Figma Design
+                </button>
+              )}
+              {hasSrs && hasFigma && (
+                <button
+                  onClick={() => setGenerationMode('srs_and_figma')}
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold transition cursor-pointer ${
+                    generationMode === 'srs_and_figma'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Hybrid (SRS + Figma)
+                </button>
+              )}
+            </div>
+          )}
+
           <button
-            onClick={() => runAgent1(selectedSrsId || undefined)}
+            onClick={() => runAgent1(selectedSrsId || undefined, generationMode)}
             className="btn-primary h-10 px-5 text-sm"
           >
             <Sparkles className="w-4 h-4" /> Analyze with Agent 1
@@ -153,13 +246,37 @@ export function RequirementsView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-4 border-b border-border/60">
         <div>
-          <span className="text-xs font-bold text-primary tracking-wider uppercase">Agent 1 — Requirement Analysis</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-primary tracking-wider uppercase">Agent 1 — Requirement Analysis</span>
+            {activeRequirement?.generationMode && (
+              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
+                activeRequirement.generationMode === 'srs_and_figma'
+                  ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20'
+                  : activeRequirement.generationMode === 'figma_only'
+                  ? 'bg-purple-500/10 text-purple-500 border-purple-500/20'
+                  : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+              }`}>
+                {activeRequirement.generationMode === 'srs_and_figma' ? 'Hybrid (SRS + Figma)' : activeRequirement.generationMode === 'figma_only' ? 'Figma Design' : 'SRS Document'}
+              </span>
+            )}
+          </div>
           <h1 className="text-2xl font-bold tracking-tight mt-1">{requirements.project_name || 'Project Analysis'}</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-xl">{requirements.summary}</p>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
+          {(hasSrs || hasFigma) && (
+            <select
+              value={generationMode}
+              onChange={(e) => setGenerationMode(e.target.value as any)}
+              className="px-2.5 py-1.5 bg-background border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-primary/40 font-semibold"
+            >
+              {hasSrs && <option value="srs_only">SRS Mode</option>}
+              {hasFigma && <option value="figma_only">Figma Mode</option>}
+              {hasSrs && hasFigma && <option value="srs_and_figma">Hybrid Mode</option>}
+            </select>
+          )}
           <button
-            onClick={() => runAgent1(selectedSrsId || undefined)}
+            onClick={() => runAgent1(selectedSrsId || undefined, generationMode)}
             className="btn-secondary"
           >
             <BrainCircuit className="w-3.5 h-3.5" /> Re-analyze
@@ -318,6 +435,14 @@ export function RequirementsView() {
           )}
         </div>
       </div>
+
+      {/* Figma Carousel Preview Modal */}
+      <FigmaScreensCarouselModal
+        isOpen={figmaPreviewIndex !== null}
+        onClose={() => setFigmaPreviewIndex(null)}
+        frames={project?.figmaSyncedFrames || []}
+        initialIndex={figmaPreviewIndex ?? 0}
+      />
     </div>
   )
 }

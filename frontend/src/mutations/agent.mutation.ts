@@ -28,8 +28,8 @@ export function useRunAgent0Mutation(projectId: string) {
 export function useRunAgent1Mutation(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (srsDocumentId?: string) =>
-      agentService.generateRequirements(projectId, srsDocumentId),
+    mutationFn: (params: { srsDocumentId?: string; mode?: string } = {}) =>
+      agentService.generateRequirements(projectId, params.srsDocumentId, params.mode),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
       toast.success('Agent 1 module extraction completed successfully! ✨')

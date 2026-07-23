@@ -128,3 +128,21 @@ export async function importLinearStories(req, res, next) {
     next(err)
   }
 }
+
+export async function connectFigma(req, res, next) {
+  try {
+    const project = await projectService.connectFigma(req.project, req.user, req.body)
+    return sendSuccess(res, 'Connected to Figma successfully.', project)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function syncFigma(req, res, next) {
+  try {
+    const project = await projectService.syncFigma(req.project, req.user)
+    return sendSuccess(res, 'Figma screens synced successfully.', project)
+  } catch (err) {
+    next(err)
+  }
+}

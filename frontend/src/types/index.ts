@@ -25,9 +25,13 @@ export interface Project {
   jiraEmail?: string
   jiraProjectKey?: string
   jiraConnected?: boolean
-  linearApiKey?: string
-  linearTeamId?: string
-  linearConnected?: boolean
+  linearApiKey?: string;
+  linearTeamId?: string;
+  linearConnected?: boolean;
+  figmaFileUrl?: string;
+  figmaAccessToken?: string;
+  figmaFileKey?: string;
+  figmaSyncedFrames?: Array<{ id: string; name: string; imageUrl: string }>;
 }
 
 export interface Agent0Feedback {
@@ -71,6 +75,7 @@ export interface RequirementAnalysis {
   projectId: string
   srsDocumentId: string | null
   analyzedData: any
+  generationMode?: string
   status: string
   agent0Score?: number | null
   agent0Feedback?: Agent0Feedback | string | null

@@ -28,7 +28,7 @@ export function useDisconnectJiraMutation(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () =>
-      projectService.connectJira(projectId, { host: '', email: '', token: '', projectKey: '' }),
+      projectService.connectJira(projectId, { host: '', email: '', token: '', projectKey: '', disconnect: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
       toast.info('Disconnected Jira account successfully.')

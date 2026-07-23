@@ -10,6 +10,7 @@ import { JiraConnectionForm } from './JiraConnectionForm'
 import { JiraIssueExplorer } from './JiraIssueExplorer'
 import { LinearConnectionForm } from './LinearConnectionForm'
 import { LinearIssueExplorer } from './LinearIssueExplorer'
+import { FigmaConnectionForm } from './FigmaConnectionForm'
 
 interface SrsUploadSectionProps {
   projectId: string
@@ -27,10 +28,10 @@ interface SrsUploadSectionProps {
  * data fetching via TanStack Query.
  */
 export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUploaded, mode }: SrsUploadSectionProps) {
-  const [activeTab, setActiveTab] = useState<'upload' | 'jira' | 'linear'>(mode || 'upload')
+  const [activeTab, setActiveTab] = useState<'upload' | 'jira' | 'linear'>((mode as any) || 'upload')
 
   useEffect(() => {
-    if (mode) setActiveTab(mode)
+    if (mode) setActiveTab(mode as any)
   }, [mode])
 
   const jiraConnected = !!project?.jiraConnected
@@ -64,7 +65,7 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            Upload Document File
+            Upload Document / Connect Figma
           </button>
           <button
             onClick={() => setActiveTab('jira')}
@@ -91,7 +92,24 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
 
       {/* Tab Content */}
       {activeTab === 'upload' && (
-        <FileUploadTab projectId={projectId} onSrsUploaded={onSrsUploaded} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div className="space-y-2.5">
+            <h4 className="font-bold text-foreground text-xs uppercase tracking-wider">
+              Upload SRS Document <span className="text-muted-foreground font-normal">(Optional)</span>
+            </h4>
+            <FileUploadTab projectId={projectId} onSrsUploaded={onSrsUploaded} />
+          </div>
+          <div className="border-t lg:border-t-0 lg:border-l border-border/60 pt-5 lg:pt-0 lg:pl-6 space-y-2.5">
+            <h4 className="font-bold text-foreground text-xs uppercase tracking-wider">
+              Connect Figma Design <span className="text-muted-foreground font-normal">(Optional)</span>
+            </h4>
+            <FigmaConnectionForm
+              projectId={projectId}
+              initialUrl={project?.figmaFileUrl}
+              syncedFrames={project?.figmaSyncedFrames}
+            />
+          </div>
+        </div>
       )}
 
       {activeTab === 'jira' && (

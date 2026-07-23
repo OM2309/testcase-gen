@@ -14,7 +14,8 @@ export async function analyzeScore(req, res, next) {
 export async function generateRequirements(req, res, next) {
   try {
     const { projectId, srsDocumentId } = req.params
-    const analysis = await requirementService.generateRequirements(projectId, srsDocumentId)
+    const { mode } = req.body || {}
+    const analysis = await requirementService.generateRequirements(projectId, srsDocumentId, mode)
     return sendSuccess(res, 'Requirements generated successfully.', analysis)
   } catch (err) {
     next(err)
