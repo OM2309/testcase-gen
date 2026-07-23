@@ -57,8 +57,14 @@ export async function getChannelsAndUsers(accessToken) {
     fetch(`${SLACK_API}/users.list?limit=200`, { headers })
   ])
 
-  const channelsData = await channelsRes.json()
+  let channelsData = await channelsRes.json()
   const usersData = await usersRes.json()
+
+  if (!channelsData.ok && channelsData.error === 'missing_scope') {
+    // Retry fetching only public channels if private channels scope (groups:read) is missing
+    const fallbackRes = await fetch(`${SLACK_API}/conversations.list?types=public_channel&exclude_archived=true&limit=200`, { headers })
+    channelsData = await fallbackRes.json()
+  }
 
   if (!channelsData.ok) {
     throw new ApiError(`Slack channels error: ${channelsData.error}`, 400)

@@ -11,10 +11,10 @@ import { getChannelsAndUsers, sendMessageToChannel } from './slack.service.js'
  * associate the callback with the correct user.
  */
 export async function slackConnect(req, res) {
-  const scopes = 'chat:write,channels:read,users:read'
+  const scopes = 'chat:write,channels:read,groups:read,im:read,mpim:read,users:read,users:read.email'
   const state = req.user.id // pass our user ID so we can link in callback
-  console.log("env.slackClientId", env.slackClientId);
-  console.log("env.slackRedirectUri", env.slackRedirectUri);
+  // console.log("env.slackClientId", env.slackClientId);
+  // console.log("env.slackRedirectUri", env.slackRedirectUri);
 
   const slackAuthUrl = new URL('https://slack.com/oauth/v2/authorize')
   slackAuthUrl.searchParams.set('client_id', env.slackClientId)

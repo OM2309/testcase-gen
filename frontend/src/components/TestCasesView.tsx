@@ -522,22 +522,20 @@ export function TestCasesView() {
               <button
                 type="button"
                 onClick={() => setReviewStatus('approved')}
-                className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl font-semibold transition-all cursor-pointer ${
-                  reviewStatus === 'approved'
+                className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl font-semibold transition-all cursor-pointer ${reviewStatus === 'approved'
                     ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 shadow-sm'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted/80'
-                }`}
+                  }`}
               >
                 <ThumbsUp className="w-4 h-4" /> Approve
               </button>
               <button
                 type="button"
                 onClick={() => setReviewStatus('rejected')}
-                className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl font-semibold transition-all cursor-pointer ${
-                  reviewStatus === 'rejected'
+                className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl font-semibold transition-all cursor-pointer ${reviewStatus === 'rejected'
                     ? 'border-rose-500 bg-rose-500/10 text-rose-500 shadow-sm'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted/80'
-                }`}
+                  }`}
               >
                 <ThumbsDown className="w-4 h-4" /> Request Changes
               </button>
@@ -646,10 +644,10 @@ export function TestCasesView() {
             <MessageSquare className="w-3.5 h-3.5 text-primary" /> Review History & Feedback
           </h3>
           <div className="space-y-3 divide-y divide-border/40">
-            {activeTestSuite.comments.map((c, idx) => (
+            {activeTestSuite && activeTestSuite?.comments && activeTestSuite?.comments?.map((c, idx) => (
               <div key={idx} className="pt-3 first:pt-0 flex gap-3 text-[11px] leading-relaxed">
                 <div className="w-7 h-7 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0">
-                  {c.userName.substring(0, 2).toUpperCase()}
+                  {c?.userName && c?.userName?.substring(0, 2)?.toUpperCase() || "-"}
                 </div>
                 <div className="min-w-0 flex-grow">
                   <div className="flex items-center justify-between">
