@@ -22,7 +22,6 @@ import { downloadPdfReport } from '../../utils/pdfGenerator'
 import { useExecutionHistoryQuery } from '../../queries/execution.query'
 import { useCancelExecutionMutation } from '../../mutations/execution.mutation'
 import { PageLoader, PageError } from '../shared'
-import { slackService } from '../../services/slackService'
 import { toast } from 'sonner'
 import { SlackShareModal } from './slack-share-modal'
 
@@ -62,22 +61,9 @@ export function ExecutionHistoryList({ projectId, onSelectRun }: ExecutionHistor
     setExpandedReportIds((prev) => ({ ...prev, [runId]: !prev[runId] }))
   }
 
-  const handleSlackShare = async (runItem: TestRun) => {
-    setCheckingSlack(runItem._id)
-    try {
-      const statusRes = await slackService.getStatus()
-      if (statusRes.success && statusRes.data.connected) {
-        setSelectedRunForShare(runItem)
-        setShareModalOpen(true)
-      } else {
-        toast.error('Slack is not connected. Redirecting to Profile page to connect Slack.')
-        router.push('/dashboard/profile')
-      }
-    } catch (err) {
-      toast.error('Failed to verify Slack status.')
-    } finally {
-      setCheckingSlack(null)
-    }
+  const handleSlackShare = (runItem: TestRun) => {
+    setSelectedRunForShare(runItem)
+    setShareModalOpen(true)
   }
 
   const getStatusBadge = (status: string) => {

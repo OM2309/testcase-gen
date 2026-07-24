@@ -1,5 +1,6 @@
 import User from '../auth/user.model.js'
 import { ApiError } from '../../utils/apiError.js'
+import env from '../../config/env.js'
 
 const SLACK_API = 'https://slack.com/api'
 
@@ -18,14 +19,15 @@ export async function sendSlackMessage(userId, channel, text) {
     throw new ApiError('User not found.', 404)
   }
 
-  if (!user.slack?.accessToken) {
-    throw new ApiError('Slack is not connected. Please connect Slack first.', 400)
+  const token = user.slack?.accessToken || env.slackBotToken
+  if (!token) {
+    throw new ApiError('Slack is not connected. Please connect Slack or configure SLACK_BOT_TOKEN.', 400)
   }
 
   const response = await fetch('https://slack.com/api/chat.postMessage', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${user.slack.accessToken}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ channel, text })
@@ -43,12 +45,17 @@ export async function sendSlackMessage(userId, channel, text) {
 
 /**
  * Fetches all channels the bot has access to plus workspace users.
- * @param {string} accessToken - The user's Slack OAuth bot token
+ * @param {string} [accessToken] - Optional token, defaults to user token or env.slackBotToken
  * @returns {{ channels: Array, users: Array }}
  */
 export async function getChannelsAndUsers(accessToken) {
+  const token = accessToken || env.slackBotToken
+  if (!token) {
+    throw new ApiError('Slack access token not provided and SLACK_BOT_TOKEN is not configured.', 400)
+  }
+
   const headers = {
-    Authorization: `Bearer ${accessToken}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json'
   }
 
@@ -104,10 +111,15 @@ export async function getChannelsAndUsers(accessToken) {
  * @returns {object} Slack API response
  */
 export async function sendMessageToChannel(accessToken, channelId, text) {
+  const token = accessToken || env.slackBotToken
+  if (!token) {
+    throw new ApiError('Slack access token not provided and SLACK_BOT_TOKEN is not configured.', 400)
+  }
+
   const response = await fetch(`${SLACK_API}/chat.postMessage`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({

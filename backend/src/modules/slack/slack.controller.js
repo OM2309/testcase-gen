@@ -103,11 +103,11 @@ export async function slackStatus(req, res, next) {
       throw new ApiError('User not found.', 404)
     }
 
-    const connected = !!(user.slack?.accessToken)
+    const connected = !!(user.slack?.accessToken || env.slackBotToken)
 
     return sendSuccess(res, 'Slack status fetched.', {
       connected,
-      teamName: user.slack?.teamName || null,
+      teamName: user.slack?.teamName || (env.slackBotToken ? 'Workspace Bot' : null),
       teamId: user.slack?.teamId || null,
       connectedAt: user.slack?.connectedAt || null
     })
@@ -154,11 +154,12 @@ export async function slackChannels(req, res, next) {
       throw new ApiError('User not found.', 404)
     }
 
-    if (!user.slack?.accessToken) {
-      throw new ApiError('Slack account is not connected.', 400)
+    const token = user.slack?.accessToken || env.slackBotToken
+    if (!token) {
+      throw new ApiError('Slack account or bot token is not connected.', 400)
     }
 
-    const data = await getChannelsAndUsers(user.slack.accessToken)
+    const data = await getChannelsAndUsers(token)
     return sendSuccess(res, 'Slack channels and users fetched.', data)
   } catch (err) {
     next(err)

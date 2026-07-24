@@ -162,10 +162,11 @@ export class ProjectService {
     return { project, requirementAnalyses, testSuites }
   }
 
-  async updateProject(project, user, { projectName, projectDescription }) {
+  async updateProject(project, user, { projectName, projectDescription, slackChannelId, slackChannelName, slackConnected }) {
     const isOwner = project.userId && project.userId.toString() === user.id
-    if (user.role !== 'admin' && !isOwner) {
-      throw new ForbiddenError('Access denied. Only the project owner or an admin can update project details.')
+    const isManager = user.role === 'project_manager' || user.role === 'admin'
+    if (!isManager && !isOwner) {
+      throw new ForbiddenError('Access denied. Only project managers, owners, or admins can update project details.')
     }
 
     if (projectName && projectName.trim()) {
@@ -173,6 +174,15 @@ export class ProjectService {
     }
     if (projectDescription !== undefined) {
       project.projectDescription = projectDescription.trim()
+    }
+    if (slackChannelId !== undefined) {
+      project.slackChannelId = slackChannelId.trim()
+    }
+    if (slackChannelName !== undefined) {
+      project.slackChannelName = slackChannelName.trim()
+    }
+    if (slackConnected !== undefined) {
+      project.slackConnected = Boolean(slackConnected)
     }
 
     return this.projectRepo.save(project)

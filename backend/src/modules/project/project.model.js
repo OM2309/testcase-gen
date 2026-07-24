@@ -103,6 +103,18 @@ const projectSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null
   },
+  slackChannelId: {
+    type: String,
+    default: ''
+  },
+  slackChannelName: {
+    type: String,
+    default: ''
+  },
+  slackConnected: {
+    type: Boolean,
+    default: false
+  },
   status: {
     type: String,
     enum: ['created', 'uploaded', 'analyzing', 'analyzed', 'tests_generated', 'failed'],

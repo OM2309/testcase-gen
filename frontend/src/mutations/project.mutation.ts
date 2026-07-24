@@ -24,7 +24,16 @@ export function useDeleteProjectMutation() {
 export function useUpdateProjectMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ projectId, payload }: { projectId: string; payload: { projectName: string; projectDescription: string } }) =>
+    mutationFn: ({ projectId, payload }: {
+      projectId: string;
+      payload: {
+        projectName?: string;
+        projectDescription?: string;
+        slackChannelId?: string;
+        slackChannelName?: string;
+        slackConnected?: boolean;
+      }
+    }) =>
       projectService.updateProject(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })

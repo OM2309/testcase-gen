@@ -1,15 +1,16 @@
 'use client'
 
 import React from 'react'
-import { FileText, Link2, AlertCircle } from 'lucide-react'
+import { FileText, Link2, AlertCircle, MessageSquare } from 'lucide-react'
 import { Project, RequirementAnalysis, TestSuiteData } from '../../types'
 import { SrsUploadSection } from '../srs-upload'
+import { SlackConnectionForm } from '../srs-upload/SlackConnectionForm'
 import { DocumentsTable } from './DocumentsTable'
 
 interface OverviewDashboardProps {
   project: Project
-  dashboardTab: 'srs' | 'jira' | 'linear'
-  setDashboardTab: (tab: 'srs' | 'jira' | 'linear') => void
+  dashboardTab: 'srs' | 'jira' | 'linear' | 'slack'
+  setDashboardTab: (tab: 'srs' | 'jira' | 'linear' | 'slack') => void
   srsDocs: any[]
   jiraDocs: any[]
   linearDocs: any[]
@@ -25,7 +26,7 @@ interface OverviewDashboardProps {
 }
 
 /**
- * Overview dashboard displaying project header, tabs for SRS / Jira / Linear, SRS upload section, and documents table.
+ * Overview dashboard displaying project header, tabs for SRS / Jira / Linear / Slack, SRS upload section, and documents table.
  */
 export function OverviewDashboard({
   project,
@@ -66,7 +67,7 @@ export function OverviewDashboard({
         </div>
       )}
 
-      {/* ── Two Main Tabs ── */}
+      {/* ── Main Tabs ── */}
       <div className="border-b border-border">
         <div className="flex gap-0">
           <button
@@ -135,6 +136,20 @@ export function OverviewDashboard({
               </span>
             )}
           </button>
+          <button
+            onClick={() => setDashboardTab('slack')}
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+              dashboardTab === 'slack'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Slack Channel
+            {project.slackConnected && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            )}
+          </button>
         </div>
       </div>
 
@@ -181,7 +196,7 @@ export function OverviewDashboard({
             onRunAgent2={onRunAgent2}
           />
         </div>
-      ) : (
+      ) : dashboardTab === 'linear' ? (
         <div className="space-y-5 animate-fadeIn">
           <SrsUploadSection
             projectId={project._id}
@@ -202,7 +217,24 @@ export function OverviewDashboard({
             onRunAgent2={onRunAgent2}
           />
         </div>
+      ) : (
+        <div className="animate-fadeIn">
+          <div className="border border-border bg-card/20 rounded-2xl p-6 max-w-xl">
+            <h3 className="font-bold text-sm text-foreground mb-1">Configure Project Slack Channel</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Select the Slack channel where test suite approval requests and review notifications will be posted for this project.
+            </p>
+            <SlackConnectionForm
+              projectId={project._id}
+              slackChannelId={project.slackChannelId}
+              slackChannelName={project.slackChannelName}
+              slackConnected={project.slackConnected}
+              onUpdated={onRefreshProject}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
 }
+

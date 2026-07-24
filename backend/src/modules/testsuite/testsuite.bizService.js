@@ -222,42 +222,24 @@ Update the test case steps and expected outcome to match the user's instructions
         message: `User ${user.username} has requested approval for the test suite "${suite.suiteName}" in project "${project.projectName}".`
       })
 
-      // Send Slack message if possible
+      // Send Slack message to project channel if configured
       try {
         const pmUser = await User.findById(recipientId)
-        if (pmUser) {
-          let accessToken = null
-          let channelId = null
+        const channelId = project.slackChannelId || (pmUser && pmUser.slack?.userId)
+        const token = user.slack?.accessToken || (pmUser && pmUser.slack?.accessToken) || null
 
-          // Determine whose token and which channel/user ID to use
-          if (user.slack?.accessToken) {
-            // QA (sender) has Slack connected: send from QA's token to PM's Slack User ID
-            accessToken = user.slack.accessToken
-            if (pmUser.slack?.userId) {
-              channelId = pmUser.slack.userId
-            } else {
-              // Try to look up PM's Slack user ID by email using QA's token
-              channelId = await findSlackUserIdByEmail(accessToken, pmUser.email)
-            }
-          } else if (pmUser.slack?.accessToken) {
-            // QA does not have Slack, but PM does: send from PM's token to PM's own Slack User ID
-            accessToken = pmUser.slack.accessToken
-            channelId = pmUser.slack.userId
-          }
+        if (channelId) {
+          const suiteLink = `http://localhost:3000/dashboard/${projectId}/test-cases` + 
+            (suite.srsDocumentId ? `?srsId=${suite.srsDocumentId}` : '')
 
-          if (accessToken && channelId) {
-            const suiteLink = `http://localhost:3000/dashboard/${projectId}/test-cases` + 
-              (suite.srsDocumentId ? `?srsId=${suite.srsDocumentId}` : '')
-
-            const slackText = `*Test Suite Approval Request*
+          const slackText = `*Test Suite Approval Request*
 QA *${user.username}* has requested approval for the test suite *${suite.suiteName}* in project *${project.projectName}*.
 
 Please review and approve the test suite here:
 ${suiteLink}`
 
-            await sendMessageToChannel(accessToken, channelId, slackText)
-            console.log(`Slack approval notification successfully sent to PM ${pmUser.username} (${channelId})`)
-          }
+          await sendMessageToChannel(token, channelId, slackText)
+          console.log(`Slack approval notification sent to channel ${channelId} for project ${project.projectName}`)
         }
       } catch (slackErr) {
         console.error('Failed to send Slack approval notification:', slackErr.message)
@@ -309,33 +291,17 @@ ${suiteLink}`
         message: `Project Manager ${reviewer.username} reviewed test suite "${suite.suiteName}" (Status: ${statusLabel}). Feedback: "${commentText}"`
       })
 
-      // Send Slack message back to QA if possible
+      // Send Slack message to project channel if configured
       try {
         const qaUser = await User.findById(qaId)
-        if (qaUser) {
-          let accessToken = null
-          let channelId = null
+        const channelId = project.slackChannelId || (qaUser && qaUser.slack?.userId)
+        const token = reviewer.slack?.accessToken || (qaUser && qaUser.slack?.accessToken) || null
 
-          if (reviewer.slack?.accessToken) {
-            // PM (sender) has Slack connected: send from PM's token to QA's Slack User ID
-            accessToken = reviewer.slack.accessToken
-            if (qaUser.slack?.userId) {
-              channelId = qaUser.slack.userId
-            } else {
-              // Try to look up QA's Slack user ID by email using PM's token
-              channelId = await findSlackUserIdByEmail(accessToken, qaUser.email)
-            }
-          } else if (qaUser.slack?.accessToken) {
-            // PM does not have Slack, but QA does: send from QA's token to QA's own Slack User ID
-            accessToken = qaUser.slack.accessToken
-            channelId = qaUser.slack.userId
-          }
+        if (channelId) {
+          const suiteLink = `http://localhost:3000/dashboard/${projectId}/test-cases` + 
+            (suite.srsDocumentId ? `?srsId=${suite.srsDocumentId}` : '')
 
-          if (accessToken && channelId) {
-            const suiteLink = `http://localhost:3000/dashboard/${projectId}/test-cases` + 
-              (suite.srsDocumentId ? `?srsId=${suite.srsDocumentId}` : '')
-
-            const slackText = `*Test Suite Review Submitted*
+          const slackText = `*Test Suite Review Submitted*
 PM *${reviewer.username}* has reviewed the test suite *${suite.suiteName}* in project *${project.projectName}*.
 Status: *${statusLabel}*
 Feedback: "${commentText}"
@@ -343,9 +309,8 @@ Feedback: "${commentText}"
 Please check the details here:
 ${suiteLink}`
 
-            await sendMessageToChannel(accessToken, channelId, slackText)
-            console.log(`Slack review notification successfully sent to QA ${qaUser.username} (${channelId})`)
-          }
+          await sendMessageToChannel(token, channelId, slackText)
+          console.log(`Slack review notification sent to channel ${channelId} for project ${project.projectName}`)
         }
       } catch (slackErr) {
         console.error('Failed to send Slack review response notification:', slackErr.message)
