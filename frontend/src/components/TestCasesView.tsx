@@ -47,7 +47,9 @@ export function TestCasesView() {
   // Find active test suite for selected SRS
   const activeTestSuite = useMemo(() => {
     if (!selectedSrsId) return testSuites[0] || null
-    return testSuites.find(t => t.srsDocumentId === selectedSrsId) || null
+    // Map virtual IDs to null for backend lookup
+    const mappedId = (selectedSrsId === 'figma-design' || selectedSrsId === 'legacy') ? null : selectedSrsId
+    return testSuites.find(t => t.srsDocumentId === mappedId) || null
   }, [testSuites, selectedSrsId])
 
   const initialTestCases = useMemo(() => {

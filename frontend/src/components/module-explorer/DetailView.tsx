@@ -24,8 +24,9 @@ interface DetailViewProps {
   agentRunning: string | null
   runningActionDocId: string | null
   onRunAgent0: (docId: string) => void
-  onRunAgent1: (docId: string) => void
+  onRunAgent1: (docId: string, mode?: string) => void
   onRunAgent2: (docId: string) => void
+  hasFigma?: boolean
   onOpenGapFill?: () => void
   onExportExcel: (fileName: string, modules: ModuleGroup[]) => void
   onOpenRunDialog: (
@@ -55,12 +56,21 @@ export function DetailView({
   onOpenGapFill,
   onExportExcel,
   onOpenRunDialog,
+  hasFigma = false,
 }: DetailViewProps) {
   const router = useRouter()
   const activeMod = selectedSrsModules.find((m: ModuleGroup) => m.name === activeModuleName)
 
+  const isFigmaOnly = selectedSrs?._id === 'figma-design'
   const isScored = selectedAnalysis && selectedAnalysis.agent0Status === 'completed' && selectedAnalysis.agent0Score != null
   const isModulesExtracted = selectedSrsModules && selectedSrsModules.length > 0
+
+  // Determine the generation mode for Agent 1
+  const getAgent1Mode = (): string => {
+    if (isFigmaOnly) return 'figma_only'
+    if (hasFigma) return 'srs_and_figma'
+    return 'srs_only'
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -76,7 +86,7 @@ export function DetailView({
           </button>
           <div>
             <span className="text-xs font-bold text-primary tracking-wider uppercase">
-              Document View
+              {isFigmaOnly ? 'Figma Design View' : 'Document View'}
             </span>
             <h1 className="text-xl font-bold text-foreground capitalize mt-0.5">
               {selectedSrs.originalFileName || 'Requirement Specification'}
@@ -134,6 +144,43 @@ export function DetailView({
               )
             </button>
           </div>
+        ) : isFigmaOnly ? (
+          /* Figma-only: skip scoring, go directly to module extraction */
+          !isModulesExtracted ? (
+            <button
+              disabled={agentRunning !== null}
+              onClick={() => onRunAgent1(selectedSrs._id, 'figma_only')}
+              className="btn-primary h-9 px-4 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              {agentRunning === 'agent1' && runningActionDocId === selectedSrs._id ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Extracting from Figma...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" /> Generate Modules from Figma
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                disabled={agentRunning !== null}
+                onClick={() => onRunAgent2(selectedSrs._id)}
+                className="btn-primary h-9 px-4 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                {agentRunning === 'agent2' && runningActionDocId === selectedSrs._id ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating test cases...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" /> Generate Test Suite
+                  </>
+                )}
+              </button>
+            </div>
+          )
         ) : !isScored ? (
           <button
             disabled={agentRunning !== null}
@@ -153,7 +200,7 @@ export function DetailView({
         ) : !isModulesExtracted ? (
           <button
             disabled={agentRunning !== null}
-            onClick={() => onRunAgent1(selectedSrs._id)}
+            onClick={() => onRunAgent1(selectedSrs._id, getAgent1Mode())}
             className="btn-primary h-9 px-4 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
           >
             {agentRunning === 'agent1' && runningActionDocId === selectedSrs._id ? (
@@ -163,6 +210,9 @@ export function DetailView({
             ) : (
               <>
                 <Sparkles className="w-3.5 h-3.5" /> Generate Modules
+                {hasFigma && (
+                  <span className="ml-0.5 text-[8px] font-bold text-purple-500 uppercase">+ Figma</span>
+                )}
               </>
             )}
           </button>
@@ -217,8 +267,8 @@ export function DetailView({
         </div>
       )}
 
-      {/* Accuracy Score Card */}
-      {selectedAnalysis &&
+      {/* Accuracy Score Card — hidden for Figma-only analyses */}
+      {!isFigmaOnly && selectedAnalysis &&
         selectedAnalysis.agent0Score != null && (
           <AccuracyScoreCard analysis={selectedAnalysis} onOpenGapFill={onOpenGapFill} />
         )}

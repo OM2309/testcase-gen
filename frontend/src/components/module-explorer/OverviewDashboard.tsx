@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { FileText, Link2, AlertCircle } from 'lucide-react'
 import { Project, RequirementAnalysis, TestSuiteData } from '../../types'
 import { SrsUploadSection } from '../srs-upload'
@@ -19,13 +19,15 @@ interface OverviewDashboardProps {
   agentRunning: string | null
   runningActionDocId: string | null
   onRunAgent0: (docId: string) => void
-  onRunAgent1: (docId: string) => void
+  onRunAgent1: (docId: string, mode?: string) => void
   onRunAgent2: (docId: string) => void
   onRefreshProject: () => void
+  hasFigma?: boolean
 }
 
 /**
  * Overview dashboard displaying project header, tabs for SRS / Jira / Linear, SRS upload section, and documents table.
+ * When Figma designs are connected, a virtual Figma entry is shown alongside SRS docs allowing direct module generation.
  */
 export function OverviewDashboard({
   project,
@@ -43,7 +45,29 @@ export function OverviewDashboard({
   onRunAgent1,
   onRunAgent2,
   onRefreshProject,
+  hasFigma = false,
 }: OverviewDashboardProps) {
+  // Build a virtual Figma doc entry when Figma designs are synced and there are no SRS docs
+  // (Figma-only scenario). When SRS docs exist, they automatically get hybrid mode.
+  const figmaDoc = useMemo(() => {
+    if (!hasFigma) return null
+    const frameCount = project.figmaSyncedFrames?.length || 0
+    return {
+      _id: 'figma-design',
+      originalFileName: `Figma Designs (${frameCount} screens)`,
+      filePath: 'virtual://figma',
+      parsedText: '',
+      uploadedAt: project.createdAt,
+    }
+  }, [hasFigma, project.figmaSyncedFrames, project.createdAt])
+
+  // Merge Figma doc into srsDocs list for the SRS tab
+  const srsDocsWithFigma = useMemo(() => {
+    if (!figmaDoc) return srsDocs
+    // Add Figma entry at the end of the SRS docs list
+    return [...srsDocs, figmaDoc]
+  }, [srsDocs, figmaDoc])
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Project Header */}
@@ -66,7 +90,7 @@ export function OverviewDashboard({
         </div>
       )}
 
-      {/* ── Two Main Tabs ── */}
+      {/* ── Tabs ── */}
       <div className="border-b border-border">
         <div className="flex gap-0">
           <button
@@ -79,7 +103,7 @@ export function OverviewDashboard({
           >
             <FileText className="w-4 h-4" />
             SRS Documents
-            {srsDocs.length > 0 && (
+            {srsDocsWithFigma.length > 0 && (
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                   dashboardTab === 'srs'
@@ -87,7 +111,7 @@ export function OverviewDashboard({
                     : 'bg-muted text-muted-foreground'
                 }`}
               >
-                {srsDocs.length}
+                {srsDocsWithFigma.length}
               </span>
             )}
           </button>
@@ -149,8 +173,9 @@ export function OverviewDashboard({
             onSrsUploaded={onRefreshProject}
           />
           <DocumentsTable
-            docs={srsDocs}
+            docs={srsDocsWithFigma}
             isJira={false}
+            hasFigma={hasFigma}
             requirementAnalyses={requirementAnalyses}
             testSuites={testSuites}
             agentRunning={agentRunning}
@@ -172,6 +197,7 @@ export function OverviewDashboard({
           <DocumentsTable
             docs={jiraDocs}
             isJira={true}
+            hasFigma={hasFigma}
             requirementAnalyses={requirementAnalyses}
             testSuites={testSuites}
             agentRunning={agentRunning}
@@ -193,6 +219,7 @@ export function OverviewDashboard({
           <DocumentsTable
             docs={linearDocs}
             isJira={true}
+            hasFigma={hasFigma}
             requirementAnalyses={requirementAnalyses}
             testSuites={testSuites}
             agentRunning={agentRunning}

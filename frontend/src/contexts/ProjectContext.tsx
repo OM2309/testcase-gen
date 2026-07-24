@@ -110,7 +110,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const runAgent1 = async (srsId?: string, mode?: string) => {
     if (!projectId || agentRunning) return
-    const targetSrsId = srsId || selectedSrsId || undefined
+    // Don't send virtual IDs ('figma-design') to the backend as srsDocumentId
+    const rawSrsId = srsId || selectedSrsId || undefined
+    const targetSrsId = (rawSrsId === 'figma-design') ? undefined : rawSrsId
     setAgentError(null)
     setAgentRunning('agent1')
     try {
@@ -124,7 +126,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const runAgent2 = async (srsId?: string) => {
     if (!projectId || agentRunning) return
-    const targetSrsId = srsId || selectedSrsId || undefined
+    const rawSrsId = srsId || selectedSrsId || undefined
+    const targetSrsId = (rawSrsId === 'figma-design') ? undefined : rawSrsId
     setAgentError(null)
     setAgentRunning('agent2')
     try {

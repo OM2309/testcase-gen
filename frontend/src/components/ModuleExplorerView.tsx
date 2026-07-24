@@ -82,15 +82,30 @@ export function ModuleExplorerView() {
   )
 
   const selectedSrs = useMemo(() => {
+    if (selectedSrsId === 'figma-design' && project) {
+      // Create virtual Figma doc entry for detail view
+      const frameCount = project.figmaSyncedFrames?.length || 0
+      return {
+        _id: 'figma-design',
+        originalFileName: `Figma Designs (${frameCount} screens)`,
+        filePath: 'virtual://figma',
+        parsedText: '',
+        uploadedAt: project.createdAt,
+      }
+    }
     return srsDocumentsList.find((d: any) => d._id === selectedSrsId)
-  }, [selectedSrsId, srsDocumentsList])
+  }, [selectedSrsId, srsDocumentsList, project])
 
   const getSrsTreeData = (srsId: string): ModuleGroup[] => {
+    const mappedId = (srsId === 'legacy' || srsId === 'figma-design') ? null : srsId
     const analysis = requirementAnalyses.find(
-      (r: any) => r.srsDocumentId === (srsId === 'legacy' ? null : srsId)
+      (r: any) => {
+        if (srsId === 'figma-design') return r.generationMode === 'figma_only' && r.srsDocumentId === null
+        return r.srsDocumentId === mappedId
+      }
     )
     const suite = testSuites.find(
-      (t: any) => t.srsDocumentId === (srsId === 'legacy' ? null : srsId)
+      (t: any) => t.srsDocumentId === mappedId
     )
     if (!analysis || !analysis.analyzedData) return []
 
@@ -130,13 +145,16 @@ export function ModuleExplorerView() {
 
   const selectedAnalysis = useMemo(() => {
     if (!selectedSrs) return null
+    if (selectedSrs._id === 'figma-design') {
+      return requirementAnalyses.find((r: any) => r.generationMode === 'figma_only' && r.srsDocumentId === null) || null
+    }
     const targetSrsId = selectedSrs._id === 'legacy' ? null : selectedSrs._id
     return requirementAnalyses.find((r: any) => r.srsDocumentId === targetSrsId) || null
   }, [selectedSrs, requirementAnalyses])
 
   const selectedSuite = useMemo(() => {
     if (!selectedSrs) return null
-    const targetSrsId = selectedSrs._id === 'legacy' ? null : selectedSrs._id
+    const targetSrsId = (selectedSrs._id === 'legacy' || selectedSrs._id === 'figma-design') ? null : selectedSrs._id
     return testSuites.find((t: any) => t.srsDocumentId === targetSrsId) || null
   }, [selectedSrs, testSuites])
 
@@ -151,10 +169,10 @@ export function ModuleExplorerView() {
     }
   }
 
-  const handleLocalRunAgent1 = async (docId: string) => {
+  const handleLocalRunAgent1 = async (docId: string, mode?: string) => {
     setRunningActionDocId(docId)
     try {
-      await runAgent1(docId)
+      await runAgent1(docId, mode)
     } finally {
       setRunningActionDocId(null)
     }
@@ -357,6 +375,7 @@ export function ModuleExplorerView() {
           onOpenGapFill={() => handleOpenGapFill(selectedSrs._id)}
           onExportExcel={handleDownloadExcel}
           onOpenRunDialog={handleOpenRunDialog}
+          hasFigma={!!(project.figmaSyncedFrames && project.figmaSyncedFrames.length > 0)}
         />
       ) : (
         <OverviewDashboard
@@ -375,6 +394,7 @@ export function ModuleExplorerView() {
           onRunAgent1={handleLocalRunAgent1}
           onRunAgent2={handleLocalRunAgent2}
           onRefreshProject={refreshProject}
+          hasFigma={!!(project.figmaSyncedFrames && project.figmaSyncedFrames.length > 0)}
         />
       )}
     </div>

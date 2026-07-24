@@ -9,21 +9,24 @@ import { RequirementAnalysis, TestSuiteData } from '../../types'
 interface DocumentsTableProps {
   docs: any[]
   isJira: boolean
+  hasFigma?: boolean
   requirementAnalyses: RequirementAnalysis[]
   testSuites: TestSuiteData[]
   agentRunning: string | null
   runningActionDocId: string | null
   onRunAgent0: (docId: string) => void
-  onRunAgent1: (docId: string) => void
+  onRunAgent1: (docId: string, mode?: string) => void
   onRunAgent2: (docId: string) => void
 }
 
 /**
  * Table listing uploaded SRS documents or imported Jira/Linear user stories with quality scores and agent trigger actions.
+ * Supports Figma-only flow: when a doc is Figma-only, scoring is skipped and modules are generated directly.
  */
 export function DocumentsTable({
   docs,
   isJira,
+  hasFigma = false,
   requirementAnalyses,
   testSuites,
   agentRunning,
@@ -59,21 +62,41 @@ export function DocumentsTable({
         <tbody className="divide-y divide-border/40">
           {docs.map((doc: any) => {
             const targetSrsId = doc._id === 'legacy' ? null : doc._id
+            const isFigmaOnlyDoc = doc._id === 'figma-design'
             const analysis =
-              requirementAnalyses.find((r: any) => r.srsDocumentId === targetSrsId) || null
+              requirementAnalyses.find((r: any) => {
+                if (isFigmaOnlyDoc) return r.generationMode === 'figma_only' && r.srsDocumentId === null
+                return r.srsDocumentId === targetSrsId
+              }) || null
             const suite =
-              testSuites.find((t: any) => t.srsDocumentId === targetSrsId) || null
+              testSuites.find((t: any) => {
+                if (isFigmaOnlyDoc) return t.srsDocumentId === null
+                return t.srsDocumentId === targetSrsId
+              }) || null
             
             const isScored = analysis && analysis.agent0Status === 'completed' && analysis.agent0Score != null
             const isModulesGenerated = analysis && analysis.status === 'completed' && analysis.analyzedData != null
             const isSuiteGenerated = suite && suite.testCases?.length > 0
             const isThisRunning = runningActionDocId === doc._id && agentRunning !== null
 
+            // Determine the generation mode for Agent 1
+            const getAgent1Mode = (): string => {
+              if (isFigmaOnlyDoc) return 'figma_only'
+              if (hasFigma) return 'srs_and_figma'
+              return 'srs_only'
+            }
+
             return (
               <tr key={doc._id} className="hover:bg-muted/20 transition-colors">
                 <td className="p-3.5 font-semibold text-foreground max-w-[220px] truncate">
                   <button
-                    onClick={() => router.push(`?srsId=${doc._id}`)}
+                    onClick={() => {
+                      if (isFigmaOnlyDoc) {
+                        router.push(`?srsId=figma-design`)
+                      } else {
+                        router.push(`?srsId=${doc._id}`)
+                      }
+                    }}
                     className="hover:underline text-left cursor-pointer text-xs font-semibold text-primary"
                   >
                     {doc.originalFileName || (isJira ? 'Jira Stories' : 'Requirement Specification')}
@@ -83,7 +106,9 @@ export function DocumentsTable({
                   {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'N/A'}
                 </td>
                 <td className="p-3.5 text-center">
-                  {analysis && analysis.agent0Score != null ? (
+                  {isFigmaOnlyDoc ? (
+                    <span className="text-[10px] text-muted-foreground italic px-2 py-0.5 rounded-full bg-muted/50 border border-border/50">N/A</span>
+                  ) : analysis && analysis.agent0Score != null ? (
                     <Badge
                       variant="default"
                       className={`font-mono border ${
@@ -130,7 +155,51 @@ export function DocumentsTable({
                   )}
                 </td>
                 <td className="p-3.5 text-right space-x-2">
-                  {!isScored ? (
+                  {isFigmaOnlyDoc ? (
+                    /* Figma-only: skip scoring, go directly to modules → suite */
+                    !isModulesGenerated ? (
+                      <button
+                        onClick={() => onRunAgent1(doc._id, 'figma_only')}
+                        disabled={agentRunning !== null}
+                        className="btn-primary h-7 px-3 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
+                      >
+                        {agentRunning === 'agent1' && runningActionDocId === doc._id ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" /> Extracting...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" /> Generate Modules
+                          </>
+                        )}
+                      </button>
+                    ) : !isSuiteGenerated ? (
+                      <button
+                        onClick={() => onRunAgent2(doc._id)}
+                        disabled={agentRunning !== null}
+                        className="btn-primary h-7 px-3 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        {agentRunning === 'agent2' && runningActionDocId === doc._id ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" /> Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" /> Generate Suite
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => router.push(`?srsId=figma-design`)}
+                        className="btn-secondary h-7 px-3 text-[10px] font-bold cursor-pointer"
+                      >
+                        View Modules
+                      </button>
+                    )
+                  ) : (
+                    /* SRS / Jira / Linear: existing linear flow (Score → Modules → Suite) */
+                    !isScored ? (
                     <button
                       onClick={() => onRunAgent0(doc._id)}
                       disabled={agentRunning !== null}
@@ -148,7 +217,7 @@ export function DocumentsTable({
                     </button>
                   ) : !isModulesGenerated ? (
                     <button
-                      onClick={() => onRunAgent1(doc._id)}
+                      onClick={() => onRunAgent1(doc._id, getAgent1Mode())}
                       disabled={agentRunning !== null}
                       className="btn-primary h-7 px-3 text-[10px] font-bold cursor-pointer inline-flex items-center gap-1"
                     >
@@ -159,6 +228,9 @@ export function DocumentsTable({
                       ) : (
                         <>
                           <Sparkles className="w-3 h-3" /> Generate Modules
+                          {hasFigma && (
+                            <span className="ml-0.5 text-[8px] font-bold text-purple-500 uppercase">+ Figma</span>
+                          )}
                         </>
                       )}
                     </button>
@@ -185,6 +257,7 @@ export function DocumentsTable({
                     >
                       View Modules
                     </button>
+                  )
                   )}
                 </td>
               </tr>
