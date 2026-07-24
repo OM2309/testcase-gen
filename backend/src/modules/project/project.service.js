@@ -52,7 +52,7 @@ export class ProjectService {
       })
     } catch (err) {
       if (file && fs.existsSync(file.path)) {
-        try { fs.unlinkSync(file.path) } catch (_) {}
+        try { fs.unlinkSync(file.path) } catch (_) { }
       }
       throw err
     }
@@ -81,7 +81,7 @@ export class ProjectService {
       return await this.projectRepo.save(project)
     } catch (err) {
       if (file && fs.existsSync(file.path)) {
-        try { fs.unlinkSync(file.path) } catch (_) {}
+        try { fs.unlinkSync(file.path) } catch (_) { }
       }
       throw err
     }
@@ -163,6 +163,10 @@ export class ProjectService {
   }
 
   async updateProject(project, user, { projectName, projectDescription, slackChannelId, slackChannelName, slackConnected }) {
+    console.log("project", project);
+    console.log("slackChannelId", slackChannelId);
+    console.log("slackChannelName", slackChannelName);
+    console.log("slackConnected", slackConnected);
     const isOwner = project.userId && project.userId.toString() === user.id
     const isManager = user.role === 'project_manager' || user.role === 'admin'
     if (!isManager && !isOwner) {
@@ -201,7 +205,7 @@ export class ProjectService {
 
     for (const filePath of allFiles) {
       if (filePath && fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath) } catch (_) {}
+        try { fs.unlinkSync(filePath) } catch (_) { }
       }
     }
 
@@ -290,7 +294,7 @@ export class ProjectService {
 
       freshProject.figmaSyncedFrames = syncedFrames
       freshProject.figmaParsedData = parsedScreens
-      
+
       if (freshProject.status === 'created' || freshProject.status === 'failed') {
         freshProject.status = 'uploaded'
       }
