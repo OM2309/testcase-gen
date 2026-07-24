@@ -32,6 +32,9 @@ export interface Project {
   figmaAccessToken?: string;
   figmaFileKey?: string;
   figmaSyncedFrames?: Array<{ id: string; name: string; imageUrl: string }>;
+  slackChannelId?: string;
+  slackChannelName?: string;
+  slackConnected?: boolean;
 }
 
 export interface Agent0Feedback {

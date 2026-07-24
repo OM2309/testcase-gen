@@ -7,7 +7,6 @@ import { TestRun } from '../../types'
 import { ExecutionStatusBadge } from './execution-status-badge'
 import { formatTime, elapsedBetween } from './execution-utils'
 import { downloadPdfReport } from '../../utils/pdfGenerator'
-import { slackService } from '../../services/slackService'
 import { toast } from 'sonner'
 import { SlackShareModal } from './slack-share-modal'
 
@@ -24,23 +23,9 @@ interface ExecutionHeaderProps {
 export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning, onCancel, cancelling }: ExecutionHeaderProps) {
   const router = useRouter()
   const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [checkingSlack, setCheckingSlack] = useState(false)
 
-  const handleSlackShare = async () => {
-    setCheckingSlack(true)
-    try {
-      const statusRes = await slackService.getStatus()
-      if (statusRes.success && statusRes.data.connected) {
-        setShareModalOpen(true)
-      } else {
-        toast.error('Slack is not connected. Redirecting to Profile page to connect Slack.')
-        router.push('/dashboard/profile')
-      }
-    } catch (err) {
-      toast.error('Failed to verify Slack status.')
-    } finally {
-      setCheckingSlack(false)
-    }
+  const handleSlackShare = () => {
+    setShareModalOpen(true)
   }
 
   return (
@@ -94,15 +79,11 @@ export function ExecutionHeader({ run, isPolling, onRefresh, onRerun, rerunning,
           </button>
           <button
             onClick={handleSlackShare}
-            disabled={checkingSlack || run.status === 'running' || run.status === 'queued'}
+            disabled={run.status === 'running' || run.status === 'queued'}
             className="btn-secondary"
             title="Share report on Slack"
           >
-            {checkingSlack ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Send className="w-3.5 h-3.5 text-[#4A154B]" />
-            )}
+            <Send className="w-3.5 h-3.5 text-[#4A154B]" />
             Share Slack
           </button>
           {onCancel && (run.status === 'running' || run.status === 'queued') && (

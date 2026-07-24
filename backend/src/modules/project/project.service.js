@@ -52,7 +52,7 @@ export class ProjectService {
       })
     } catch (err) {
       if (file && fs.existsSync(file.path)) {
-        try { fs.unlinkSync(file.path) } catch (_) {}
+        try { fs.unlinkSync(file.path) } catch (_) { }
       }
       throw err
     }
@@ -81,7 +81,7 @@ export class ProjectService {
       return await this.projectRepo.save(project)
     } catch (err) {
       if (file && fs.existsSync(file.path)) {
-        try { fs.unlinkSync(file.path) } catch (_) {}
+        try { fs.unlinkSync(file.path) } catch (_) { }
       }
       throw err
     }
@@ -162,10 +162,15 @@ export class ProjectService {
     return { project, requirementAnalyses, testSuites }
   }
 
-  async updateProject(project, user, { projectName, projectDescription }) {
+  async updateProject(project, user, { projectName, projectDescription, slackChannelId, slackChannelName, slackConnected }) {
+    console.log("project", project);
+    console.log("slackChannelId", slackChannelId);
+    console.log("slackChannelName", slackChannelName);
+    console.log("slackConnected", slackConnected);
     const isOwner = project.userId && project.userId.toString() === user.id
-    if (user.role !== 'admin' && !isOwner) {
-      throw new ForbiddenError('Access denied. Only the project owner or an admin can update project details.')
+    const isManager = user.role === 'project_manager' || user.role === 'admin'
+    if (!isManager && !isOwner) {
+      throw new ForbiddenError('Access denied. Only project managers, owners, or admins can update project details.')
     }
 
     if (projectName && projectName.trim()) {
@@ -173,6 +178,15 @@ export class ProjectService {
     }
     if (projectDescription !== undefined) {
       project.projectDescription = projectDescription.trim()
+    }
+    if (slackChannelId !== undefined) {
+      project.slackChannelId = slackChannelId.trim()
+    }
+    if (slackChannelName !== undefined) {
+      project.slackChannelName = slackChannelName.trim()
+    }
+    if (slackConnected !== undefined) {
+      project.slackConnected = Boolean(slackConnected)
     }
 
     return this.projectRepo.save(project)
@@ -191,7 +205,7 @@ export class ProjectService {
 
     for (const filePath of allFiles) {
       if (filePath && fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath) } catch (_) {}
+        try { fs.unlinkSync(filePath) } catch (_) { }
       }
     }
 
@@ -280,7 +294,7 @@ export class ProjectService {
 
       freshProject.figmaSyncedFrames = syncedFrames
       freshProject.figmaParsedData = parsedScreens
-      
+
       if (freshProject.status === 'created' || freshProject.status === 'failed') {
         freshProject.status = 'uploaded'
       }

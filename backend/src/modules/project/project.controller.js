@@ -50,6 +50,7 @@ export async function getProjectById(req, res, next) {
 
 export async function updateProject(req, res, next) {
   try {
+    console.log("req.body", req.body);
     const project = await projectService.updateProject(req.project, req.user, req.body)
     return sendSuccess(res, 'Project updated successfully.', project)
   } catch (err) {

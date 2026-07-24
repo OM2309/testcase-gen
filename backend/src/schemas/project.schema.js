@@ -14,6 +14,9 @@ export const updateProjectSchema = z.object({
   body: z.object({
     projectName: z.string().optional(),
     projectDescription: z.string().optional(),
+    slackChannelId: z.string().optional(),
+    slackChannelName: z.string().optional(),
+    slackConnected: z.boolean().optional(),
   }),
 })
 

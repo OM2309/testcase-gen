@@ -26,7 +26,13 @@ export const projectService = {
     return response.data
   },
 
-  async updateProject(projectId: string, payload: { projectName: string; projectDescription: string }) {
+  async updateProject(projectId: string, payload: {
+    projectName?: string;
+    projectDescription?: string;
+    slackChannelId?: string;
+    slackChannelName?: string;
+    slackConnected?: boolean;
+  }) {
     const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}`, payload)
     return response.data
   },

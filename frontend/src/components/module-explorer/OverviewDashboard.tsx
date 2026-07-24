@@ -1,15 +1,16 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { FileText, Link2, AlertCircle } from 'lucide-react'
+import { FileText, Link2, AlertCircle, MessageSquare } from 'lucide-react'
 import { Project, RequirementAnalysis, TestSuiteData } from '../../types'
 import { SrsUploadSection } from '../srs-upload'
+import { SlackConnectionForm } from '../srs-upload/SlackConnectionForm'
 import { DocumentsTable } from './DocumentsTable'
 
 interface OverviewDashboardProps {
   project: Project
-  dashboardTab: 'srs' | 'jira' | 'linear'
-  setDashboardTab: (tab: 'srs' | 'jira' | 'linear') => void
+  dashboardTab: 'srs' | 'jira' | 'linear' | 'slack'
+  setDashboardTab: (tab: 'srs' | 'jira' | 'linear' | 'slack') => void
   srsDocs: any[]
   jiraDocs: any[]
   linearDocs: any[]
@@ -95,21 +96,19 @@ export function OverviewDashboard({
         <div className="flex gap-0">
           <button
             onClick={() => setDashboardTab('srs')}
-            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-              dashboardTab === 'srs'
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${dashboardTab === 'srs'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-            }`}
+              }`}
           >
             <FileText className="w-4 h-4" />
             SRS Documents
             {srsDocsWithFigma.length > 0 && (
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                  dashboardTab === 'srs'
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${dashboardTab === 'srs'
                     ? 'bg-primary/15 text-primary'
                     : 'bg-muted text-muted-foreground'
-                }`}
+                  }`}
               >
                 {srsDocsWithFigma.length}
               </span>
@@ -117,21 +116,19 @@ export function OverviewDashboard({
           </button>
           <button
             onClick={() => setDashboardTab('jira')}
-            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-              dashboardTab === 'jira'
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${dashboardTab === 'jira'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-            }`}
+              }`}
           >
             <Link2 className="w-4 h-4" />
             Jira Tickets
             {jiraDocs.length > 0 && (
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                  dashboardTab === 'jira'
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${dashboardTab === 'jira'
                     ? 'bg-primary/15 text-primary'
                     : 'bg-muted text-muted-foreground'
-                }`}
+                  }`}
               >
                 {jiraDocs.length}
               </span>
@@ -139,24 +136,35 @@ export function OverviewDashboard({
           </button>
           <button
             onClick={() => setDashboardTab('linear')}
-            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-              dashboardTab === 'linear'
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${dashboardTab === 'linear'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-            }`}
+              }`}
           >
             <Link2 className="w-4 h-4" />
             Linear Stories
             {linearDocs.length > 0 && (
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                  dashboardTab === 'linear'
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${dashboardTab === 'linear'
                     ? 'bg-primary/15 text-primary'
                     : 'bg-muted text-muted-foreground'
-                }`}
+                  }`}
               >
                 {linearDocs.length}
               </span>
+            )}
+          </button>
+          <button
+            onClick={() => setDashboardTab('slack')}
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${dashboardTab === 'slack'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Slack Channel
+            {project.slackConnected && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
             )}
           </button>
         </div>
@@ -207,7 +215,7 @@ export function OverviewDashboard({
             onRunAgent2={onRunAgent2}
           />
         </div>
-      ) : (
+      ) : dashboardTab === 'linear' ? (
         <div className="space-y-5 animate-fadeIn">
           <SrsUploadSection
             projectId={project._id}
@@ -229,7 +237,24 @@ export function OverviewDashboard({
             onRunAgent2={onRunAgent2}
           />
         </div>
+      ) : (
+        <div className="animate-fadeIn">
+          <div className="border border-border bg-card/20 rounded-2xl p-6 max-w-xl">
+            <h3 className="font-bold text-sm text-foreground mb-1">Configure Project Slack Channel</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Select the Slack channel where test suite approval requests and review notifications will be posted for this project.
+            </p>
+            <SlackConnectionForm
+              projectId={project._id}
+              slackChannelId={project.slackChannelId}
+              slackChannelName={project.slackChannelName}
+              slackConnected={project.slackConnected}
+              onUpdated={onRefreshProject}
+            />
+          </div>
+        </div>
       )}
     </div>
   )
 }
+
