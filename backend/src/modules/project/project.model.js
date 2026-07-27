@@ -103,6 +103,19 @@ const projectSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null
   },
+  figmaScreenMappings: [{
+    figmaFrameId: { type: String, required: true },
+    targetUrl: { type: String, default: '' },
+    steps: [{
+      action: { type: String, required: true },
+      target: { type: String, default: '' },
+      value: { type: String, default: '' }
+    }]
+  }],
+  figmaBaseUrl: {
+    type: String,
+    default: ''
+  },
   slackChannelId: {
     type: String,
     default: ''

@@ -30,8 +30,8 @@ export function ModuleExplorerView() {
     refreshProject,
   } = useProject()
 
-  // Dashboard tab: 'srs' | 'jira' | 'linear' | 'slack'
-  const [dashboardTab, setDashboardTab] = useState<'srs' | 'jira' | 'linear' | 'slack'>('srs')
+  // Dashboard tab: 'srs' | 'jira' | 'linear' | 'slack' | 'figma'
+  const [dashboardTab, setDashboardTab] = useState<'srs' | 'jira' | 'linear' | 'slack' | 'figma'>('srs')
   const [activeModuleName, setActiveModuleName] = useState<string | null>(null)
   const [runningActionDocId, setRunningActionDocId] = useState<string | null>(null)
   const [isGapFillOpen, setIsGapFillOpen] = useState(false)

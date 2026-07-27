@@ -5,6 +5,7 @@
  * Persists progress to MongoDB continuously for frontend polling.
  */
 
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { chromium } from 'playwright'
@@ -13,6 +14,7 @@ import TestSuite from '../testsuite/testsuite.model.js'
 import Project from '../project/project.model.js'
 import { executeStep, captureFailureScreenshot } from './stepExecutor.service.js'
 import { getSocketIO } from '../../shared/socket.js'
+import { compareDesign } from './designMatcher.service.js'
 
 const activeRuns = new Map()
 
@@ -82,6 +84,7 @@ export async function startExecution({ projectId, testSuiteId, baseUrl, headless
     module: tc.module || '',
     feature: tc.feature || '',
     status: 'pending',
+    figmaFrameId: tc.figmaFrameId || '',
     stepResults: tc.steps.map(step => ({
       stepNumber: step.step_number,
       action: step.action,
@@ -316,6 +319,60 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
 
       // Break out of steps on first failure
       break
+    }
+  }
+
+  // Visual Design Compliance Match
+  if (!failed && testCase.figmaFrameId) {
+    try {
+      await appendLog(runId, 'info', 'step', `Running visual compliance check against Figma...`, testCaseId)
+      const project = await Project.findById(run.projectId)
+      const frame = project?.figmaSyncedFrames?.find(f => f.id === testCase.figmaFrameId)
+
+      if (frame && frame.imageUrl) {
+        const screenshotFilename = `${testCaseId}-design-actual.png`
+        fs.mkdirSync(screenshotDir, { recursive: true })
+        const actualScreenshotPath = path.join(screenshotDir, screenshotFilename)
+
+        await page.screenshot({ path: actualScreenshotPath, fullPage: true })
+
+        const diffFilename = `${testCaseId}-design-diff.png`
+        const matchResult = await compareDesign({
+          actualScreenshotPath,
+          figmaFrameImageUrl: frame.imageUrl,
+          frameName: frame.name,
+          outputDir: screenshotDir,
+          diffFilename
+        })
+
+        const webScreenshotPath = `/uploads/test-runs/${runId}/${screenshotFilename}`
+        const webDiffPath = matchResult.visualDiffPath ? `/uploads/test-runs/${runId}/${diffFilename}` : ''
+
+        // Save result and diff paths to the testCaseResults
+        await updateTestRun(runId, {
+          [`testCaseResults.${testCaseIndex}.designMatchResult`]: {
+            status: matchResult.status,
+            similarityScore: matchResult.similarityScore,
+            visualDiffPath: webDiffPath,
+            discrepancies: matchResult.discrepancies,
+            completedAt: new Date()
+          }
+        })
+        screenshotPath = webScreenshotPath
+
+        if (matchResult.status === 'mismatch') {
+          failed = true
+          errorMessage = `Visual design mismatch (${matchResult.similarityScore}% similarity): ${matchResult.discrepancies.join(', ')}`
+          await appendLog(runId, 'error', 'step', errorMessage, testCaseId)
+        } else {
+          await appendLog(runId, 'success', 'step', `Design match check passed (${matchResult.similarityScore}% similarity)`, testCaseId)
+        }
+      } else {
+        await appendLog(runId, 'error', 'step', `Figma design image not found for compliance check`, testCaseId)
+      }
+    } catch (matchErr) {
+      console.error('[EXECUTION SERVICE] Visual compliance check failed:', matchErr)
+      await appendLog(runId, 'error', 'step', `Visual compliance check failed: ${matchErr.message}`, testCaseId)
     }
   }
 

@@ -75,5 +75,20 @@ export const projectService = {
   async syncFigma(projectId: string) {
     const response = await apiClient.post<{ success: boolean; data: any }>(`/projects/${projectId}/figma-sync`)
     return response.data
+  },
+  
+  async updateFigmaMappings(projectId: string, payload: { mappings: any[]; figmaBaseUrl?: string }) {
+    const response = await apiClient.put<{ success: boolean; data: any }>(`/projects/${projectId}/figma-mappings`, payload)
+    return response.data
+  },
+
+  async runFigmaCompliance(projectId: string, payload: { baseUrl: string; headless?: boolean }) {
+    const response = await apiClient.post<{ success: boolean; data: { runId: string; testSuiteId: string } }>(`/projects/${projectId}/figma-run-compliance`, payload)
+    return response.data
+  },
+
+  async runFigmaSingleCompliance(projectId: string, payload: { figmaFrameId: string; baseUrl: string; headless?: boolean }) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(`/projects/${projectId}/figma-run-single`, payload)
+    return response.data
   }
 }

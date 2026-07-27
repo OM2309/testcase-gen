@@ -17,6 +17,9 @@ import {
   importLinearStories,
   connectFigma,
   syncFigma,
+  updateFigmaMappings,
+  runFigmaCompliance,
+  runFigmaSingleCompliance,
 } from './project.controller.js'
 import { projectAccessMiddleware } from '../../middleware/projectAccess.js'
 import { authorizeRoles } from '../../middleware/auth.js'
@@ -49,5 +52,8 @@ router.get('/projects/:projectId/linear-issues', projectAccessMiddleware, getLin
 router.post('/projects/:projectId/linear-import', projectAccessMiddleware, importLinearStories)
 router.put('/projects/:projectId/figma-connect', projectAccessMiddleware, validate(connectFigmaSchema), connectFigma)
 router.post('/projects/:projectId/figma-sync', projectAccessMiddleware, syncFigma)
+router.put('/projects/:projectId/figma-mappings', projectAccessMiddleware, updateFigmaMappings)
+router.post('/projects/:projectId/figma-run-compliance', projectAccessMiddleware, runFigmaCompliance)
+router.post('/projects/:projectId/figma-run-single', projectAccessMiddleware, runFigmaSingleCompliance)
 
 export default router

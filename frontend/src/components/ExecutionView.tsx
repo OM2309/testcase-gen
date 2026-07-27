@@ -10,11 +10,14 @@ import { ExecutionSummaryCards } from './execution/execution-summary-cards'
 import { ExecutionTestCaseList } from './execution/execution-testcase-list'
 import { ExecutionConsole } from './execution/execution-console'
 import { ExecutionScreenshotPanel } from './execution/execution-screenshot-panel'
+import { FigmaDesignMatchPanel } from './execution/FigmaDesignMatchPanel'
 import { ExecutionHistoryList } from './execution/execution-history-list'
 import { PageLoader, PageError, EmptyState } from '@/components/shared'
+import { useProject } from '../contexts/ProjectContext'
 import { PlayCircle } from 'lucide-react'
 
 export function ExecutionView() {
+  const { project } = useProject()
   const router = useRouter()
   const params = useParams() as { projectId?: string }
   const projectId = params.projectId
@@ -112,7 +115,11 @@ export function ExecutionView() {
 
         <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-4">
           <ExecutionConsole logs={run.executionLogs} isPolling={isPolling} />
-          <ExecutionScreenshotPanel testCase={selectedTestCase} />
+          {selectedTestCase?.figmaFrameId ? (
+            <FigmaDesignMatchPanel testCase={selectedTestCase} frames={project?.figmaSyncedFrames || []} />
+          ) : (
+            <ExecutionScreenshotPanel testCase={selectedTestCase} />
+          )}
         </div>
       </div>
     </div>

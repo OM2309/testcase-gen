@@ -147,3 +147,30 @@ export async function syncFigma(req, res, next) {
     next(err)
   }
 }
+
+export async function updateFigmaMappings(req, res, next) {
+  try {
+    const project = await projectService.updateFigmaMappings(req.project, req.user, req.body)
+    return sendSuccess(res, 'Figma mappings updated successfully.', project)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function runFigmaCompliance(req, res, next) {
+  try {
+    const result = await projectService.runFigmaCompliance(req.project, req.user, req.body)
+    return sendSuccess(res, 'Figma design compliance run started successfully.', result)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function runFigmaSingleCompliance(req, res, next) {
+  try {
+    const result = await projectService.runFigmaSingleCompliance(req.project, req.user, req.body)
+    return sendSuccess(res, 'Figma single design compliance run completed successfully.', result)
+  } catch (err) {
+    next(err)
+  }
+}

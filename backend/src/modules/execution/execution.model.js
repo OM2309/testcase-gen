@@ -26,6 +26,14 @@ const testCaseResultSchema = new mongoose.Schema({
   failedStepNumber: { type: Number, default: null },
   errorMessage: { type: String, default: '' },
   screenshotPath: { type: String, default: '' },
+  figmaFrameId: { type: String, default: '' },
+  designMatchResult: {
+    status: { type: String, enum: ['none', 'match', 'mismatch', 'error'], default: 'none' },
+    similarityScore: { type: Number, default: 0 },
+    visualDiffPath: { type: String, default: '' },
+    discrepancies: { type: [String], default: [] },
+    completedAt: { type: Date, default: null }
+  },
   stepResults: { type: [stepResultSchema], default: [] }
 }, { _id: false })
 

@@ -32,6 +32,16 @@ export interface Project {
   figmaAccessToken?: string;
   figmaFileKey?: string;
   figmaSyncedFrames?: Array<{ id: string; name: string; imageUrl: string }>;
+  figmaScreenMappings?: Array<{
+    figmaFrameId: string;
+    targetUrl: string;
+    steps: Array<{
+      action: string;
+      target: string;
+      value: string;
+    }>;
+  }>;
+  figmaBaseUrl?: string;
   slackChannelId?: string;
   slackChannelName?: string;
   slackConnected?: boolean;
@@ -178,6 +188,14 @@ export interface TestCaseResult {
   failedStepNumber?: number | null
   errorMessage?: string
   screenshotPath?: string
+  figmaFrameId?: string
+  designMatchResult?: {
+    status: 'none' | 'match' | 'mismatch' | 'error'
+    similarityScore: number
+    visualDiffPath?: string
+    discrepancies: string[]
+    completedAt?: string | null
+  }
   stepResults: StepResult[]
 }
 

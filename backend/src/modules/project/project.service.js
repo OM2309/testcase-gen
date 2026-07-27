@@ -1,4 +1,5 @@
 import fs from 'fs'
+import path from 'path'
 import mongoose from 'mongoose'
 import Project from './project.model.js'
 import RequirementAnalysis from '../requirement/requirement.model.js'
@@ -303,6 +304,191 @@ export class ProjectService {
     } catch (err) {
       console.error('Figma Sync Error:', err)
       throw err
+    }
+  }
+
+  async updateFigmaMappings(project, user, { mappings, figmaBaseUrl }) {
+    const isOwner = project.userId && project.userId.toString() === user.id
+    if (user.role !== 'admin' && !isOwner) {
+      throw new ForbiddenError('Access denied. Only the project owner or an admin can update Figma mappings.')
+    }
+
+    if (!Array.isArray(mappings)) {
+      throw new ValidationError('Mappings must be an array.')
+    }
+
+    project.figmaScreenMappings = mappings
+    if (figmaBaseUrl !== undefined) {
+      project.figmaBaseUrl = (figmaBaseUrl || '').trim()
+    }
+    return this.projectRepo.save(project)
+  }
+
+  async runFigmaCompliance(project, user, { baseUrl, headless = true }) {
+    const isOwner = project.userId && project.userId.toString() === user.id
+    if (user.role !== 'admin' && !isOwner) {
+      throw new ForbiddenError('Access denied. Only the project owner or an admin can run Figma compliance check.')
+    }
+
+    if (!project.figmaScreenMappings || project.figmaScreenMappings.length === 0) {
+      throw new ValidationError('No Figma screen mappings found. Please configure mappings first.')
+    }
+
+    const testCases = project.figmaScreenMappings.map((mapping) => {
+      const frame = project.figmaSyncedFrames.find(f => f.id === mapping.figmaFrameId)
+      const steps = [
+        {
+          step_number: 1,
+          action: 'goto',
+          target: '',
+          value: mapping.targetUrl
+        },
+        ...mapping.steps.map((s, idx) => ({
+          step_number: idx + 2,
+          action: s.action,
+          target: s.target,
+          value: s.value
+        }))
+      ]
+
+      return {
+        id: `design_match_${mapping.figmaFrameId}`,
+        title: `Design Match: ${frame ? frame.name : 'Screen'}`,
+        description: `Visual regression check for ${frame ? frame.name : 'screen'}`,
+        module: 'Figma Compliance',
+        feature: frame ? frame.name : 'Visual Match',
+        figmaFrameId: mapping.figmaFrameId,
+        steps,
+        expected_result: 'Live page matches Figma design mockup visually.'
+      }
+    })
+
+    let requirement = await RequirementAnalysis.findOne({ projectId: project._id })
+    if (!requirement) {
+      requirement = await RequirementAnalysis.create({
+        projectId: project._id,
+        generationMode: 'figma_only',
+        status: 'completed',
+        analyzedData: { modules: [] }
+      })
+    }
+
+    let testSuite = await TestSuite.findOne({
+      projectId: project._id,
+      suiteName: 'Figma Design Compliance Suite'
+    })
+
+    if (!testSuite) {
+      testSuite = await TestSuite.create({
+        projectId: project._id,
+        suiteName: 'Figma Design Compliance Suite',
+        projectName: project.projectName,
+        generatedFromRequirementId: requirement._id,
+        testCases,
+        approvalStatus: 'approved'
+      })
+    } else {
+      testSuite.testCases = testCases
+      testSuite.generatedFromRequirementId = requirement._id
+      testSuite.approvalStatus = 'approved'
+      await testSuite.save()
+    }
+
+    const { startExecution } = await import('../execution/execution.service.js')
+    const runId = await startExecution({
+      projectId: project._id,
+      testSuiteId: testSuite._id,
+      baseUrl,
+      headless
+    })
+
+    return { runId, testSuiteId: testSuite._id }
+  }
+
+  async runFigmaSingleCompliance(project, user, { figmaFrameId, baseUrl, headless = true }) {
+    const isOwner = project.userId && project.userId.toString() === user.id
+    if (user.role !== 'admin' && !isOwner) {
+      throw new ForbiddenError('Access denied. Only the project owner or an admin can run Figma compliance check.')
+    }
+
+    const mapping = project.figmaScreenMappings.find(m => m.figmaFrameId === figmaFrameId)
+    if (!mapping) {
+      throw new ValidationError('Figma screen mapping not found. Please configure this screen first.')
+    }
+
+    const frame = project.figmaSyncedFrames.find(f => f.id === figmaFrameId)
+    if (!frame || !frame.imageUrl) {
+      throw new ValidationError('Figma screen frame image url not found. Please sync Figma screens first.')
+    }
+
+    // Launch browser
+    const { chromium } = await import('playwright')
+    const explicitPath = process.env.PLAYWRIGHT_CHROME_PATH
+    let browser
+    if (explicitPath) {
+      browser = await chromium.launch({ headless, executablePath: explicitPath })
+    } else {
+      try {
+        browser = await chromium.launch({ headless })
+      } catch (err) {
+        browser = await chromium.launch({ headless, channel: 'chrome' })
+      }
+    }
+
+    let actualScreenshotPath = ''
+    const runId = `single-${figmaFrameId}-${Date.now()}`
+    const outputDir = path.resolve('uploads/test-runs', runId)
+    const actualFilename = 'actual.png'
+    const diffFilename = 'diff.png'
+
+    try {
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: 720 }
+      })
+      const page = await context.newPage()
+
+      const { executeStep } = await import('../execution/stepExecutor.service.js')
+      
+      const targetUrl = mapping.targetUrl
+      const url = /^https?:\/\//i.test(targetUrl)
+        ? targetUrl
+        : `${baseUrl.replace(/\/+$/, '')}/${targetUrl.replace(/^\/+/, '')}`
+        
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+      for (const step of mapping.steps) {
+        await executeStep({
+          page,
+          step,
+          baseUrl,
+          screenshotDir: null
+        })
+      }
+
+      fs.mkdirSync(outputDir, { recursive: true })
+      actualScreenshotPath = path.join(outputDir, actualFilename)
+      await page.screenshot({ path: actualScreenshotPath, fullPage: true })
+    } finally {
+      if (browser) {
+        await browser.close()
+      }
+    }
+
+    const { compareDesign } = await import('../execution/designMatcher.service.js')
+    const matchResult = await compareDesign({
+      actualScreenshotPath,
+      figmaFrameImageUrl: frame.imageUrl,
+      frameName: frame.name,
+      outputDir,
+      diffFilename
+    })
+
+    return {
+      status: matchResult.status,
+      similarityScore: matchResult.similarityScore,
+      actualScreenshotUrl: `/uploads/test-runs/${runId}/${actualFilename}`,
+      visualDiffUrl: matchResult.visualDiffPath ? `/uploads/test-runs/${runId}/${diffFilename}` : '',
+      discrepancies: matchResult.discrepancies
     }
   }
 }

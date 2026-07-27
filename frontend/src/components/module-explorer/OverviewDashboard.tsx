@@ -6,11 +6,12 @@ import { Project, RequirementAnalysis, TestSuiteData } from '../../types'
 import { SrsUploadSection } from '../srs-upload'
 import { SlackConnectionForm } from '../srs-upload/SlackConnectionForm'
 import { DocumentsTable } from './DocumentsTable'
+import { FigmaScreenMapper } from '../FigmaScreenMapper'
 
 interface OverviewDashboardProps {
   project: Project
-  dashboardTab: 'srs' | 'jira' | 'linear' | 'slack'
-  setDashboardTab: (tab: 'srs' | 'jira' | 'linear' | 'slack') => void
+  dashboardTab: 'srs' | 'jira' | 'linear' | 'slack' | 'figma'
+  setDashboardTab: (tab: 'srs' | 'jira' | 'linear' | 'slack' | 'figma') => void
   srsDocs: any[]
   jiraDocs: any[]
   linearDocs: any[]
@@ -167,6 +168,18 @@ export function OverviewDashboard({
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
             )}
           </button>
+          {hasFigma && (
+            <button
+              onClick={() => setDashboardTab('figma')}
+              className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${dashboardTab === 'figma'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                }`}
+            >
+              <Link2 className="w-4 h-4 text-purple-500" />
+              Figma Mapper
+            </button>
+          )}
         </div>
       </div>
 
@@ -237,7 +250,7 @@ export function OverviewDashboard({
             onRunAgent2={onRunAgent2}
           />
         </div>
-      ) : (
+      ) : dashboardTab === 'slack' ? (
         <div className="animate-fadeIn">
           <div className="border border-border bg-card/20 rounded-2xl p-6 max-w-xl">
             <h3 className="font-bold text-sm text-foreground mb-1">Configure Project Slack Channel</h3>
@@ -252,6 +265,10 @@ export function OverviewDashboard({
               onUpdated={onRefreshProject}
             />
           </div>
+        </div>
+      ) : (
+        <div className="space-y-5 animate-fadeIn">
+          <FigmaScreenMapper project={project} onUpdate={onRefreshProject} />
         </div>
       )}
     </div>
