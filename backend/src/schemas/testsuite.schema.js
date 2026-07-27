@@ -69,7 +69,32 @@ export const submitReviewSchema = z.object({
   }),
   body: z.object({
     status: z.enum(['approved', 'rejected']),
-    comment: z.string().min(1, 'Review comment is required'),
+    comment: z.string().optional().default(''),
+    rejectedTestCases: z.array(z.object({
+      testCaseId: z.string().min(1),
+      feedback: z.string().min(1, 'Feedback is required for each selected test case')
+    })).optional().default([]),
+  }),
+})
+
+export const resolveRejectionFeedbackSchema = z.object({
+  params: z.object({
+    projectId: z.string().min(1, 'Project ID is required'),
+    suiteId: z.string().min(1, 'Suite ID is required'),
+  }),
+  body: z.object({
+    testCaseId: z.string().min(1, 'Test case ID is required'),
+    action: z.enum(['rejected_change', 'manually_updated']),
+  }),
+})
+
+export const aiResolveRejectionFeedbackSchema = z.object({
+  params: z.object({
+    projectId: z.string().min(1, 'Project ID is required'),
+    suiteId: z.string().min(1, 'Suite ID is required'),
+  }),
+  body: z.object({
+    testCaseId: z.string().min(1, 'Test case ID is required'),
   }),
 })
 

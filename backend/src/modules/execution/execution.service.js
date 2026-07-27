@@ -66,6 +66,11 @@ export async function startExecution({ projectId, testSuiteId, baseUrl, headless
   const testSuite = await TestSuite.findById(testSuiteId)
   if (!testSuite) throw new Error('Test suite not found')
 
+  // Block execution if test suite is not approved
+  if (testSuite.approvalStatus !== 'approved') {
+    throw new Error('Test suite must be approved before execution. Current status: ' + (testSuite.approvalStatus || 'draft'))
+  }
+
   const project = await Project.findById(projectId)
   if (!project) throw new Error('Project not found')
 

@@ -76,9 +76,31 @@ export async function requestApproval(req, res, next) {
 export async function submitReview(req, res, next) {
   try {
     const { projectId, suiteId } = req.params
-    const { status, comment } = req.body
-    const suite = await testSuiteService.submitReview(projectId, suiteId, req.user.id, status, comment)
+    const { status, comment, rejectedTestCases } = req.body
+    const suite = await testSuiteService.submitReview(projectId, suiteId, req.user.id, status, comment, rejectedTestCases)
     return sendSuccess(res, 'Review submitted successfully.', suite)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function resolveRejectionFeedback(req, res, next) {
+  try {
+    const { projectId, suiteId } = req.params
+    const { testCaseId, action } = req.body
+    const suite = await testSuiteService.resolveRejectionFeedback(projectId, suiteId, testCaseId, action)
+    return sendSuccess(res, 'Rejection feedback resolved.', suite)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function aiResolveRejectionFeedback(req, res, next) {
+  try {
+    const { projectId, suiteId } = req.params
+    const { testCaseId } = req.body
+    const result = await testSuiteService.aiResolveRejectionFeedback(projectId, suiteId, testCaseId)
+    return sendSuccess(res, 'Test case updated by AI based on PM feedback.', result)
   } catch (err) {
     next(err)
   }

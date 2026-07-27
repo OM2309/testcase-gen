@@ -105,6 +105,13 @@ export interface TestSuiteComment {
   createdAt: string
 }
 
+export interface RejectionFeedbackItem {
+  testCaseId: string
+  feedback: string
+  resolvedByAction: 'pending' | 'rejected_change' | 'ai_updated' | 'manually_updated'
+  createdAt: string
+}
+
 export interface TestSuiteData {
   _id: string
   projectId: string
@@ -116,6 +123,7 @@ export interface TestSuiteData {
   approvalRequestedBy?: string
   approvalRequestedAt?: string
   comments?: TestSuiteComment[]
+  rejectionFeedback?: RejectionFeedbackItem[]
 }
 
 export interface ProjectDetail {

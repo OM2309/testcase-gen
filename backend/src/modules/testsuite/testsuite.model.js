@@ -51,6 +51,16 @@ const testSuiteSchema = new mongoose.Schema({
     required: true
   },
   testCases: { type: [testCaseSchema], default: [] },
+  rejectionFeedback: [{
+    testCaseId: { type: String, required: true },
+    feedback: { type: String, default: '' },
+    resolvedByAction: {
+      type: String,
+      enum: ['pending', 'rejected_change', 'ai_updated', 'manually_updated'],
+      default: 'pending'
+    },
+    createdAt: { type: Date, default: Date.now }
+  }],
   approvalStatus: {
     type: String,
     enum: ['draft', 'pending_approval', 'approved', 'rejected'],

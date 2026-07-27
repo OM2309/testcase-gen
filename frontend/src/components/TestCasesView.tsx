@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { FileSpreadsheet, Plus, PlayCircle, ShieldCheck, MessageSquare, Send, Clock, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { FileSpreadsheet, Plus, PlayCircle, ShieldCheck, MessageSquare, Send, Clock, ThumbsUp, ThumbsDown, AlertTriangle, Sparkles, X, Loader2, Pencil, Ban } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 
-import { Step, TestCase } from '../types'
+import { Step, TestCase, RejectionFeedbackItem } from '../types'
 import { SuiteSummary } from './testsuite/SuiteSummary'
 import { TestCaseList } from './testsuite/TestCaseList'
 import { TestCaseDetail } from './testsuite/TestCaseDetail'
@@ -19,6 +19,8 @@ import {
   useToggleRegressiveMutation,
   useRequestApprovalMutation,
   useReviewTestSuiteMutation,
+  useResolveRejectionFeedbackMutation,
+  useAiResolveRejectionFeedbackMutation,
 } from '../mutations/agent.mutation'
 import { useStartExecutionMutation } from '../mutations/execution.mutation'
 import { EmptyState } from '@/components/shared'
@@ -73,6 +75,9 @@ export function TestCasesView() {
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved')
   const [reviewComment, setReviewComment] = useState('')
+  // Per-test-case rejection feedback state
+  const [selectedRejectTcIds, setSelectedRejectTcIds] = useState<Set<string>>(new Set())
+  const [rejectFeedbackMap, setRejectFeedbackMap] = useState<Record<string, string>>({})
 
   // Mutations
   const saveSuiteMutation = useSaveTestSuiteMutation(project?._id || '')
@@ -80,6 +85,15 @@ export function TestCasesView() {
   const startExecutionMutation = useStartExecutionMutation()
   const requestApprovalMutation = useRequestApprovalMutation(project?._id || '')
   const reviewTestSuiteMutation = useReviewTestSuiteMutation(project?._id || '')
+  const resolveRejectionFeedbackMutation = useResolveRejectionFeedbackMutation(project?._id || '')
+  const aiResolveRejectionFeedbackMutation = useAiResolveRejectionFeedbackMutation(project?._id || '')
+
+  // Derived: is suite approved?
+  const isApproved = activeTestSuite?.approvalStatus === 'approved'
+  // Pending rejection feedback items
+  const pendingFeedback = useMemo(() => {
+    return (activeTestSuite?.rejectionFeedback || []).filter(f => f.resolvedByAction === 'pending')
+  }, [activeTestSuite?.rejectionFeedback])
 
   const existingModules = useMemo(() => {
     return modulesList
@@ -316,20 +330,70 @@ export function TestCasesView() {
   }
 
   const handleReviewSubmit = () => {
-    if (!activeTestSuite || !reviewComment.trim()) return
+    if (!activeTestSuite) return
+    // For approval, no special validation needed
+    // For rejection, need at least one test case selected with feedback
+    if (reviewStatus === 'rejected' && selectedRejectTcIds.size === 0) {
+      toast.error('Please select at least one test case and provide feedback.')
+      return
+    }
+
+    const rejectedTestCases = reviewStatus === 'rejected'
+      ? Array.from(selectedRejectTcIds)
+          .filter(id => rejectFeedbackMap[id]?.trim())
+          .map(id => ({ testCaseId: id, feedback: rejectFeedbackMap[id].trim() }))
+      : []
+
+    if (reviewStatus === 'rejected' && rejectedTestCases.length === 0) {
+      toast.error('Please provide feedback for at least one selected test case.')
+      return
+    }
+
     reviewTestSuiteMutation.mutate(
       {
         suiteId: activeTestSuite._id,
         status: reviewStatus,
         comment: reviewComment.trim(),
+        rejectedTestCases,
       },
       {
         onSuccess: () => {
           setIsReviewOpen(false)
           setReviewComment('')
+          setSelectedRejectTcIds(new Set())
+          setRejectFeedbackMap({})
         },
       }
     )
+  }
+
+  const handleResolveRejection = (testCaseId: string, action: 'rejected_change' | 'manually_updated') => {
+    if (!activeTestSuite) return
+    resolveRejectionFeedbackMutation.mutate({
+      suiteId: activeTestSuite._id,
+      testCaseId,
+      action,
+    })
+  }
+
+  const handleAiResolveRejection = (testCaseId: string) => {
+    if (!activeTestSuite) return
+    aiResolveRejectionFeedbackMutation.mutate({
+      suiteId: activeTestSuite._id,
+      testCaseId,
+    })
+  }
+
+  const toggleRejectTcSelection = (tcId: string) => {
+    setSelectedRejectTcIds(prev => {
+      const next = new Set(prev)
+      if (next.has(tcId)) {
+        next.delete(tcId)
+      } else {
+        next.add(tcId)
+      }
+      return next
+    })
   }
 
   const openCreateDialog = (moduleName?: string) => {
@@ -509,13 +573,13 @@ export function TestCasesView() {
 
       {/* Review Dialog */}
       <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-        <DialogContent className="sm:max-w-md p-6">
+        <DialogContent className={`p-6 ${reviewStatus === 'rejected' ? 'sm:max-w-2xl' : 'sm:max-w-md'}`}>
           <DialogHeader className="pb-4 border-b border-border mb-4">
             <DialogTitle className="text-lg font-bold text-foreground">
               Review Test Suite
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Approve or request changes for this test suite. Your feedback comment will be sent to the QA engineer.
+              Approve or request changes for this test suite. When requesting changes, select the specific test cases and provide feedback for each.
             </DialogDescription>
           </DialogHeader>
 
@@ -543,16 +607,62 @@ export function TestCasesView() {
               </button>
             </div>
 
+            {/* Per-test-case feedback when rejecting */}
+            {reviewStatus === 'rejected' && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground">
+                  Select test cases with issues <span className="text-rose-500">*</span>
+                </label>
+                <div className="max-h-[40vh] overflow-y-auto border border-border rounded-xl divide-y divide-border/60">
+                  {testCases.map(tc => {
+                    const isSelected = selectedRejectTcIds.has(tc.id)
+                    return (
+                      <div key={tc.id} className={`p-3 transition-all ${isSelected ? 'bg-rose-500/5' : 'hover:bg-muted/30'}`}>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRejectTcSelection(tc.id)}
+                            className="w-3.5 h-3.5 text-rose-500 border-border rounded focus:ring-rose-500/40 bg-background cursor-pointer flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-mono font-bold text-primary mr-2">{tc.id}</span>
+                            <span className="text-xs font-medium text-foreground">{tc.title}</span>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <div className="mt-2 ml-7">
+                            <textarea
+                              value={rejectFeedbackMap[tc.id] || ''}
+                              onChange={(e) => setRejectFeedbackMap(prev => ({ ...prev, [tc.id]: e.target.value }))}
+                              placeholder={`What needs to change in ${tc.id}?`}
+                              rows={2}
+                              className="w-full px-3 py-2 text-xs bg-card border border-rose-500/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-rose-500/40 focus:border-rose-500 transition-all resize-none placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                {selectedRejectTcIds.size > 0 && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {selectedRejectTcIds.size} test case{selectedRejectTcIds.size !== 1 ? 's' : ''} selected for feedback
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <label htmlFor="review-comment" className="text-xs font-semibold text-foreground">
-                Comments / Feedback <span className="text-rose-500">*</span>
+                Overall Comments {reviewStatus === 'approved' && <span className="text-muted-foreground font-normal">(optional)</span>}
               </label>
               <textarea
                 id="review-comment"
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="Provide details about your review decision..."
-                className="w-full min-h-[100px] p-3 text-xs bg-card border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all animate-fadeIn"
+                placeholder={reviewStatus === 'rejected' ? 'Any overall comments for the QA engineer...' : 'Provide details about your approval...'}
+                className="w-full min-h-[80px] p-3 text-xs bg-card border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all animate-fadeIn"
               />
             </div>
           </div>
@@ -566,10 +676,10 @@ export function TestCasesView() {
             </button>
             <button
               onClick={handleReviewSubmit}
-              disabled={!reviewComment.trim() || reviewTestSuiteMutation.isPending}
-              className="btn-primary"
+              disabled={reviewTestSuiteMutation.isPending || (reviewStatus === 'rejected' && selectedRejectTcIds.size === 0)}
+              className={reviewStatus === 'rejected' ? 'btn-primary bg-rose-600 hover:bg-rose-700 text-white' : 'btn-primary'}
             >
-              {reviewTestSuiteMutation.isPending ? 'Submitting...' : 'Submit Review'}
+              {reviewTestSuiteMutation.isPending ? 'Submitting...' : reviewStatus === 'approved' ? 'Approve' : 'Request Changes'}
             </button>
           </div>
         </DialogContent>
@@ -585,7 +695,7 @@ export function TestCasesView() {
           <p className="text-sm text-muted-foreground mt-0.5">{testCases.length} test cases — edit steps, drag to reorder, create new cases</p>
         </div>
         <div className="flex items-center gap-2">
-          {isQA && activeTestSuite?.approvalStatus !== 'pending_approval' && (
+          {isQA && activeTestSuite?.approvalStatus !== 'pending_approval' && activeTestSuite?.approvalStatus !== 'approved' && (
             <button
               onClick={handleRequestApproval}
               disabled={requestApprovalMutation.isPending}
@@ -600,6 +710,8 @@ export function TestCasesView() {
               onClick={() => {
                 setReviewStatus('approved')
                 setReviewComment('')
+                setSelectedRejectTcIds(new Set())
+                setRejectFeedbackMap({})
                 setIsReviewOpen(true)
               }}
               className="btn-primary bg-amber-600 hover:bg-amber-700 text-white"
@@ -631,8 +743,9 @@ export function TestCasesView() {
           </button>
           <button
             onClick={() => openRunDialog(null)}
-            disabled={testCases.length === 0}
+            disabled={testCases.length === 0 || !isApproved}
             className="btn-primary"
+            title={!isApproved ? 'Test suite must be approved before running' : ''}
           >
             <PlayCircle className="w-4 h-4" /> Run Test Suite
           </button>
@@ -671,6 +784,63 @@ export function TestCasesView() {
         </div>
       )}
 
+      {/* Rejection feedback banner for QA */}
+      {activeTestSuite?.approvalStatus === 'rejected' && pendingFeedback.length > 0 && isQA && (
+        <div className="border border-rose-500/30 bg-rose-500/5 rounded-xl p-4 space-y-3 shadow-sm">
+          <h3 className="text-xs font-bold text-rose-500 flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5" /> PM Feedback — {pendingFeedback.length} test case{pendingFeedback.length !== 1 ? 's' : ''} need attention
+          </h3>
+          <div className="space-y-2">
+            {pendingFeedback.map(fb => {
+              const tc = testCases.find(t => t.id === fb.testCaseId)
+              return (
+                <div key={fb.testCaseId} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] font-mono font-bold text-primary">{fb.testCaseId}</span>
+                      <span className="text-xs font-medium text-foreground truncate">{tc?.title || 'Unknown'}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground bg-rose-500/5 border border-rose-500/10 rounded-lg px-3 py-2">
+                    <span className="font-semibold text-rose-500 text-[10px] uppercase block mb-0.5">PM Feedback</span>
+                    {fb.feedback}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleResolveRejection(fb.testCaseId, 'rejected_change')}
+                      disabled={resolveRejectionFeedbackMutation.isPending}
+                      className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-all font-semibold"
+                      title="Dismiss PM's suggestion"
+                    >
+                      <Ban className="w-3 h-3" /> Reject Change
+                    </button>
+                    <button
+                      onClick={() => handleAiResolveRejection(fb.testCaseId)}
+                      disabled={aiResolveRejectionFeedbackMutation.isPending}
+                      className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all font-semibold"
+                      title="AI will update this test case based on PM feedback and project context"
+                    >
+                      {aiResolveRejectionFeedbackMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} AI Update
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedId(fb.testCaseId)
+                        handleResolveRejection(fb.testCaseId, 'manually_updated')
+                      }}
+                      disabled={resolveRejectionFeedbackMutation.isPending}
+                      className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-all font-semibold"
+                      title="Open the test case editor to make manual changes"
+                    >
+                      <Pencil className="w-3 h-3" /> Edit Manually
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <SuiteSummary testCases={testCases} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -686,6 +856,8 @@ export function TestCasesView() {
           onDelete={confirmDelete}
           onRun={openRunDialog}
           onToggleRegressive={handleToggleRegressive}
+          approvalStatus={activeTestSuite?.approvalStatus}
+          rejectionFeedback={activeTestSuite?.rejectionFeedback}
         />
       </div>
 
@@ -710,6 +882,11 @@ export function TestCasesView() {
               onUpdateStep={(idx, patch) => { if (selectedTc) updateStep(selectedTc.id, idx, patch) }}
               onReorder={(from, to) => { if (selectedTc) reorderSteps(selectedTc.id, from, to) }}
               onUpdateTestCase={(patch) => { if (selectedTc) updateTestCase(selectedTc.id, patch) }}
+              rejectionFeedback={(activeTestSuite?.rejectionFeedback || []).find(f => f.testCaseId === selectedTc.id && f.resolvedByAction === 'pending')}
+              onResolveRejection={handleResolveRejection}
+              onAiResolveRejection={handleAiResolveRejection}
+              isResolvingFeedback={resolveRejectionFeedbackMutation.isPending}
+              isAiResolvingFeedback={aiResolveRejectionFeedbackMutation.isPending}
             />
           )}
         </DialogContent>

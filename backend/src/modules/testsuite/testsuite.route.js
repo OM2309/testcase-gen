@@ -8,6 +8,8 @@ import {
   aiUpdateTestCaseSteps,
   requestApproval,
   submitReview,
+  resolveRejectionFeedback,
+  aiResolveRejectionFeedback,
 } from './testsuite.controller.js'
 import { validate } from '../../middlewares/validate.middleware.js'
 import {
@@ -19,6 +21,8 @@ import {
   aiUpdateTestCaseStepsSchema,
   requestApprovalSchema,
   submitReviewSchema,
+  resolveRejectionFeedbackSchema,
+  aiResolveRejectionFeedbackSchema,
 } from '../../schemas/testsuite.schema.js'
 
 const router = express.Router()
@@ -53,5 +57,13 @@ router.post('/testsuite/:projectId/:suiteId/request-approval', validate(requestA
 router.post('/test-suites/:projectId/:suiteId/request-approval', validate(requestApprovalSchema), requestApproval)
 router.post('/testsuite/:projectId/:suiteId/review', validate(submitReviewSchema), submitReview)
 router.post('/test-suites/:projectId/:suiteId/review', validate(submitReviewSchema), submitReview)
+
+// Resolve Rejection Feedback
+router.patch('/testsuite/:projectId/:suiteId/resolve-feedback', validate(resolveRejectionFeedbackSchema), resolveRejectionFeedback)
+router.patch('/test-suites/:projectId/:suiteId/resolve-feedback', validate(resolveRejectionFeedbackSchema), resolveRejectionFeedback)
+
+// AI Resolve Rejection Feedback
+router.post('/testsuite/:projectId/:suiteId/ai-resolve-feedback', validate(aiResolveRejectionFeedbackSchema), aiResolveRejectionFeedback)
+router.post('/test-suites/:projectId/:suiteId/ai-resolve-feedback', validate(aiResolveRejectionFeedbackSchema), aiResolveRejectionFeedback)
 
 export default router

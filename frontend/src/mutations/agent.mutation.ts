@@ -174,8 +174,18 @@ export function useRequestApprovalMutation(projectId: string) {
 export function useReviewTestSuiteMutation(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ suiteId, status, comment }: { suiteId: string; status: 'approved' | 'rejected'; comment: string }) =>
-      agentService.reviewTestSuite(projectId, suiteId, status, comment),
+    mutationFn: ({
+      suiteId,
+      status,
+      comment,
+      rejectedTestCases
+    }: {
+      suiteId: string
+      status: 'approved' | 'rejected'
+      comment: string
+      rejectedTestCases?: Array<{ testCaseId: string; feedback: string }>
+    }) =>
+      agentService.reviewTestSuite(projectId, suiteId, status, comment, rejectedTestCases),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
       const statusLabel = res.data?.approvalStatus === 'approved' ? 'Approved' : 'Rejected'
@@ -183,6 +193,54 @@ export function useReviewTestSuiteMutation(projectId: string) {
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.error || 'Failed to submit review. Please try again.'
+      toast.error(msg)
+    }
+  })
+}
+
+/** Resolve rejection feedback (reject change or mark manually updated). */
+export function useResolveRejectionFeedbackMutation(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      suiteId,
+      testCaseId,
+      action
+    }: {
+      suiteId: string
+      testCaseId: string
+      action: 'rejected_change' | 'manually_updated'
+    }) =>
+      agentService.resolveRejectionFeedback(projectId, suiteId, testCaseId, action),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
+      toast.success('Feedback resolved ✓')
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error || 'Failed to resolve feedback.'
+      toast.error(msg)
+    }
+  })
+}
+
+/** AI resolve rejection feedback using PM feedback + project context. */
+export function useAiResolveRejectionFeedbackMutation(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      suiteId,
+      testCaseId
+    }: {
+      suiteId: string
+      testCaseId: string
+    }) =>
+      agentService.aiResolveRejectionFeedback(projectId, suiteId, testCaseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) })
+      toast.success('Test case updated by AI based on PM feedback! ✨')
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error || 'AI update failed. Please try again.'
       toast.error(msg)
     }
   })

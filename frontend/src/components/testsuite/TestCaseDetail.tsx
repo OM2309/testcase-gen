@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2, GripVertical, Pencil, Play, Sparkles, Upload, X, Loader2 } from 'lucide-react'
+import { ShieldCheck, FileSpreadsheet, HelpCircle, Plus, Trash2, GripVertical, Pencil, Play, Sparkles, Upload, X, Loader2, AlertTriangle, Ban } from 'lucide-react'
 import { toast } from 'sonner'
 import { getPriorityBadge } from '../../helpers/utils'
-import { Step, TestCase } from '../../types'
+import { Step, TestCase, RejectionFeedbackItem } from '../../types'
 import { StepEditor, StepRow } from './StepEditor'
 import { agentService } from '../../services/agentService'
 
@@ -17,11 +17,17 @@ interface TestCaseDetailProps {
   onUpdateStep: (idx: number, patch: Partial<Step>) => void
   onReorder: (from: number, to: number) => void
   onUpdateTestCase: (patch: Partial<TestCase>) => void
+  rejectionFeedback?: RejectionFeedbackItem
+  onResolveRejection?: (testCaseId: string, action: 'rejected_change' | 'manually_updated') => void
+  onAiResolveRejection?: (testCaseId: string) => void
+  isResolvingFeedback?: boolean
+  isAiResolvingFeedback?: boolean
 }
 
 /** Right-hand panel: test case header + its editable, reorderable step list. */
 export function TestCaseDetail({
-  testCase, projectId, onEditMeta, onAddStep, onDeleteStep, onUpdateStep, onReorder, onUpdateTestCase
+  testCase, projectId, onEditMeta, onAddStep, onDeleteStep, onUpdateStep, onReorder, onUpdateTestCase,
+  rejectionFeedback, onResolveRejection, onAiResolveRejection, isResolvingFeedback, isAiResolvingFeedback
 }: TestCaseDetailProps) {
   const [editingStepIdx, setEditingStepIdx] = useState<number | null>(null)
   const [draggedStepIdx, setDraggedStepIdx] = useState<number | null>(null)
@@ -136,6 +142,43 @@ export function TestCaseDetail({
             <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
               <span className="font-bold text-primary block text-[10px] uppercase mb-0.5">Expected Result</span>
               {testCase.expected_result}
+            </div>
+          )}
+
+          {/* PM Rejection Feedback Banner */}
+          {rejectionFeedback && (
+            <div className="border border-rose-500/30 bg-rose-500/5 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+                <span className="text-[10px] font-bold text-rose-500 uppercase">PM Feedback</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{rejectionFeedback.feedback}</p>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => onResolveRejection?.(testCase.id, 'rejected_change')}
+                  disabled={isResolvingFeedback}
+                  className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-all font-semibold"
+                >
+                  <Ban className="w-3 h-3" /> Reject Change
+                </button>
+                <button
+                  onClick={() => onAiResolveRejection?.(testCase.id)}
+                  disabled={isAiResolvingFeedback}
+                  className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all font-semibold"
+                >
+                  {isAiResolvingFeedback ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} AI Update
+                </button>
+                <button
+                  onClick={() => {
+                    onEditMeta(testCase)
+                    onResolveRejection?.(testCase.id, 'manually_updated')
+                  }}
+                  disabled={isResolvingFeedback}
+                  className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-all font-semibold"
+                >
+                  <Pencil className="w-3 h-3" /> Edit Manually
+                </button>
+              </div>
             </div>
           )}
         </div>

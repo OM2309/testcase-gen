@@ -71,10 +71,41 @@ export const agentService = {
     return response.data
   },
 
-  async reviewTestSuite(projectId: string, suiteId: string, status: 'approved' | 'rejected', comment: string) {
+  async reviewTestSuite(
+    projectId: string,
+    suiteId: string,
+    status: 'approved' | 'rejected',
+    comment: string,
+    rejectedTestCases: Array<{ testCaseId: string; feedback: string }> = []
+  ) {
     const response = await apiClient.post<{ success: boolean; data: any }>(
       `/test-suites/${projectId}/${suiteId}/review`,
-      { status, comment }
+      { status, comment, rejectedTestCases }
+    )
+    return response.data
+  },
+
+  async resolveRejectionFeedback(
+    projectId: string,
+    suiteId: string,
+    testCaseId: string,
+    action: 'rejected_change' | 'manually_updated'
+  ) {
+    const response = await apiClient.patch<{ success: boolean; data: any }>(
+      `/test-suites/${projectId}/${suiteId}/resolve-feedback`,
+      { testCaseId, action }
+    )
+    return response.data
+  },
+
+  async aiResolveRejectionFeedback(
+    projectId: string,
+    suiteId: string,
+    testCaseId: string
+  ) {
+    const response = await apiClient.post<{ success: boolean; data: any }>(
+      `/test-suites/${projectId}/${suiteId}/ai-resolve-feedback`,
+      { testCaseId }
     )
     return response.data
   }

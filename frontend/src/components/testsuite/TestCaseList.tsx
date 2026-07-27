@@ -1,9 +1,9 @@
 'use client'
 
 import React from 'react'
-import { Search, Trash2, PlayCircle } from 'lucide-react'
+import { Search, Trash2, PlayCircle, AlertTriangle } from 'lucide-react'
 import { getPriorityBadge } from '../../helpers/utils'
-import { TestCase } from '../../types'
+import { TestCase, RejectionFeedbackItem } from '../../types'
 
 interface TestCaseListProps {
   modules: Array<{ name: string; count: number }>
@@ -17,12 +17,18 @@ interface TestCaseListProps {
   onDelete: (id: string) => void
   onRun?: (id: string) => void
   onToggleRegressive?: (id: string) => void
+  approvalStatus?: string
+  rejectionFeedback?: RejectionFeedbackItem[]
 }
 
 /** Left module nav + center searchable test-case list (two grid columns). */
 export function TestCaseList({
-  modules, selectedModule, onSelectModule, testCases, selectedId, onSelect, search, onSearch, onDelete, onRun, onToggleRegressive
+  modules, selectedModule, onSelectModule, testCases, selectedId, onSelect, search, onSearch, onDelete, onRun, onToggleRegressive, approvalStatus, rejectionFeedback
 }: TestCaseListProps) {
+  const isApproved = approvalStatus === 'approved'
+  const pendingFeedbackIds = new Set(
+    (rejectionFeedback || []).filter(f => f.resolvedByAction === 'pending').map(f => f.testCaseId)
+  )
   return (
     <>
       {/* Module sidebar */}
@@ -87,11 +93,17 @@ export function TestCaseList({
                   )}
                   
                   <div className="flex items-center gap-0.5">
+                    {pendingFeedbackIds.has(tc.id) && (
+                      <span title="PM has feedback on this test case" className="p-1 text-rose-500">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                      </span>
+                    )}
                     {onRun && (
                       <button
                         onClick={e => { e.stopPropagation(); onRun(tc.id) }}
-                        title="Run this test case"
-                        className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                        title={!isApproved ? 'Approve test suite first' : 'Run this test case'}
+                        disabled={!isApproved}
+                        className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-all ${!isApproved ? 'text-muted-foreground/40 cursor-not-allowed' : 'hover:bg-primary/10 text-muted-foreground hover:text-primary'}`}
                       >
                         <PlayCircle className="w-3.5 h-3.5" />
                       </button>
