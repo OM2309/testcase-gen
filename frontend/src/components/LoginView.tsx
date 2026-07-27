@@ -31,114 +31,140 @@ export function LoginView() {
   }
 
   return (
-    <div className="min-h-screen w-full flex bg-background text-foreground overflow-hidden">
+    <>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet"
+      />
+      <div
+        className="min-h-screen w-full flex bg-white text-black overflow-hidden"
+        style={{ fontFamily: "'Poppins', var(--font-poppins), sans-serif" }}
+      >
 
-      {/* LEFT PANEL: Clean Modern Login Interface */}
-      <div className="w-full md:w-[50%] flex flex-col justify-between p-8 md:p-16 relative">
-        {/* Soft decorative glow */}
-        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+        {/* LEFT PANEL: Clean Modern Login Interface with Warm Yellow Accents */}
+        <div className="w-full md:w-[50%] flex flex-col justify-between p-8 md:p-16 relative bg-[#FFFDF2]">
+          {/* Soft decorative yellow ambient glow */}
+          <div className="absolute top-1/3 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full bg-[#FFFCEB] border border-[#FFF7C2] blur-2xl pointer-events-none" />
+          <div className="absolute bottom-10 right-10 w-[200px] h-[200px] rounded-full bg-[#FBDD24]/10 blur-3xl pointer-events-none" />
 
-        {/* Top Header Logo */}
-        <div className="flex justify-center w-full z-10">
-          <img
-            src="/Memorres-logo-light theme.png"
-            alt="Memorres Logo"
-            className="h-16 md:h-34 w-auto object-contain"
-          />
-        </div>
-
-        {/* Main Content Area */}
-        <div className="max-w-[420px] w-full mx-auto my-auto py-12 z-10 space-y-8">
-          <div className="space-y-2.5">
-            <h2 className="text-3xl font-extrabold tracking-tight text-center md:text-left">Welcome Back!</h2>
-            <p className="text-sm text-muted-foreground text-center md:text-left">
-              Sign in with your Google account to access the dashboard.
-            </p>
+          {/* Top Header Logo */}
+          <div className="flex justify-center md:justify-start w-full z-10">
+            <img
+              src="/Memorres-logo-light theme.png"
+              alt="Memorres Logo"
+              className="h-14 md:h-20 w-auto object-contain"
+            />
           </div>
 
-          {error && (
-            <div className="border border-destructive/20 bg-destructive/10 text-destructive text-xs p-3.5 rounded-xl leading-relaxed flex items-start gap-2.5">
-              <span className="font-bold">Error:</span> {error}
+          {/* Main Content Area */}
+          <div className="max-w-[420px] w-full mx-auto my-auto py-12 z-10 space-y-8">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFF7C2] border border-[#FBDD24]/40 text-black text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-[#FBDD24]" /> TestGen AI Workspace
+              </div>
+              <h2 className="text-4xl font-black tracking-tight text-black text-center md:text-left">Welcome Back</h2>
+              <p className="text-sm text-gray-700 text-center md:text-left font-medium">
+                Sign in with your Google account to access your testing workspace.
+              </p>
             </div>
-          )}
 
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full h-12 flex items-center justify-center gap-3 bg-card border border-border hover:bg-muted/80 text-foreground font-semibold px-4 rounded-xl shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99] duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              ) : (
-                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.09 14.974 0 12 0 7.354 0 3.307 2.673 1.347 6.57l3.919 3.195z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M23.49 12.275c0-.825-.074-1.62-.21-2.385H12v4.51h6.46c-.278 1.47-1.11 2.71-2.36 3.55l3.68 2.85c2.15-1.98 3.39-4.89 3.39-8.525z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.266 14.235L1.347 17.43A11.962 11.962 0 0 0 12 24c2.97 0 5.64-.98 7.52-2.65l-3.68-2.85c-1.03.69-2.35 1.1-3.84 1.1-2.91 0-5.38-1.96-6.26-4.6l-3.92 3.195z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M5.266 9.765c-.22.66-.345 1.37-.345 2.11 0 .74.125 1.45.345 2.11l3.92-3.195-3.92-2.11z"
-                  />
-                </svg>
-              )}
-              <span className="text-sm font-semibold">Continue with Google</span>
-            </button>
+            {error && (
+              <div className="border border-red-200 bg-red-50 text-red-700 text-xs p-3.5 rounded-xl leading-relaxed flex items-start gap-2.5 shadow-sm">
+                <span className="font-bold">Error:</span> {error}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full h-13 flex items-center justify-center gap-3 bg-white border-2 border-black hover:bg-[#FFFCEB] text-black font-bold px-5 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[0px] active:translate-y-[0px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-black" />
+                ) : (
+                  <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#EA4335"
+                      d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.09 14.974 0 12 0 7.354 0 3.307 2.673 1.347 6.57l3.919 3.195z"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M23.49 12.275c0-.825-.074-1.62-.21-2.385H12v4.51h6.46c-.278 1.47-1.11 2.71-2.36 3.55l3.68 2.85c2.15-1.98 3.39-4.89 3.39-8.525z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.266 14.235L1.347 17.43A11.962 11.962 0 0 0 12 24c2.97 0 5.64-.98 7.52-2.65l-3.68-2.85c-1.03.69-2.35 1.1-3.84 1.1-2.91 0-5.38-1.96-6.26-4.6l-3.92 3.195z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M5.266 9.765c-.22.66-.345 1.37-.345 2.11 0 .74.125 1.45.345 2.11l3.92-3.195-3.92-2.11z"
+                    />
+                  </svg>
+                )}
+                <span className="text-sm font-bold">Continue with Google</span>
+              </button>
+            </div>
           </div>
+
+          {/* Footer info */}
+          {/* <div className="z-10 text-[11px] text-gray-500 font-medium text-center md:text-left">
+          Protected by Memorres Authentication System
+        </div> */}
         </div>
 
-        {/* Empty placeholder bottom footer */}
-        <div className="h-4 z-10" />
-      </div>
+        {/* RIGHT PANEL: High Contrast Vibrant Yellow & Dark Black Hero Section */}
+        <div className="hidden md:flex md:w-[50%] bg-[#FBDD24] p-16 flex-col justify-between relative overflow-hidden border-l-2 border-black">
+          {/* Subtle grid pattern overlay */}
+          <div className="absolute inset-0 bg-[radial-gradient(#000000_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
 
-      {/* RIGHT PANEL: Highly Premium Indigo/Blue Gradient & Testimonial Section */}
-      <div className="hidden md:flex md:w-[50%] bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-950 p-16 flex-col justify-center relative overflow-hidden">
-        {/* Abstract light effects matching indigo/blue theme */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
+          {/* Decorative backdrop shapes */}
+          <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/40 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-80 h-80 bg-[#FFF7C2]/60 rounded-full blur-2xl pointer-events-none" />
 
-        {/* Brand visual grid lines */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-
-        <div className="max-w-[500px] space-y-10 z-10">
-          {/* Main Visual Title */}
-          <h1 className="text-4xl font-bold tracking-tight text-white leading-tight">
-            Revolutionize QA with <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-sky-300">
-              Smarter Automation
+          <div className="z-10 flex items-center justify-between">
+            <span className="font-extrabold text-black tracking-widest text-xs uppercase bg-black text-white px-3 py-1 rounded-md">
+              AI QA Platform
             </span>
-          </h1>
+          </div>
 
-          {/* Testimonial card */}
-          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl relative space-y-5">
-            <Quote className="absolute top-4 right-4 w-12 h-12 text-white/5 pointer-events-none" />
-            <p className="text-white/80 leading-relaxed text-sm italic">
-              "TestGen AI has completely transformed our testing process. It's reliable, efficient, and ensures our releases are always top-notch."
-            </p>
-            <div className="flex items-center gap-3.5 pt-1">
-              <Avatar className="w-9 h-9 border border-white/20 shadow-lg">
-                <AvatarFallback className="bg-gradient-to-tr from-indigo-400 to-sky-400 text-indigo-950 font-bold text-xs">
-                  AS
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h4 className="font-bold text-white text-sm">Anurag Sharma</h4>
-                <p className="text-[11px] text-white/60">Software Engineer</p>
+          <div className="max-w-[480px] space-y-8 z-10 my-auto">
+            {/* Main Visual Title */}
+            <h1 className="text-5xl font-black tracking-tight text-black leading-[1.1]">
+              Revolutionize QA <br />
+              <span className="px-2.5 py-0.5 rounded-lg inline-block mt-1">
+                With Smarter Automation
+              </span>
+            </h1>
+
+            {/* Testimonial card */}
+            <div className="bg-white border-2 border-black rounded-2xl p-7 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] relative space-y-4">
+              <Quote className="absolute top-4 right-4 w-10 h-10 text-[#FBDD24] pointer-events-none" />
+              <p className="text-black font-medium leading-relaxed text-sm">
+                "TestGen AI has completely transformed our testing process. It's reliable, efficient, and ensures our releases are always top-notch."
+              </p>
+              <div className="flex items-center gap-3.5 pt-2 border-t border-gray-100">
+                <Avatar className="w-10 h-10 border-2 border-black shadow-sm">
+                  <AvatarFallback className="bg-[#FBDD24] text-black font-extrabold text-xs">
+                    AS
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h4 className="font-black text-black text-sm">Anurag Sharma</h4>
+                  <p className="text-xs text-gray-600 font-medium">Software Engineer</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-    </div>
+          <div className="z-10 flex items-center justify-between text-xs text-black font-bold">
+            <span>© {new Date().getFullYear()} Memorres</span>
+            <span>All rights reserved</span>
+          </div>
+        </div>
+
+      </div>
+    </>
   )
 }
