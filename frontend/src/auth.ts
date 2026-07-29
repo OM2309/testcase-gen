@@ -27,7 +27,7 @@ export const authOptions: NextAuthOptions = {
             const token = credentials.token
             if (!token) throw new Error('No token provided.')
 
-            // Validate token with backend
+
             const response = await axios.get('http://localhost:5000/api/auth/me', {
               headers: { Authorization: `Bearer ${token}` }
             })
@@ -46,8 +46,8 @@ export const authOptions: NextAuthOptions = {
           }
 
           const isSignup = credentials.action === 'signup'
-          const url = isSignup 
-            ? 'http://localhost:5000/api/auth/register' 
+          const url = isSignup
+            ? 'http://localhost:5000/api/auth/register'
             : 'http://localhost:5000/api/auth/login'
 
           const payload = isSignup
