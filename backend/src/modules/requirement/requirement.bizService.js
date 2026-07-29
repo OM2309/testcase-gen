@@ -162,12 +162,10 @@ export class RequirementService {
         { upsert: true, new: true }
       )
 
-      const projectName = requirementsJson.project_name || project.projectName
       const totalModules = requirementsJson.modules?.length || 0
 
       await Project.findByIdAndUpdate(projectId, {
         status: 'analyzed',
-        projectName,
         totalModules,
         processingCompletedAt: new Date(),
       })

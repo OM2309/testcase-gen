@@ -60,7 +60,7 @@ export function AppSidebar({
     }
     return allProjects
   }, [allProjects, projectQuery])
-  
+
   const isOnReportsPage = pathname.includes('/execution')
   const [isProjectMenuOpen, setIsProjectMenuOpen] = React.useState(!isOnReportsPage)
   const [isReportsMenuOpen, setIsReportsMenuOpen] = React.useState(isOnReportsPage)
@@ -134,9 +134,8 @@ export function AppSidebar({
           <SidebarMenuItem className="space-y-1.5">
             <button
               onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
-              className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${
-                activeTab === 'projects' || isProjectMenuOpen ? 'bg-sidebar-accent/30 text-foreground font-bold shadow-sm' : ''
-              }`}
+              className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${activeTab === 'projects' || isProjectMenuOpen ? 'bg-sidebar-accent/30 text-foreground font-bold shadow-sm' : ''
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <FolderKanban className="w-4 h-4 text-muted-foreground" />
@@ -181,11 +180,10 @@ export function AppSidebar({
                               e.stopPropagation()
                               router.push(`/dashboard/${p._id}/modules`)
                             }}
-                            className={`px-2.5 py-2 rounded-lg text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
-                              isCurrent
-                                ? 'bg-muted/80 text-foreground font-semibold'
-                                : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
-                            }`}
+                            className={`px-2.5 py-2 rounded-lg text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${isCurrent
+                              ? 'bg-muted/80 text-foreground font-semibold'
+                              : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
+                              }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <Sparkles className={`w-3.5 h-3.5 flex-shrink-0 ${isCurrent ? 'text-primary' : 'text-muted-foreground/60'}`} />
@@ -218,7 +216,7 @@ export function AppSidebar({
                       className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50"
                     >
                       <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>test suits</span>
+                      <span>Test suits</span>
                     </SidebarMenuButton>
                   </div>
                 )}
@@ -229,9 +227,8 @@ export function AppSidebar({
           <SidebarMenuItem className="space-y-1">
             <button
               onClick={() => setIsReportsMenuOpen(!isReportsMenuOpen)}
-              className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${
-                activeTab === 'execution' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
-              }`}
+              className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${activeTab === 'execution' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <BarChart3 className="w-4 h-4 text-muted-foreground" />
@@ -264,9 +261,8 @@ export function AppSidebar({
             <SidebarMenuItem className="space-y-1">
               <button
                 onClick={() => router.push('/dashboard/users')}
-                className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${
-                  pathname === '/dashboard/users' ? 'bg-sidebar-accent text-sidebar-accent-foreground font-bold shadow-sm' : ''
-                }`}
+                className={`w-full text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center justify-between hover:bg-muted/80 cursor-pointer ${pathname === '/dashboard/users' ? 'bg-sidebar-accent text-sidebar-accent-foreground font-bold shadow-sm' : ''
+                  }`}
               >
                 <div className="flex items-center gap-2.5 text-left">
                   <Users className="w-4 h-4 text-muted-foreground" />
@@ -288,7 +284,7 @@ export function AppSidebar({
                   {(session.user.name || session.user.email || 'US').substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div 
+              <div
                 onClick={() => router.push('/dashboard/profile')}
                 className="min-w-0 cursor-pointer text-left group flex-grow"
               >

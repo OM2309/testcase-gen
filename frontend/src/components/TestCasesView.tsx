@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { FileSpreadsheet, Plus, PlayCircle, ShieldCheck, MessageSquare, Send, Clock, ThumbsUp, ThumbsDown, AlertTriangle, Sparkles, X, Loader2, Pencil, Ban } from 'lucide-react'
+import { FileSpreadsheet, Plus, PlayCircle, ShieldCheck, MessageSquare, Send, Clock, ThumbsUp, ThumbsDown, AlertTriangle, Sparkles, X, Loader2, Pencil, Ban, ChevronDown, FileText, Check } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
@@ -46,13 +46,54 @@ export function TestCasesView() {
     }
   }, [srsIdParam, selectedSrsId, setSelectedSrsId])
 
+  // SRS documents list for the selector
+  const srsDocs = useMemo(() => project?.srsDocuments || [], [project?.srsDocuments])
+  const hasMultipleSrs = srsDocs.length > 1
+  const [srsDropdownOpen, setSrsDropdownOpen] = useState(false)
+
   // Find active test suite for selected SRS
   const activeTestSuite = useMemo(() => {
-    if (!selectedSrsId) return testSuites[0] || null
     // Map virtual IDs to null for backend lookup
-    const mappedId = (selectedSrsId === 'figma-design' || selectedSrsId === 'legacy') ? null : selectedSrsId
-    return testSuites.find(t => t.srsDocumentId === mappedId) || null
-  }, [testSuites, selectedSrsId])
+    const mappedId = selectedSrsId
+      ? (selectedSrsId === 'figma-design' || selectedSrsId === 'legacy') ? null : selectedSrsId
+      : null
+
+    if (selectedSrsId) {
+      return testSuites.find(t => t.srsDocumentId === mappedId) || null
+    }
+
+    // When no SRS is selected: if there's only one suite, use it; otherwise require explicit selection
+    if (testSuites.length === 1) return testSuites[0]
+    if (srsDocs.length <= 1) return testSuites[0] || null
+    // Multiple SRS docs exist but none selected — don't silently pick the first one
+    return null
+  }, [testSuites, selectedSrsId, srsDocs.length])
+
+  // Get the display name for the currently selected SRS
+  const activeSrsName = useMemo(() => {
+    if (!selectedSrsId) return srsDocs.length > 0 ? srsDocs[0]?.originalFileName : 'Test Suite'
+    if (selectedSrsId === 'figma-design') return 'Figma Designs'
+    if (selectedSrsId === 'legacy') return 'Legacy Document'
+    const doc = srsDocs.find(d => d._id === selectedSrsId)
+    return doc?.originalFileName || 'Test Suite'
+  }, [selectedSrsId, srsDocs])
+
+  // Helper to get approval status for a given SRS doc
+  const getApprovalStatusForSrs = useCallback((srsId: string) => {
+    const mappedId = (srsId === 'figma-design' || srsId === 'legacy') ? null : srsId
+    const suite = testSuites.find(t => t.srsDocumentId === mappedId)
+    return suite?.approvalStatus || 'draft'
+  }, [testSuites])
+
+  // Handle SRS selection from the dropdown
+  const handleSrsSelect = useCallback((srsId: string) => {
+    setSelectedSrsId(srsId)
+    setSrsDropdownOpen(false)
+    // Update URL to reflect the selected SRS
+    const url = new URL(window.location.href)
+    url.searchParams.set('srsId', srsId)
+    router.replace(url.pathname + url.search)
+  }, [setSelectedSrsId, router])
 
   const initialTestCases = useMemo(() => {
     return activeTestSuite?.testCases || []
@@ -510,6 +551,9 @@ export function TestCasesView() {
   }
 
   if (!activeTestSuite) {
+    if (hasMultipleSrs && !selectedSrsId) {
+      return <EmptyState icon={FileText} title="Select an SRS document to view its test suite." description="This project has multiple SRS documents. Please select one from the modules page to view its test suite and approval status." />
+    }
     return <EmptyState icon={ShieldCheck} title="Test suite not found. Run Agent 2 to generate one." />
   }
 
@@ -686,15 +730,88 @@ export function TestCasesView() {
       </Dialog>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-4 border-b border-border/40 pb-4">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight">Test Suite Builder</h1>
             {getApprovalBadge()}
+
+            {/* SRS Document Selector — only shown when project has multiple SRS docs */}
+            {hasMultipleSrs && (
+              <div className="relative">
+                <button
+                  onClick={() => setSrsDropdownOpen(!srsDropdownOpen)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-muted/60 text-foreground transition-all cursor-pointer"
+                  title="Switch between SRS documents"
+                >
+                  <FileText className="w-3.5 h-3.5 text-primary" />
+                  <span className="truncate max-w-[180px]">{activeSrsName}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${srsDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {srsDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setSrsDropdownOpen(false)} />
+                    <div className="absolute left-0 mt-1.5 w-72 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-fadeIn">
+                      <div className="p-2.5 border-b border-border">
+                        <span className="text-[9px] font-bold text-muted-foreground/80 uppercase tracking-wider">SRS Documents</span>
+                      </div>
+                      <div className="max-h-[260px] overflow-y-auto custom-scrollbar p-1.5 space-y-0.5">
+                        {srsDocs.map((doc) => {
+                          const isCurrent = selectedSrsId === doc._id
+                          const docApproval = getApprovalStatusForSrs(doc._id)
+                          return (
+                            <button
+                              key={doc._id}
+                              onClick={() => handleSrsSelect(doc._id)}
+                              className={`w-full text-left px-3 py-2.5 rounded-lg text-xs flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                                isCurrent
+                                  ? 'bg-primary/10 text-foreground font-semibold border border-primary/20'
+                                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FileText className={`w-3.5 h-3.5 flex-shrink-0 ${isCurrent ? 'text-primary' : 'text-muted-foreground/60'}`} />
+                                <span className="truncate">{doc.originalFileName || 'Unnamed Document'}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {docApproval === 'approved' && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                    <ShieldCheck className="w-2.5 h-2.5" /> Approved
+                                  </span>
+                                )}
+                                {docApproval === 'pending_approval' && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse">
+                                    <Clock className="w-2.5 h-2.5" /> Pending
+                                  </span>
+                                )}
+                                {docApproval === 'rejected' && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                    Changes
+                                  </span>
+                                )}
+                                {docApproval === 'draft' && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold rounded bg-muted text-muted-foreground border border-border">
+                                    Draft
+                                  </span>
+                                )}
+                                {isCurrent && <Check className="w-3.5 h-3.5 text-primary" />}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">{testCases.length} test cases — edit steps, drag to reorder, create new cases</p>
+          <p className="text-sm text-muted-foreground">{testCases.length} test cases — edit steps, drag to reorder, create new cases</p>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Action Buttons Row */}
+        <div className="flex items-center justify-end gap-2 flex-wrap pt-1 border-t border-border/20">
           {isQA && activeTestSuite?.approvalStatus !== 'pending_approval' && activeTestSuite?.approvalStatus !== 'approved' && (
             <button
               onClick={handleRequestApproval}

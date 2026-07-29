@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, Sparkles, ShieldCheck, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { RequirementAnalysis, TestSuiteData } from '../../types'
 
@@ -56,6 +56,7 @@ export function DocumentsTable({
             <th className="p-3.5">Uploaded</th>
             <th className="p-3.5 text-center">Quality Score</th>
             <th className="p-3.5 text-center">Status</th>
+            <th className="p-3.5 text-center">Approval</th>
             <th className="p-3.5 text-right">Actions</th>
           </tr>
         </thead>
@@ -152,6 +153,41 @@ export function DocumentsTable({
                     <Badge variant="outline" className="text-muted-foreground">
                       New
                     </Badge>
+                  )}
+                </td>
+                <td className="p-3.5 text-center">
+                  {isSuiteGenerated ? (
+                    (() => {
+                      const approvalStatus = suite?.approvalStatus || 'draft'
+                      switch (approvalStatus) {
+                        case 'approved':
+                          return (
+                            <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <ShieldCheck className="w-3 h-3 mr-1" /> Approved
+                            </Badge>
+                          )
+                        case 'pending_approval':
+                          return (
+                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 animate-pulse">
+                              <Clock className="w-3 h-3 mr-1" /> Pending
+                            </Badge>
+                          )
+                        case 'rejected':
+                          return (
+                            <Badge variant="secondary" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                              Changes Requested
+                            </Badge>
+                          )
+                        default:
+                          return (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Draft
+                            </Badge>
+                          )
+                      }
+                    })()
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground italic">—</span>
                   )}
                 </td>
                 <td className="p-3.5 text-right space-x-2">
