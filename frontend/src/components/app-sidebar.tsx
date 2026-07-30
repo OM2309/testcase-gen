@@ -216,7 +216,7 @@ export function AppSidebar({
                       className="w-full cursor-pointer text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2.5 hover:bg-muted/50"
                     >
                       <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>Test suits</span>
+                      <span>Test Suites</span>
                     </SidebarMenuButton>
                   </div>
                 )}
