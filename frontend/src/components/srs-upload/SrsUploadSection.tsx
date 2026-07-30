@@ -99,16 +99,17 @@ export function SrsUploadSection({ projectId, srsDocuments, project, onSrsUpload
 
       {/* Tab Content */}
       {activeTab === 'upload' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start relative">
           <div className="space-y-2.5">
             <h4 className="font-bold text-foreground text-xs uppercase tracking-wider">
-              Upload SRS Document <span className="text-muted-foreground font-normal">(Optional)</span>
+              SRS Upload
             </h4>
             <FileUploadTab projectId={projectId} onSrsUploaded={onSrsUploaded} />
           </div>
-          <div className="border-t lg:border-t-0 lg:border-l border-border/60 pt-5 lg:pt-0 lg:pl-6 space-y-2.5">
+
+          <div className="pt-6 lg:pt-0 lg:pl-8 space-y-2.5 relative">
             <h4 className="font-bold text-foreground text-xs uppercase tracking-wider">
-              Connect Figma Design <span className="text-muted-foreground font-normal">(Optional)</span>
+              Figma Prototype <span className="text-muted-foreground font-normal">(Optional)</span>
             </h4>
             <FigmaConnectionForm
               projectId={projectId}

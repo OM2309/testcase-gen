@@ -10,6 +10,7 @@ import { parseFile } from '../../shared/fileParser.service.js'
 import { parseFigmaUrl, fetchFigmaFile, fetchFigmaImages, extractScreens } from '../../shared/figma.service.js'
 import { projectRepository } from './project.repository.js'
 import { ForbiddenError, NotFoundError, ValidationError } from '../../errors/index.js'
+import { getSocketIO } from '../../shared/socket.js'
 
 export class ProjectService {
   constructor(projectRepo = projectRepository) {
@@ -271,6 +272,14 @@ export class ProjectService {
       throw new ValidationError('Figma Access Token missing. Please provide an access token or configure FIGMA_ACCESS_TOKEN in the server environment.')
     }
 
+    const io = getSocketIO()
+    if (io) {
+      io.to(`project:${project._id}`).emit('figma-sync-status', {
+        projectId: project._id.toString(),
+        status: 'syncing'
+      })
+    }
+
     try {
       const figmaFile = await fetchFigmaFile(project.figmaFileKey, token)
       const parsedScreens = extractScreens(figmaFile, project.figmaFileUrl)
@@ -300,9 +309,24 @@ export class ProjectService {
         freshProject.status = 'uploaded'
       }
 
-      return this.projectRepo.save(freshProject)
+      const savedProject = await this.projectRepo.save(freshProject)
+      if (io) {
+        io.to(`project:${project._id}`).emit('figma-sync-status', {
+          projectId: project._id.toString(),
+          status: 'synced',
+          project: savedProject
+        })
+      }
+      return savedProject
     } catch (err) {
       console.error('Figma Sync Error:', err)
+      if (io) {
+        io.to(`project:${project._id}`).emit('figma-sync-status', {
+          projectId: project._id.toString(),
+          status: 'failed',
+          errorMessage: err.message
+        })
+      }
       throw err
     }
   }
@@ -464,6 +488,9 @@ export class ProjectService {
           screenshotDir: null
         })
       }
+
+      // Wait 5 seconds for the website/assets to load fully before capturing screenshot
+      await page.waitForTimeout(5000)
 
       fs.mkdirSync(outputDir, { recursive: true })
       actualScreenshotPath = path.join(outputDir, actualFilename)

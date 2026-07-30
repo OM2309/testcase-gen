@@ -15,7 +15,7 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({ title = 'Documents' }: SiteHeaderProps) {
-  const { agentRunning } = useProject()
+  const { agentRunning, figmaSyncing } = useProject()
   const [tatModalOpen, setTatModalOpen] = useState(false)
 
   const { data: notifications = [] } = useNotificationsQuery()
@@ -134,6 +134,13 @@ export function SiteHeader({ title = 'Documents' }: SiteHeaderProps) {
                 </>
               )}
             </div>
+
+            {figmaSyncing && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Syncing Figma Design...
+              </span>
+            )}
 
             {agentRunning && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded bg-primary/10 text-primary border border-primary/20">

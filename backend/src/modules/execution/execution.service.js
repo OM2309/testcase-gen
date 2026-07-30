@@ -339,6 +339,9 @@ async function runSingleTestCase({ runId, testCaseIndex, testCase, page, baseUrl
         fs.mkdirSync(screenshotDir, { recursive: true })
         const actualScreenshotPath = path.join(screenshotDir, screenshotFilename)
 
+        // Wait 5 seconds for the website/assets to load fully before capturing screenshot
+        await page.waitForTimeout(5000)
+
         await page.screenshot({ path: actualScreenshotPath, fullPage: true })
 
         const diffFilename = `${testCaseId}-design-diff.png`

@@ -6,6 +6,7 @@ import { projectService } from '../../services/projectService'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { FigmaScreensCarouselModal } from '../shared'
+import { useProject } from '../../contexts/ProjectContext'
 
 interface FigmaConnectionFormProps {
   projectId: string
@@ -15,9 +16,9 @@ interface FigmaConnectionFormProps {
 
 export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames = [] }: FigmaConnectionFormProps) {
   const queryClient = useQueryClient()
+  const { figmaSyncing } = useProject()
   const [url, setUrl] = useState(initialUrl)
   const [connecting, setConnecting] = useState(false)
-  const [syncing, setSyncing] = useState(false)
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
 
   const handleConnect = async (e: React.FormEvent) => {
@@ -47,18 +48,10 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
   }
 
   const handleSync = async () => {
-    setSyncing(true)
     try {
-      const res = await projectService.syncFigma(projectId)
-      if (res.success) {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId] })
-        toast.success('Successfully synced Figma design frames! 🎉')
-      }
+      await projectService.syncFigma(projectId)
     } catch (err: any) {
       console.error(err)
-      toast.error(err.response?.data?.message || 'Figma Sync failed. Please verify your file URL.')
-    } finally {
-      setSyncing(false)
     }
   }
 
@@ -86,7 +79,7 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
         <div className="flex items-center gap-2.5 pt-1">
           <button
             type="submit"
-            disabled={connecting || syncing}
+            disabled={connecting || figmaSyncing}
             className="btn-primary flex-1 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             {connecting ? (
@@ -100,10 +93,10 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
             <button
               type="button"
               onClick={handleSync}
-              disabled={connecting || syncing}
+              disabled={connecting || figmaSyncing}
               className="btn-secondary flex items-center justify-center gap-1.5 cursor-pointer px-4"
             >
-              {syncing ? (
+              {figmaSyncing ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
               ) : (
                 <RefreshCw className="w-3.5 h-3.5" />

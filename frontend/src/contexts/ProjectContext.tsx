@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Project, RequirementAnalysis, TestSuiteData } from '../types'
 import { useProjectDetailQuery } from '../queries/project.query'
@@ -11,6 +11,9 @@ import {
   useRunGapFillMutation,
 } from '../mutations/agent.mutation'
 import { useProjectStore } from '../stores/useProjectStore'
+import { io } from 'socket.io-client'
+import { SERVER_ORIGIN } from '../services/executionService'
+import { toast } from 'sonner'
 
 interface ProjectContextType {
   project: Project | null
@@ -22,6 +25,7 @@ interface ProjectContextType {
   error: string | null
   agentRunning: 'agent0' | 'agent1' | 'agent2' | 'gapfill' | null
   agentError: string | null
+  figmaSyncing: boolean
   runAgent0: (srsId?: string) => Promise<void>
   runAgent1: (srsId?: string, mode?: string) => Promise<void>
   runAgent2: (srsId?: string) => Promise<void>
@@ -61,6 +65,44 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const agent1Mutation = useRunAgent1Mutation(projectId || '')
   const agent2Mutation = useRunAgent2Mutation(projectId || '')
   const gapFillMutation = useRunGapFillMutation(projectId || '')
+
+  const [figmaSyncing, setFigmaSyncing] = useState(false)
+
+  useEffect(() => {
+    if (!projectId) {
+      setFigmaSyncing(false)
+      return
+    }
+
+    const socketUrl = SERVER_ORIGIN || 'http://localhost:5000'
+    const socket = io(socketUrl)
+
+    socket.on('connect', () => {
+      socket.emit('join-project', projectId)
+    })
+
+    socket.on('figma-sync-status', (data: { projectId: string; status: 'syncing' | 'synced' | 'failed'; project?: Project; errorMessage?: string }) => {
+      if (data.projectId === projectId) {
+        if (data.status === 'syncing') {
+          setFigmaSyncing(true)
+        } else if (data.status === 'synced') {
+          setFigmaSyncing(false)
+          if (data.project) {
+            setProject(data.project)
+          }
+          refetch()
+          toast.success('Figma design screens synced successfully! 🎉')
+        } else if (data.status === 'failed') {
+          setFigmaSyncing(false)
+          toast.error(`Figma sync failed: ${data.errorMessage || 'Unknown error'}`)
+        }
+      }
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [projectId, refetch, setProject])
 
   useEffect(() => {
     setLoading(isLoading)
@@ -169,6 +211,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         error: isError ? (queryError as Error)?.message || 'Failed to fetch project details' : null,
         agentRunning,
         agentError,
+        figmaSyncing,
         runAgent0,
         runAgent1,
         runAgent2,

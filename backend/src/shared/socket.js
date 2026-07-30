@@ -11,6 +11,9 @@ export function initSocket(server) {
   })
 
   io.on('connection', (socket) => {
+    socket.on('join-project', (projectId) => {
+      socket.join(`project:${projectId}`)
+    })
     socket.on('join-run', (runId) => {
       socket.join(`run:${runId}`)
     })
