@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link2, Loader2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import { projectService } from '../../services/projectService'
 import { useQueryClient } from '@tanstack/react-query'
@@ -20,6 +20,10 @@ export function FigmaConnectionForm({ projectId, initialUrl = '', syncedFrames =
   const [url, setUrl] = useState(initialUrl)
   const [connecting, setConnecting] = useState(false)
   const [previewIndex, setPreviewIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    setUrl(initialUrl)
+  }, [initialUrl, projectId])
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault()
