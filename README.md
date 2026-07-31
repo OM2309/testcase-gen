@@ -4,7 +4,7 @@ TestGen AI is an automated, multi-agent QA framework designed to streamline and 
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 1. **SRS Detailing & Scoring**: Evaluates requirement documents out of 100 based on completeness, inputs/outputs, edge cases, and exceptions, identifying gaps before coding starts.
 2. **AI Requirement Modeling**: Automatically extracts functional requirements, input fields, validation constraints, and user flows into structured requirement models.
