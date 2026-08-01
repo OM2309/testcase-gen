@@ -28,7 +28,7 @@ export async function projectAccessMiddleware(req, res, next) {
 
     const isOwner = project.userId && project.userId.toString() === req.user.id
 
-    // Assigned member has access
+
     const isAssigned = project.assignedUsers && project.assignedUsers.some(
       (userId) => userId.toString() === req.user.id
     )
