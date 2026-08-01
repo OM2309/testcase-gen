@@ -20,13 +20,12 @@ export async function projectAccessMiddleware(req, res, next) {
       throw new ApiError('Project not found.', 404)
     }
 
-    // Admin has universal access
+  
     if (req.user.role === 'admin') {
       req.project = project
       return next()
     }
 
-    // Owner (creator) has access
     const isOwner = project.userId && project.userId.toString() === req.user.id
 
     // Assigned member has access
